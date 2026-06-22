@@ -151,10 +151,19 @@
 
         function calcolaTotale() { return carrello.reduce((tot, item) => tot + (item.qty * item.prezzo), 0); }
 
+        function showIndexToast(message) {
+            const toast = document.getElementById('index-toast');
+            toast.innerText = message;
+            toast.style.display = 'block';
+            clearTimeout(toast._timer);
+            toast._timer = setTimeout(() => toast.style.display = 'none', 3000);
+        }
+
         function acquista() {
-            if (carrello.length === 0) return alert("Carrello vuoto!");
-            
-            // Salva nel browser e vai al checkout
+            if (carrello.length === 0) {
+                showIndexToast("Carrello vuoto!");
+                return;
+            }
             localStorage.setItem('carrelloCheckout', JSON.stringify(carrello));
             const totale = calcolaTotale().toFixed(2);
             localStorage.setItem('totaleCheckout', totale);

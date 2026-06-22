@@ -18,6 +18,16 @@
         .cart-actions { display: flex; gap: 10px; margin-top: 12px; justify-content: flex-end; }
         .cart-actions button { flex: 1; }
         .cart-panel.hide { display: none; }
+        .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: none; align-items: center; justify-content: center; z-index: 999; padding: 20px; }
+        .modal-card { background: white; border-radius: 18px; width: 100%; max-width: 520px; padding: 30px; box-shadow: 0 20px 45px rgba(0,0,0,0.2); text-align: center; }
+        .modal-card h2 { margin-bottom: 16px; font-size: 1.4rem; }
+        .modal-card p { color: #4a5568; margin-bottom: 24px; line-height: 1.6; }
+        .modal-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+        .modal-actions button { min-width: 120px; padding: 12px 18px; border-radius: 10px; border: none; cursor: pointer; font-weight: 700; }
+        .modal-confirm { background: #10b981; color: white; }
+        .modal-cancel { background: #e2e8f0; color: #2d3748; }
+        .toast { position: fixed; bottom: 24px; right: 24px; background: rgba(45,55,72,0.95); color: white; padding: 14px 20px; border-radius: 14px; box-shadow: 0 16px 40px rgba(0,0,0,0.2); opacity: 0; transform: translateY(16px); transition: opacity 0.25s ease, transform 0.25s ease; z-index: 1000; }
+        .toast.show { opacity: 1; transform: translateY(0); }
         
         .sidebar { width: 250px; background-color: var(--primary); color: white; padding: 20px; display: flex; flex-direction: column; gap: 15px; }
         .sidebar h2 { font-size: 1.2rem; margin-bottom: 20px; border-bottom: 2px solid var(--secondary); padding-bottom: 10px; }
@@ -143,6 +153,18 @@
 
     </div>
 
+    <div id="modal-backdrop" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <div class="modal-card">
+            <h2 id="modal-title"></h2>
+            <p id="modal-message"></p>
+            <div class="modal-actions">
+                <button id="modal-confirm" class="modal-confirm">Conferma</button>
+                <button id="modal-cancel" class="modal-cancel">Annulla</button>
+            </div>
+        </div>
+    </div>
+    <div id="toast" class="toast"></div>
+
     <script>
         let inventario = [];
         let vendite = [];
@@ -150,15 +172,49 @@
         let budgetAziendale = 0;
         let categoriaAttuale = 'Tutte';
         let chartInstance = null;
+        let modalCallback = null;
+
+        function showModal(title, message, callback) {
+            const backdrop = document.getElementById('modal-backdrop');
+            const titleEl = document.getElementById('modal-title');
+            const messageEl = document.getElementById('modal-message');
+            const confirmBtn = document.getElementById('modal-confirm');
+            const cancelBtn = document.getElementById('modal-cancel');
+            titleEl.innerText = title;
+            messageEl.innerText = message;
+            modalCallback = callback;
+            confirmBtn.onclick = () => {
+                hideModal();
+                if (typeof modalCallback === 'function') modalCallback(true);
+            };
+            cancelBtn.onclick = () => {
+                hideModal();
+                if (typeof modalCallback === 'function') modalCallback(false);
+            };
+            backdrop.style.display = 'flex';
+        }
+
+        function hideModal() {
+            const backdrop = document.getElementById('modal-backdrop');
+            backdrop.style.display = 'none';
+            modalCallback = null;
+        }
+
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            toast.innerText = message;
+            toast.style.background = type === 'error' ? 'rgba(220,38,38,0.95)' : type === 'success' ? 'rgba(16,185,129,0.95)' : 'rgba(45,55,72,0.95)';
+            toast.classList.add('show');
+            clearTimeout(toast._timeout);
+            toast._timeout = setTimeout(() => toast.classList.remove('show'), 3000);
+        }
 
         function inizializzaBudget() {
             let budgetSalvato = localStorage.getItem('budgetAziendale');
             if (budgetSalvato === null) {
-                // Configurazione iniziale se non esiste
-                let input = prompt("Configurazione Iniziale: Inserisci i fondi aziendali di partenza (€):", "5000");
-                budgetAziendale = parseFloat(input);
-                if (isNaN(budgetAziendale) || budgetAziendale < 0) budgetAziendale = 5000; // fallback
+                budgetAziendale = 5000;
                 saveBudget(budgetAziendale);
+                showToast('Budget aziendale impostato a € 5.000');
             } else {
                 budgetAziendale = parseFloat(budgetSalvato);
             }
@@ -298,21 +354,33 @@
             const input = document.getElementById(`desired-${id}`);
             const qty = input ? parseInt(input.value || '1', 10) : 1;
             const p = inventario.find(i => i.id === id);
-            if (!p) return alert('Prodotto non trovato');
+            if (!p) {
+                showToast('Prodotto non trovato', 'error');
+                return;
+            }
             const remaining = Math.max(0, p.maxQty - p.qty);
-            if (remaining === 0) return alert('Stock già pieno per questo prodotto');
-            if (qty > remaining) return alert('Quantità richiesta maggiore dello spazio disponibile');
+            if (remaining === 0) {
+                showToast('Stock già pieno per questo prodotto', 'error');
+                return;
+            }
+            if (qty > remaining) {
+                showToast('Quantità richiesta maggiore dello spazio disponibile', 'error');
+                return;
+            }
 
             const existing = managerCart.find(c => c.id === id);
             if (existing) {
-                if (existing.qty + qty > remaining) return alert('Superi lo spazio disponibile per questo prodotto');
+                if (existing.qty + qty > remaining) {
+                    showToast('Superi lo spazio disponibile per questo prodotto', 'error');
+                    return;
+                }
                 existing.qty += qty;
             } else {
                 managerCart.push({ id: p.id, nome: p.nome, prezzo: p.prezzo, qty: qty });
             }
             saveManagerCart(managerCart);
             renderManagerCart();
-            alert('Aggiunto al carrello manager');
+            showToast('Aggiunto al carrello manager', 'success');
         }
 
         function renderManagerCart() {
@@ -331,35 +399,47 @@
         }
 
         function svuotaCarrelloManager() {
-            if (!confirm('Svuotare il carrello manager?')) return;
-            managerCart = [];
-            clearManagerCart();
-            renderManagerCart();
+            showModal('Svuota carrello manager', 'Sei sicuro di voler svuotare completamente il carrello manager? Questa operazione non può essere annullata.', confirmed => {
+                if (!confirmed) return;
+                managerCart = [];
+                clearManagerCart();
+                renderManagerCart();
+                showToast('Carrello manager svuotato', 'success');
+            });
         }
 
         function procCompraManager() {
-            if (managerCart.length === 0) return alert('Carrello vuoto');
+            if (managerCart.length === 0) {
+                showToast('Carrello vuoto', 'error');
+                return;
+            }
             for (const it of managerCart) {
                 const prod = inventario.find(p => p.id === it.id);
                 const remaining = prod ? Math.max(0, prod.maxQty - prod.qty) : 0;
-                if (!prod || remaining < it.qty) return alert(`Quantità non disponibile per ${it.nome}`);
+                if (!prod || remaining < it.qty) {
+                    showToast(`Quantità non disponibile per ${it.nome}`, 'error');
+                    return;
+                }
             }
-            const totale = managerCart.reduce((s,i) => s + i.prezzo * i.qty * 0.55, 0);
-            managerCart.forEach(it => {
-                const prod = inventario.find(p => p.id === it.id);
-                prod.qty += it.qty;
+            showModal('Conferma acquisto manager', 'Vuoi procedere con l\'acquisto dei prodotti presenti nel carrello manager?', confirmed => {
+                if (!confirmed) return;
+                const totale = managerCart.reduce((s,i) => s + i.prezzo * i.qty * 0.55, 0);
+                managerCart.forEach(it => {
+                    const prod = inventario.find(p => p.id === it.id);
+                    prod.qty += it.qty;
+                });
+                expenses.push({ data: new Date().toISOString().split('T')[0], totale: totale });
+                saveInventario(inventario);
+                saveExpenses(expenses);
+                budgetAziendale -= totale;
+                saveBudget(budgetAziendale);
+                managerCart = [];
+                clearManagerCart();
+                aggiornaUIBudget();
+                aggiornaTabella();
+                renderManagerCart();
+                showToast('Acquisto manager registrato con successo', 'success');
             });
-            expenses.push({ data: new Date().toISOString().split('T')[0], totale: totale });
-            saveInventario(inventario);
-            saveExpenses(expenses);
-            budgetAziendale -= totale;
-            saveBudget(budgetAziendale);
-            managerCart = [];
-            clearManagerCart();
-            aggiornaUIBudget();
-            aggiornaTabella();
-            renderManagerCart();
-            alert('Acquisto manager registrato con successo');
         }
 
         function apriEditorStock() {
@@ -386,7 +466,7 @@
                 }
             });
             saveInventario(inventario);
-            alert('Max stock aggiornati');
+            showToast('Max stock aggiornati', 'success');
             // Torna alla vista magazzino
             cambiaVista('magazzino', document.querySelector('.sidebar > .category-btn'));
             aggiornaTabella();
@@ -395,20 +475,21 @@
         function compraProdotto(id) {
             const item = inventario.find(i => i.id === id);
             if (item) {
-                if (item.qty >= item.maxQty) return alert("Magazzino pieno per questo prodotto!");
-                
+                if (item.qty >= item.maxQty) {
+                    showToast("Magazzino pieno per questo prodotto!", 'error');
+                    return;
+                }
                 const costo = item.prezzo * 0.55;
                 if (budgetAziendale >= costo) {
                     budgetAziendale -= costo;
                     item.qty += 1;
-                    
                     saveBudget(budgetAziendale);
                     saveInventario(inventario);
-                    
                     aggiornaUIBudget();
                     aggiornaTabella();
+                    showToast("Prodotto acquistato per il magazzino", 'success');
                 } else {
-                    alert("Fondi aziendali insufficienti per acquistare questo prodotto.");
+                    showToast("Fondi aziendali insufficienti per acquistare questo prodotto.", 'error');
                 }
             }
         }
