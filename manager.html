@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Gestionale</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root { --primary: #2c3e50; --secondary: #27ae60; --bg: #f4f7f6; --text: #333; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
+        body { background-color: var(--bg); color: var(--text); display: flex; height: 100vh; }
+        
+        .sidebar { width: 250px; background-color: var(--primary); color: white; padding: 20px; display: flex; flex-direction: column; gap: 15px; }
+        .sidebar h2 { font-size: 1.2rem; margin-bottom: 20px; border-bottom: 2px solid var(--secondary); padding-bottom: 10px; }
+        .menu-label { font-size: 0.8rem; text-transform: uppercase; color: #aaa; margin-top: 10px; }
+        .category-btn { background: none; border: none; color: white; text-align: left; padding: 10px; cursor: pointer; border-radius: 5px; transition: 0.3s; }
+        .category-btn:hover, .category-btn.active { background-color: var(--secondary); }
+        .logout-btn { background: #e74c3c; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; text-align: center; text-decoration: none; font-weight: bold; margin-top: auto; }
+        
+        .main { flex: 1; padding: 30px; overflow-y: auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        .budget-box { background: var(--secondary); color: white; padding: 10px 20px; border-radius: 8px; font-weight: bold; font-size: 1.2rem; }
+        
+        .section { display: none; }
+        .section.active { display: block; }
+        .controls { display: flex; gap: 15px; margin-bottom: 20px; }
+        select { padding: 8px; border-radius: 5px; border: 1px solid #ccc; font-size: 1rem; }
+
+        table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #eee; }
+        th { background-color: var(--primary); color: white; }
+        
+        .badge { padding: 5px 10px; border-radius: 20px; font-size: 0.8rem; color: white; font-weight: bold; }
+        .btn-qty { border: none; padding: 5px 10px; cursor: pointer; border-radius: 4px; font-weight: bold; color: white; margin-right: 5px;}
+        .btn-plus { background-color: var(--secondary); }
+        .btn-minus { background-color: #e74c3c; }
+        .costo-info { font-size: 0.8rem; color: #777; display: block; margin-top: 5px; }
+
+        .chart-container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; height: 400px;}
+        .stats-cards { display: flex; gap: 20px; margin-bottom: 20px; }
+        .card { flex: 1; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center; border-bottom: 4px solid var(--secondary); }
+        .card h3 { color: #777; font-size: 1rem; }
+        .card p { font-size: 2rem; font-weight: bold; color: var(--primary); margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <h2>🛠️ Pannello Manager</h2>
+        
+        <div class="menu-label">Viste</div>
+        <button class="category-btn active" onclick="cambiaVista('magazzino', this)">📦 Magazzino</button>
+        <button class="category-btn" onclick="cambiaVista('finanze', this)">📈 Finanze e Grafici</button>
+        
+        <div id="menu-categorie" style="display: flex; flex-direction: column; gap: 5px;">
+            <div class="menu-label">Filtra Categorie</div>
+            <button class="category-btn sub-btn active" onclick="filtraCategoria('Tutte')">Tutte</button>
+            <button class="category-btn sub-btn" onclick="filtraCategoria('Alimentari')">Alimentari</button>
+            <button class="category-btn sub-btn" onclick="filtraCategoria('Cura della casa')">Cura della casa</button>
+            <button class="category-btn sub-btn" onclick="filtraCategoria('Giardinaggio')">Giardinaggio</button>
+            <button class="category-btn sub-btn" onclick="filtraCategoria('Macchina')">Macchina</button>
+        </div>
+
+        <a href="index.html" class="logout-btn">Esci alla Vista Cliente</a>
+    </div>
+
+    <div class="main">
+        <div class="header">
+            <h1 id="titolo-sezione">Gestione Magazzino</h1>
+            <div class="budget-box" id="display-budget-top">Budget: € 0.00</div>
+        </div>
+
+        <div id="vista-magazzino" class="section active">
+            <div class="controls">
+                <select id="filtro-stato" onchange="aggiornaTabella()">
+                    <option value="Tutti">Tutti gli stati di scorta</option>
+                    <option value="Scarso">🟠 Scarsi (< 20%)</option>
+                    <option value="Medio">🟡 Medi (20% - 50%)</option>
+                    <option value="Buono">🟢 Buoni (> 50%)</option>
+                </select>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Prodotto</th>
+                        <th>Stato Scorta</th>
+                        <th>Giacenza</th>
+                        <th>Prezzo Vendita</th>
+                        <th>Azioni (Acquista/Rimuovi)</th>
+                    </tr>
+                </thead>
+                <tbody id="tabella-inventario"></tbody>
+            </table>
+        </div>
+
+        <div id="vista-finanze" class="section">
+            <div class="stats-cards">
+                <div class="card">
+                    <h3>Budget Aziendale Disponibile</h3>
+                    <p id="budget-finanze">€ 0.00</p>
+                </div>
+                <div class="card">
+                    <h3>Incasso Totale Vendite</h3>
+                    <p id="incasso-totale">€ 0.00</p>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <canvas id="graficoVendite"></canvas>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        let inventario = [];
+        let vendite = [];
+        let budgetAziendale = 0;
+        let categoriaAttuale = 'Tutte';
+        let chartInstance = null;
+
+        function inizializzaBudget() {
+            let budgetSalvato = localStorage.getItem('budgetAziendale');
+            if (budgetSalvato === null) {
+                // Configurazione iniziale se non esiste
+                let input = prompt("Configurazione Iniziale: Inserisci i fondi aziendali di partenza (€):", "5000");
+                budgetAziendale = parseFloat(input);
+                if (isNaN(budgetAziendale) || budgetAziendale < 0) budgetAziendale = 5000; // fallback
+                localStorage.setItem('budgetAziendale', budgetAziendale);
+            } else {
+                budgetAziendale = parseFloat(budgetSalvato);
+            }
+            aggiornaUIBudget();
+        }
+
+        function aggiornaUIBudget() {
+            document.getElementById('display-budget-top').innerText = `Budget: € ${budgetAziendale.toFixed(2)}`;
+            document.getElementById('budget-finanze').innerText = `€ ${budgetAziendale.toFixed(2)}`;
+        }
+
+        function caricaDati() {
+            inventario = JSON.parse(localStorage.getItem('inventario')) || [];
+            vendite = JSON.parse(localStorage.getItem('vendite')) || [];
+            inizializzaBudget();
+            aggiornaTabella();
+            aggiornaFinanze();
+        }
+
+        function cambiaVista(vista, btn) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.getElementById('vista-' + vista).classList.add('active');
+            
+            document.querySelectorAll('.sidebar > .category-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            
+            document.getElementById('menu-categorie').style.display = vista === 'magazzino' ? 'flex' : 'none';
+            document.getElementById('titolo-sezione').innerText = vista === 'magazzino' ? "Gestione Magazzino" : "Report Finanziario";
+
+            if (vista === 'finanze') aggiornaFinanze();
+        }
+
+        function valutaStato(qty, maxQty) {
+            const perc = (qty / maxQty) * 100;
+            if (perc < 20) return { testo: 'Scarso', colore: 'darkorange' };
+            if (perc <= 50) return { testo: 'Medio', colore: '#f1c40f' };
+            return { testo: 'Buono', colore: '#27ae60' };
+        }
+
+        function aggiornaTabella() {
+            const tbody = document.getElementById('tabella-inventario');
+            const filtroStato = document.getElementById('filtro-stato').value;
+            tbody.innerHTML = '';
+
+            let filtrati = categoriaAttuale === 'Tutte' ? inventario : inventario.filter(item => item.cat === categoriaAttuale);
+
+            if (filtroStato !== 'Tutti') {
+                filtrati = filtrati.filter(item => valutaStato(item.qty, item.maxQty).testo === filtroStato);
+            }
+
+            filtrati.forEach(item => {
+                const stato = valutaStato(item.qty, item.maxQty);
+                const percentuale = ((item.qty / item.maxQty) * 100).toFixed(0);
+                const costoAcquisto = item.prezzo * 0.55; // Sconto 45% per il magazzino
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td>
+                            <strong>${item.nome}</strong><br>
+                            <small style="color: #777;">${item.cat} > ${item.sub}</small>
+                        </td>
+                        <td><span class="badge" style="background-color: ${stato.colore}">${stato.testo} (${percentuale}%)</span></td>
+                        <td><strong>${item.qty}</strong> / ${item.maxQty}</td>
+                        <td>€ ${item.prezzo.toFixed(2)}</td>
+                        <td>
+                            <button class="btn-qty btn-plus" onclick="compraProdotto(${item.id})">+ Compra</button>
+                            <button class="btn-qty btn-minus" onclick="rimuoviProdotto(${item.id})">- Rimuovi</button>
+                            <span class="costo-info">Costo rifornimento: €${costoAcquisto.toFixed(2)}/pz</span>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function compraProdotto(id) {
+            const item = inventario.find(i => i.id === id);
+            if (item) {
+                if (item.qty >= item.maxQty) return alert("Magazzino pieno per questo prodotto!");
+                
+                const costo = item.prezzo * 0.55;
+                if (budgetAziendale >= costo) {
+                    budgetAziendale -= costo;
+                    item.qty += 1;
+                    
+                    localStorage.setItem('budgetAziendale', budgetAziendale);
+                    localStorage.setItem('inventario', JSON.stringify(inventario));
+                    
+                    aggiornaUIBudget();
+                    aggiornaTabella();
+                } else {
+                    alert("Fondi aziendali insufficienti per acquistare questo prodotto.");
+                }
+            }
+        }
+
+        function rimuoviProdotto(id) {
+            const item = inventario.find(i => i.id === id);
+            if (item && item.qty > 0) {
+                item.qty -= 1; // Rimuove prodotto senza rimborsi (es. merce rotta/scaduta)
+                localStorage.setItem('inventario', JSON.stringify(inventario));
+                aggiornaTabella();
+            }
+        }
+
+        function filtraCategoria(categoria) {
+            categoriaAttuale = categoria;
+            document.querySelectorAll('.sub-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            aggiornaTabella();
+        }
+
+        function aggiornaFinanze() {
+            const incassoTotale = vendite.reduce((sum, v) => sum + v.totale, 0);
+            document.getElementById('incasso-totale').innerText = `€ ${incassoTotale.toFixed(2)}`;
+
+            const venditePerData = {};
+            vendite.forEach(v => {
+                venditePerData[v.data] = (venditePerData[v.data] || 0) + v.totale;
+            });
+
+            const etichetteDate = Object.keys(venditePerData);
+            const datiIncasso = Object.values(venditePerData);
+
+            if(etichetteDate.length === 0) {
+                etichetteDate.push("Oggi");
+                datiIncasso.push(0);
+            }
+
+            const ctx = document.getElementById('graficoVendite').getContext('2d');
+            if (chartInstance) chartInstance.destroy(); 
+
+            chartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: etichetteDate,
+                    datasets: [{
+                        label: 'Incasso Giornaliero (€)',
+                        data: datiIncasso,
+                        backgroundColor: '#27ae60',
+                        borderColor: '#2ecc71',
+                        borderWidth: 1
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+            });
+        }
+
+        caricaDati();
+    </script>
+</body>
+</html>

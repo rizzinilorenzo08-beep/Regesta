@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supermercato - Shop Online</title>
+    <style>
+        :root { --primary: #2c3e50; --secondary: #27ae60; --bg: #f4f7f6; --text: #333; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
+        body { background-color: var(--bg); color: var(--text); display: block; min-height: 100vh; }
+        
+        .navbar { background-color: var(--primary); color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; }
+        .navbar a { color: white; text-decoration: none; font-weight: bold; background: rgba(255,255,255,0.1); padding: 8px 15px; border-radius: 4px; }
+
+        .container { display: flex; padding: 20px; gap: 20px; }
+        .sidebar { width: 200px; display: flex; flex-direction: column; gap: 10px; }
+        .category-btn { background: white; border: 1px solid #ddd; padding: 12px; text-align: left; cursor: pointer; border-radius: 6px; font-weight: bold; transition: 0.2s; }
+        .category-btn:hover, .category-btn.active { background-color: var(--secondary); color: white; border-color: var(--secondary); }
+        
+        .products-grid { flex: 1; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; align-content: flex-start; }
+        .product-card { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; flex-direction: column; justify-content: space-between; }
+        .product-card h3 { font-size: 1.1rem; margin-bottom: 5px; }
+        .product-sub { font-size: 0.8rem; color: #777; margin-bottom: 10px; }
+        .prezzo { font-weight: bold; color: var(--primary); font-size: 1.2rem; margin-bottom: 10px; }
+        .disponibilita { font-size: 0.9rem; font-weight: bold; margin-bottom: 10px; }
+        .disp-ok { color: #27ae60; }
+        .disp-no { color: #e74c3c; }
+        .btn-add { background-color: var(--secondary); color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; width: 100%; font-weight: bold; }
+        .btn-add:disabled { background-color: #ccc; cursor: not-allowed; }
+
+        .cart-panel { width: 300px; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); height: fit-content; }
+        .cart-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #eee; }
+        .cart-qty-btn { border: none; padding: 2px 8px; cursor: pointer; font-weight: bold; background: #e0e0e0; border-radius: 3px; }
+        .totale-carrello { font-size: 1.2rem; font-weight: bold; margin-top: 15px; text-align: right; border-top: 2px solid #eee; padding-top: 10px; }
+        .btn-checkout { background-color: #e67e22; color: white; border: none; padding: 12px; border-radius: 5px; cursor: pointer; width: 100%; font-weight: bold; margin-top: 15px; }
+    </style>
+</head>
+<body>
+
+    <div class="navbar">
+        <h2>🛒 Supermercato - Area Clienti</h2>
+        <a href="login.html">Accedi come Manager</a>
+    </div>
+
+    <div class="container">
+        <div class="sidebar">
+            <button class="category-btn active" onclick="filtra('Tutte')">Tutte</button>
+            <button class="category-btn" onclick="filtra('Alimentari')">🍎 Alimentari</button>
+            <button class="category-btn" onclick="filtra('Cura della casa')">🧼 Casa</button>
+            <button class="category-btn" onclick="filtra('Giardinaggio')">🌱 Giardinaggio</button>
+            <button class="category-btn" onclick="filtra('Macchina')">🚗 Macchina</button>
+        </div>
+
+        <div class="products-grid" id="prodotti-container"></div>
+
+        <div class="cart-panel">
+            <h3>Il tuo Carrello</h3>
+            <div id="carrello-container" style="margin-top: 15px;"></div>
+            <div id="totale-container" class="totale-carrello">Totale: € 0.00</div>
+            <button class="btn-checkout" onclick="acquista()">Procedi all'Acquisto</button>
+        </div>
+    </div>
+
+    <script>
+        const datiIniziali = [
+            { id: 1, nome: "Latte Intero", cat: "Alimentari", sub: "Da frigo", qty: 45, maxQty: 100, prezzo: 1.20 },
+            { id: 2, nome: "Piselli Surgelati", cat: "Alimentari", sub: "Da freezer", qty: 20, maxQty: 60, prezzo: 2.50 },
+            { id: 3, nome: "Biscotti Frollini", cat: "Alimentari", sub: "Biscotti", qty: 60, maxQty: 80, prezzo: 1.80 },
+            { id: 4, nome: "Acqua Naturale 1.5L", cat: "Alimentari", sub: "Bevande", qty: 120, maxQty: 200, prezzo: 0.50 },
+            { id: 5, nome: "Detersivo Piatti", cat: "Cura della casa", sub: "Cucina", qty: 30, maxQty: 50, prezzo: 1.90 },
+            { id: 6, nome: "Scopa", cat: "Cura della casa", sub: "Casa", qty: 5, maxQty: 30, prezzo: 5.00 },
+            { id: 7, nome: "Ammorbidente", cat: "Cura della casa", sub: "Bucato", qty: 25, maxQty: 50, prezzo: 3.20 },
+            { id: 8, nome: "Pianta di Ficus", cat: "Giardinaggio", sub: "Piante", qty: 10, maxQty: 20, prezzo: 15.00 },
+            { id: 9, nome: "Semi di Pomodoro", cat: "Giardinaggio", sub: "Semi", qty: 50, maxQty: 100, prezzo: 1.00 },
+            { id: 10, nome: "Tubo Irrigazione", cat: "Giardinaggio", sub: "Irrigazione", qty: 8, maxQty: 50, prezzo: 25.00 },
+            { id: 11, nome: "Rastrello", cat: "Giardinaggio", sub: "Cura del giardino", qty: 12, maxQty: 25, prezzo: 12.00 },
+            { id: 12, nome: "Liquido Tergicristalli", cat: "Macchina", sub: "Pulizia", qty: 15, maxQty: 100, prezzo: 4.50 },
+            { id: 13, nome: "Olio Motore 5W-30", cat: "Macchina", sub: "Manutenzione", qty: 18, maxQty: 40, prezzo: 9.90 }
+        ];
+
+        let inventario = JSON.parse(localStorage.getItem('inventario'));
+        if (!inventario || inventario.length === 0 || !inventario[0].maxQty) {
+            inventario = datiIniziali;
+            localStorage.setItem('inventario', JSON.stringify(inventario));
+        }
+
+        let vendite = JSON.parse(localStorage.getItem('vendite')) || [];
+        let carrello = [];
+        let catAttuale = 'Tutte';
+
+        function renderingProdotti() {
+            const container = document.getElementById('prodotti-container');
+            container.innerHTML = '';
+            const filtrati = catAttuale === 'Tutte' ? inventario : inventario.filter(p => p.cat === catAttuale);
+
+            filtrati.forEach(p => {
+                const esaurito = p.qty <= 0;
+                const classeDisp = esaurito ? 'disp-no' : 'disp-ok';
+                const testoDisp = esaurito ? 'Non disponibile' : 'Disponibile';
+
+                container.innerHTML += `
+                    <div class="product-card">
+                        <div>
+                            <h3>${p.nome}</h3>
+                            <p class="product-sub">${p.sub}</p>
+                            <div class="prezzo">€ ${p.prezzo.toFixed(2)}</div>
+                        </div>
+                        <div>
+                            <p class="disponibilita ${classeDisp}">${testoDisp}</p>
+                            <button class="btn-add" ${esaurito ? 'disabled' : ''} onclick="aggiungiAlCarrello(${p.id})">
+                                ${esaurito ? 'Esaurito' : 'Aggiungi'}
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function filtra(cat) {
+            catAttuale = cat;
+            document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+            renderingProdotti();
+        }
+
+        function aggiungiAlCarrello(id) {
+            const prodInv = inventario.find(p => p.id === id);
+            if (prodInv && prodInv.qty > 0) {
+                const itemCarrello = carrello.find(c => c.id === id);
+                if (itemCarrello) {
+                    if (itemCarrello.qty < prodInv.qty) itemCarrello.qty++;
+                } else {
+                    // Fixato bug: usato prodInv.id e prodInv.prezzo
+                    carrello.push({ id: prodInv.id, nome: prodInv.nome, qty: 1, prezzo: prodInv.prezzo });
+                }
+                renderingCarrello();
+            }
+        }
+
+        function modificaCarrello(id, cambio) {
+            const item = carrello.find(c => c.id === id);
+            const prodInv = inventario.find(p => p.id === id);
+            if (item) {
+                item.qty += cambio;
+                if (item.qty > prodInv.qty) item.qty = prodInv.qty;
+                if (item.qty <= 0) carrello = carrello.filter(c => c.id !== id);
+                renderingCarrello();
+            }
+        }
+
+        function calcolaTotale() {
+            return carrello.reduce((tot, item) => tot + (item.qty * item.prezzo), 0);
+        }
+
+        function renderingCarrello() {
+            const container = document.getElementById('carrello-container');
+            container.innerHTML = carrello.length === 0 ? '<p style="color:#777;">Il carrello è vuoto.</p>' : '';
+            
+            carrello.forEach(c => {
+                container.innerHTML += `
+                    <div class="cart-item">
+                        <div>
+                            <strong>${c.nome}</strong><br>
+                            <small>€ ${(c.prezzo * c.qty).toFixed(2)}</small>
+                        </div>
+                        <div>
+                            <button class="cart-qty-btn" onclick="modificaCarrello(${c.id}, -1)">-</button>
+                            <span style="margin: 0 5px;">${c.qty}</span>
+                            <button class="cart-qty-btn" onclick="modificaCarrello(${c.id}, 1)">+</button>
+                        </div>
+                    </div>
+                `;
+            });
+            document.getElementById('totale-container').innerText = `Totale: € ${calcolaTotale().toFixed(2)}`;
+        }
+
+        function acquista() {
+            if (carrello.length === 0) return alert("Il carrello è vuoto!");
+            
+            let totaleAcquisto = calcolaTotale();
+
+            // Aggiorna inventario
+            carrello.forEach(c => {
+                const p = inventario.find(inv => inv.id === c.id);
+                if (p) p.qty -= c.qty;
+            });
+
+            // Registra vendita
+            const oggi = new Date().toLocaleDateString('it-IT');
+            vendite.push({ data: oggi, totale: totaleAcquisto, timestamp: Date.now() });
+            localStorage.setItem('vendite', JSON.stringify(vendite));
+            localStorage.setItem('inventario', JSON.stringify(inventario));
+
+            // Aggiungi soldi al budget aziendale
+            let budget = parseFloat(localStorage.getItem('budgetAziendale')) || 0;
+            budget += totaleAcquisto;
+            localStorage.setItem('budgetAziendale', budget);
+            
+            carrello = [];
+            renderingCarrello();
+            renderingProdotti();
+            alert(`Acquisto di € ${totaleAcquisto.toFixed(2)} confermato! Grazie.`);
+        }
+
+        renderingProdotti();
+        renderingCarrello();
+    </script>
+</body>
+</html>
