@@ -72,9 +72,32 @@
     </div>
 
     <script>
-        // Database
-        let inventario = JSON.parse(localStorage.getItem('inventario')) || [];
-        // [QUI INSERISCI LA LISTA DEI TUOI PRODOTTI DATI INIZIALI SE VUOI IL RESET]
+        // Database dei prodotti storici di base (con icone coordinate per la veste Premium)
+        const datiIniziali = [
+            { id: 1, nome: "Latte Intero", cat: "Alimentari", sub: "Da frigo", qty: 45, maxQty: 100, prezzo: 1.20, icona: "🥛" },
+            { id: 2, nome: "Piselli Surgelati", cat: "Alimentari", sub: "Da freezer", qty: 20, maxQty: 60, prezzo: 2.50, icona: "🫛" },
+            { id: 3, nome: "Biscotti Frollini", cat: "Alimentari", sub: "Biscotti", qty: 60, maxQty: 80, prezzo: 1.80, icona: "🍪" },
+            { id: 4, nome: "Acqua Naturale 1.5L", cat: "Alimentari", sub: "Bevande", qty: 120, maxQty: 200, prezzo: 0.50, icona: "💧" },
+            { id: 5, nome: "Detersivo Piatti", cat: "Cura della casa", sub: "Cucina", qty: 30, maxQty: 50, prezzo: 1.90, icona: "🧼" },
+            { id: 6, nome: "Scopa", cat: "Cura della casa", sub: "Casa", qty: 5, maxQty: 30, prezzo: 5.00, icona: "🧹" },
+            { id: 7, nome: "Ammorbidente", cat: "Cura della casa", sub: "Bucato", qty: 25, maxQty: 50, prezzo: 3.20, icona: "🧴" },
+            { id: 8, nome: "Pianta di Ficus", cat: "Giardinaggio", sub: "Piante", qty: 10, maxQty: 20, prezzo: 15.00, icona: "🪴" },
+            { id: 9, nome: "Semi di Pomodoro", cat: "Giardinaggio", sub: "Semi", qty: 50, maxQty: 100, prezzo: 1.00, icona: "🍅" },
+            { id: 10, nome: "Tubo Irrigazione", cat: "Giardinaggio", sub: "Irrigazione", qty: 8, maxQty: 50, prezzo: 25.00, icona: "🚰" },
+            { id: 11, nome: "Rastrello", cat: "Giardinaggio", sub: "Cura del giardino", qty: 12, maxQty: 25, prezzo: 12.00, icona: "🍂" },
+            { id: 12, nome: "Liquido Tergicristalli", cat: "Macchina", sub: "Pulizia", qty: 15, maxQty: 100, prezzo: 4.50, icona: "🧪" },
+            { id: 13, nome: "Olio Motore 5W-30", cat: "Macchina", sub: "Manutenzione", qty: 18, maxQty: 40, prezzo: 9.90, icona: "🛢️" }
+        ];
+
+        // Caricamento controllato dell'inventario
+        let inventario = JSON.parse(localStorage.getItem('inventario'));
+
+        // Se non esiste ancora nulla in memoria o l'array si è svuotato, usa i dati di base
+        if (!inventario || inventario.length === 0) {
+            inventario = datiIniziali;
+            localStorage.setItem('inventario', JSON.stringify(inventario));
+        }
+
         let carrello = [];
         let catAttuale = 'Tutte';
 
@@ -99,7 +122,14 @@
             });
         }
 
-        function filtra(cat) { catAttuale = cat; renderingProdotti(); }
+        function filtra(cat) { 
+            catAttuale = cat; 
+            // Aggiorna graficamente lo stato del pulsante attivo nella sidebar
+            document.querySelectorAll('.category-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            renderingProdotti(); 
+        }
+        
         function aggiungiAlCarrello(id) {
             const p = inventario.find(i => i.id === id);
             const item = carrello.find(c => c.id === id);
@@ -121,7 +151,6 @@
 
         function calcolaTotale() { return carrello.reduce((tot, item) => tot + (item.qty * item.prezzo), 0); }
 
-        // --- FUNZIONE MODIFICATA ---
         function acquista() {
             if (carrello.length === 0) return alert("Carrello vuoto!");
             
