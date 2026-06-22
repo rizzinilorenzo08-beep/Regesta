@@ -19,6 +19,7 @@ const INIZIALI_INVENTARIO = [
 const STORAGE_KEYS = {
     inventario: 'inventario',
     vendite: 'vendite',
+    expenses: 'expenses',
     budget: 'budgetAziendale',
     managerCart: 'managerCart',
     carrelloCheckout: 'carrelloCheckout',
@@ -32,6 +33,9 @@ function ensureDatabase() {
     }
     if (!localStorage.getItem(STORAGE_KEYS.vendite)) {
         localStorage.setItem(STORAGE_KEYS.vendite, JSON.stringify([]));
+    }
+    if (!localStorage.getItem(STORAGE_KEYS.expenses)) {
+        localStorage.setItem(STORAGE_KEYS.expenses, JSON.stringify([]));
     }
     if (!localStorage.getItem(STORAGE_KEYS.budget)) {
         localStorage.setItem(STORAGE_KEYS.budget, DEFAULT_BUDGET);
@@ -54,6 +58,21 @@ function loadVendite() {
 
 function saveVendite(vendite) {
     localStorage.setItem(STORAGE_KEYS.vendite, JSON.stringify(vendite));
+}
+
+function loadExpenses() {
+    ensureDatabase();
+    return JSON.parse(localStorage.getItem(STORAGE_KEYS.expenses));
+}
+
+function saveExpenses(expenses) {
+    localStorage.setItem(STORAGE_KEYS.expenses, JSON.stringify(expenses));
+}
+
+function recordExpense(entry) {
+    const ex = loadExpenses();
+    ex.push(entry);
+    saveExpenses(ex);
 }
 
 function loadBudget() {
