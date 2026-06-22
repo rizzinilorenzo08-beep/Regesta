@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>Checkout - Conferma Ordine</title>
+    <style>
+        body { font-family: sans-serif; background: #f4f7f6; display: flex; justify-content: center; padding: 50px; }
+        .card { background: white; padding: 30px; border-radius: 10px; width: 400px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        h2 { color: #2c3e50; }
+        .metodo { margin: 15px 0; padding: 10px; border: 2px solid #ddd; border-radius: 6px; cursor: pointer; }
+        .metodo:hover { border-color: #27ae60; }
+        button { width: 100%; padding: 15px; background: #27ae60; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; margin-top: 20px; }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h2>Seleziona Pagamento</h2>
+        <div id="riepilogo"></div>
+        
+        <div class="metodo" onclick="salvaMetodo('PayPal')">PayPal</div>
+        <div class="metodo" onclick="salvaMetodo('Bonifico')">Bonifico Bancario</div>
+        <div class="metodo" onclick="salvaMetodo('Contanti')">Contanti alla consegna</div>
+        
+        <button onclick="confermaOrdine()">Conferma Acquisto</button>
+        <a href="index.html" style="display:block; text-align:center; margin-top:15px; color:#777;">Torna indietro</a>
+    </div>
+
+    <script>
+        // Legge il totale dal localStorage che avevi già impostato in index.html
+        const totale = localStorage.getItem('ultimoTotale') || "0.00";
+        document.getElementById('riepilogo').innerHTML = `<p>Totale da pagare: <strong>€ ${totale}</strong></p>`;
+
+        let metodoSelezionato = "";
+        function salvaMetodo(m) { metodoSelezionato = m; alert("Selezionato: " + m); }
+
+        function confermaOrdine() {
+            if(!metodoSelezionato) return alert("Scegli un metodo!");
+            
+            // Qui aggiungi la logica di pulizia carrello e registrazione vendita
+            // ... (codice per azzerare localStorage e tornare allo shop)
+            alert("Ordine completato con " + metodoSelezionato + "! Grazie.");
+            window.location.href = "index.html";
+        }
+    </script>
+</body>
+</html>
