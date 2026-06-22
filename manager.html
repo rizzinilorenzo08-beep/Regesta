@@ -78,6 +78,8 @@
                     <option value="Medio">🟡 Medi (20% - 50%)</option>
                     <option value="Buono">🟢 Buoni (> 50%)</option>
                 </select>
+                <button style="margin-left:auto; padding:8px 12px; border-radius:6px; border:none; background:#10b981; color:white; cursor:pointer;" onclick="toggleManagerCart()">Visualizza Carrello Manager</button>
+                <button style="padding:8px 12px; border-radius:6px; border:none; background:#3b82f6; color:white; cursor:pointer; margin-left:8px;" onclick="apriEditorStock()">Editor Stock</button>
             </div>
 
             <table>
@@ -92,6 +94,15 @@
                 </thead>
                 <tbody id="tabella-inventario"></tbody>
             </table>
+            <div id="manager-cart" style="margin-top:20px; display:none;">
+                <h3>Carrello Manager</h3>
+                <div id="manager-cart-items" style="background:white; padding:15px; border-radius:8px; box-shadow:0 4px 6px rgba(0,0,0,0.06);"></div>
+                <div style="text-align:right; margin-top:10px; font-weight:bold;">Totale: <span id="manager-cart-total">€ 0.00</span></div>
+                <div style="display:flex; gap:10px; margin-top:10px; justify-content:flex-end;">
+                    <button onclick="procCompraManager()" style="background:#27ae60; color:white; padding:10px 14px; border-radius:6px; border:none; cursor:pointer;">Procedi all'acquisto</button>
+                    <button onclick="svuotaCarrelloManager()" style="background:#e74c3c; color:white; padding:10px 14px; border-radius:6px; border:none; cursor:pointer;">Svuota Carrello</button>
+                </div>
+            </div>
         </div>
 
         <div id="vista-finanze" class="section">
@@ -109,6 +120,12 @@
             <div class="chart-container">
                 <canvas id="graficoVendite"></canvas>
             </div>
+        </div>
+
+        <div id="vista-editor-stock" class="section">
+            <h2>Editor Stock</h2>
+            <div id="editor-stock-list" style="margin-top:10px; display:flex; flex-direction:column; gap:10px;"></div>
+            <div style="margin-top:12px;"><button onclick="salvaEditorStock()" style="background:#3b82f6; color:white; padding:10px 14px; border-radius:6px; border:none; cursor:pointer;">Salva Modifiche</button></div>
         </div>
 
     </div>
@@ -166,9 +183,11 @@
             }
 
     vendite = JSON.parse(localStorage.getItem('vendite')) || [];
+    managerCart = JSON.parse(localStorage.getItem('managerCart')) || [];
     inizializzaBudget();
     aggiornaTabella();
     aggiornaFinanze();
+    renderManagerCart();
 }
 
         function cambiaVista(vista, btn) {
@@ -191,6 +210,8 @@
             return { testo: 'Buono', colore: '#27ae60' };
         }
 
+        let managerCart = [];
+
         function aggiornaTabella() {
             const tbody = document.getElementById('tabella-inventario');
             const filtroStato = document.getElementById('filtro-stato').value;
@@ -206,6 +227,7 @@
                 const stato = valutaStato(item.qty, item.maxQty);
                 const percentuale = ((item.qty / item.maxQty) * 100).toFixed(0);
                 const costoAcquisto = item.prezzo * 0.55; // Sconto 45% per il magazzino
+                const desiredId = `desired-${item.id}`;
 
                 tbody.innerHTML += `
                     <tr>
@@ -214,16 +236,138 @@
                             <small style="color: #777;">${item.cat} > ${item.sub}</small>
                         </td>
                         <td><span class="badge" style="background-color: ${stato.colore}">${stato.testo} (${percentuale}%)</span></td>
-                        <td><strong>${item.qty}</strong> / ${item.maxQty}</td>
+                        <td><strong id="giac-${item.id}">${item.qty}</strong> / <span id="max-${item.id}">${item.maxQty}</span></td>
                         <td>€ ${item.prezzo.toFixed(2)}</td>
                         <td>
-                            <button class="btn-qty btn-plus" onclick="compraProdotto(${item.id})">+ Compra</button>
-                            <button class="btn-qty btn-minus" onclick="rimuoviProdotto(${item.id})">- Rimuovi</button>
+                            <div style="display:flex; align-items:center; gap:6px;">
+                                <button class="btn-qty btn-minus" onclick="modificaDesired(${item.id}, -1)">-</button>
+                                <input id="${desiredId}" type="number" value="1" min="1" max="${item.qty}" style="width:60px; padding:6px; border-radius:4px; border:1px solid #ddd; text-align:center;" onchange="normalizeDesired(${item.id})">
+                                <button class="btn-qty btn-plus" onclick="modificaDesired(${item.id}, 1)">+</button>
+                                <button style="background:#10b981; color:white; border:none; padding:6px 10px; border-radius:6px; cursor:pointer;" onclick="aggiungiAlCarrelloManager(${item.id})">Aggiungi al carrello</button>
+                            </div>
                             <span class="costo-info">Costo rifornimento: €${costoAcquisto.toFixed(2)}/pz</span>
                         </td>
                     </tr>
                 `;
             });
+        }
+
+        function modificaDesired(id, delta) {
+            const input = document.getElementById(`desired-${id}`);
+            if (!input) return;
+            let val = parseInt(input.value || '0', 10) + delta;
+            const prod = inventario.find(p => p.id === id);
+            if (!prod) return;
+            if (val < 1) val = 1;
+            if (val > prod.qty) val = prod.qty;
+            input.value = val;
+        }
+
+        function normalizeDesired(id) {
+            const input = document.getElementById(`desired-${id}`);
+            const prod = inventario.find(p => p.id === id);
+            if (!input || !prod) return;
+            let val = parseInt(input.value || '0', 10);
+            if (isNaN(val) || val < 1) val = 1;
+            if (val > prod.qty) val = prod.qty;
+            input.value = val;
+        }
+
+        function aggiungiAlCarrelloManager(id) {
+            const input = document.getElementById(`desired-${id}`);
+            const qty = input ? parseInt(input.value || '1', 10) : 1;
+            const p = inventario.find(i => i.id === id);
+            if (!p) return alert('Prodotto non trovato');
+            if (qty > p.qty) return alert('Quantità richiesta maggiore della giacenza');
+
+            const existing = managerCart.find(c => c.id === id);
+            if (existing) {
+                if (existing.qty + qty > p.qty) return alert('Superi la giacenza disponibile');
+                existing.qty += qty;
+            } else {
+                managerCart.push({ id: p.id, nome: p.nome, prezzo: p.prezzo, qty: qty });
+            }
+            localStorage.setItem('managerCart', JSON.stringify(managerCart));
+            renderManagerCart();
+            alert('Aggiunto al carrello manager');
+        }
+
+        function renderManagerCart() {
+            const el = document.getElementById('manager-cart-items');
+            if (!el) return;
+            if (managerCart.length === 0) el.innerHTML = '<em>Carrello vuoto</em>';
+            else el.innerHTML = managerCart.map(c => `<div style="display:flex; justify-content:space-between; padding:6px 0;">${c.nome} x${c.qty} <strong>€ ${(c.prezzo*c.qty).toFixed(2)}</strong></div>`).join('');
+            const tot = managerCart.reduce((s, i) => s + i.prezzo * i.qty, 0);
+            document.getElementById('manager-cart-total').innerText = `€ ${tot.toFixed(2)}`;
+        }
+
+        function toggleManagerCart() {
+            const el = document.getElementById('manager-cart');
+            el.style.display = el.style.display === 'none' ? 'block' : 'none';
+            renderManagerCart();
+        }
+
+        function svuotaCarrelloManager() {
+            if (!confirm('Svuotare il carrello manager?')) return;
+            managerCart = [];
+            localStorage.removeItem('managerCart');
+            renderManagerCart();
+        }
+
+        function procCompraManager() {
+            if (managerCart.length === 0) return alert('Carrello vuoto');
+            // Validate availability
+            for (const it of managerCart) {
+                const prod = inventario.find(p => p.id === it.id);
+                if (!prod || prod.qty < it.qty) return alert(`Quantità non disponibile per ${it.nome}`);
+            }
+            // Deduct inventory, record sale and update budget
+            const totale = managerCart.reduce((s,i) => s + i.prezzo * i.qty, 0);
+            managerCart.forEach(it => {
+                const prod = inventario.find(p => p.id === it.id);
+                prod.qty -= it.qty;
+            });
+            vendite.push({ data: new Date().toISOString().split('T')[0], totale: totale });
+            budgetAziendale += totale;
+            localStorage.setItem('inventario', JSON.stringify(inventario));
+            localStorage.setItem('vendite', JSON.stringify(vendite));
+            localStorage.setItem('budgetAziendale', budgetAziendale);
+            managerCart = [];
+            localStorage.removeItem('managerCart');
+            aggiornaUIBudget();
+            aggiornaTabella();
+            renderManagerCart();
+            alert('Acquisto manager registrato con successo');
+        }
+
+        function apriEditorStock() {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.getElementById('vista-editor-stock').classList.add('active');
+            renderEditorStock();
+        }
+
+        function renderEditorStock() {
+            const list = document.getElementById('editor-stock-list');
+            list.innerHTML = '';
+            inventario.forEach(p => {
+                list.innerHTML += `<div style="display:flex; gap:10px; align-items:center; background:white; padding:10px; border-radius:8px;"><div style="flex:1;"><strong>${p.nome}</strong><div style="font-size:0.9rem;color:#666;">Giacenza attuale: ${p.qty}</div></div><div>Max: <input type="number" id="editor-max-${p.id}" value="${p.maxQty}" min="1" style="width:100px; padding:6px; border-radius:4px; border:1px solid #ddd;"></div></div>`;
+            });
+        }
+
+        function salvaEditorStock() {
+            inventario.forEach(p => {
+                const el = document.getElementById(`editor-max-${p.id}`);
+                if (el) {
+                    let v = parseInt(el.value || p.maxQty, 10);
+                    if (isNaN(v) || v < 1) v = p.maxQty;
+                    p.maxQty = v;
+                }
+            });
+            localStorage.setItem('inventario', JSON.stringify(inventario));
+            alert('Max stock aggiornati');
+            // Torna alla vista magazzino
+            cambiaVista('magazzino', document.querySelector('.sidebar > .category-btn'));
+            aggiornaTabella();
         }
 
         function compraProdotto(id) {

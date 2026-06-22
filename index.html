@@ -156,7 +156,9 @@
             
             // Salva nel browser e vai al checkout
             localStorage.setItem('carrelloCheckout', JSON.stringify(carrello));
-            localStorage.setItem('totaleCheckout', calcolaTotale().toFixed(2));
+            const totale = calcolaTotale().toFixed(2);
+            localStorage.setItem('totaleCheckout', totale);
+            localStorage.setItem('ultimoTotale', totale);
             window.location.href = "checkout.html";
         }
 
