@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Supermercato Premium - Shop Online</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="database.js"></script>
     <style>
         :root { 
             --primary: #1E293B; --primary-light: #334155; --secondary: #10B981; 
@@ -65,6 +66,7 @@
 
         <div class="cart-panel">
             <h3>🛒 Il tuo Carrello</h3>
+            <div id="customer-status" style="min-height:20px; margin-bottom:10px; color:#0f766e; font-weight:600;"></div>
             <div id="carrello-container" class="cart-items-wrapper"></div>
             <div id="totale-container" class="totale-carrello">Totale: € 0.00</div>
             <button class="btn-checkout" onclick="acquista()">Procedi al Pagamento ➔</button>
@@ -90,13 +92,7 @@
         ];
 
         // Caricamento controllato dell'inventario
-        let inventario = JSON.parse(localStorage.getItem('inventario'));
-
-        // Se non esiste ancora nulla in memoria o l'array si è svuotato, usa i dati di base
-        if (!inventario || inventario.length === 0) {
-            inventario = datiIniziali;
-            localStorage.setItem('inventario', JSON.stringify(inventario));
-        }
+        let inventario = loadInventario();
 
         let carrello = [];
         let catAttuale = 'Tutte';
@@ -132,10 +128,20 @@
         
         function aggiungiAlCarrello(id) {
             const p = inventario.find(i => i.id === id);
+            if (!p) return showCustomerMessage('Prodotto non trovato', 'error');
             const item = carrello.find(c => c.id === id);
-            if(item) { if(item.qty < p.qty) item.qty++; } 
-            else { carrello.push({...p, qty: 1}); }
+            if (item) {
+                if (item.qty < p.qty) {
+                    item.qty++;
+                } else {
+                    return showCustomerMessage('Quantità massima raggiunta per questo prodotto', 'error');
+                }
+            } else {
+                if (p.qty <= 0) return showCustomerMessage('Prodotto esaurito', 'error');
+                carrello.push({...p, qty: 1});
+            }
             renderingCarrello();
+            showCustomerMessage('Articolo aggiunto al carrello');
         }
 
         function renderingCarrello() {
@@ -152,14 +158,21 @@
         function calcolaTotale() { return carrello.reduce((tot, item) => tot + (item.qty * item.prezzo), 0); }
 
         function acquista() {
-            if (carrello.length === 0) return alert("Carrello vuoto!");
-            
-            // Salva nel browser e vai al checkout
+            if (carrello.length === 0) return showCustomerMessage('Il carrello è vuoto', 'error');
             localStorage.setItem('carrelloCheckout', JSON.stringify(carrello));
             const totale = calcolaTotale().toFixed(2);
             localStorage.setItem('totaleCheckout', totale);
             localStorage.setItem('ultimoTotale', totale);
             window.location.href = "checkout.html";
+        }
+
+        function showCustomerMessage(text, type = 'info') {
+            const el = document.getElementById('customer-status');
+            if (!el) return;
+            el.style.color = type === 'error' ? '#b91c1c' : '#0f766e';
+            el.innerText = text;
+            clearTimeout(window.customerMessageTimeout);
+            window.customerMessageTimeout = setTimeout(() => { el.innerText = ''; }, 3500);
         }
 
         renderingProdotti();

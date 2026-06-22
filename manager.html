@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard Gestionale</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="database.js"></script>
     <style>
         :root { --primary: #2c3e50; --secondary: #27ae60; --bg: #f4f7f6; --text: #333; }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
@@ -69,6 +70,7 @@
             <h1 id="titolo-sezione">Gestione Magazzino</h1>
             <div class="budget-box" id="display-budget-top">Budget: € 0.00</div>
         </div>
+        <div id="status-message" style="margin-bottom:16px; min-height:20px; color:#0a0; font-weight:600;"></div>
 
         <div id="vista-magazzino" class="section active">
             <div class="controls">
@@ -78,7 +80,7 @@
                     <option value="Medio">🟡 Medi (20% - 50%)</option>
                     <option value="Buono">🟢 Buoni (> 50%)</option>
                 </select>
-                <button style="margin-left:auto; padding:8px 12px; border-radius:6px; border:none; background:#10b981; color:white; cursor:pointer;" onclick="toggleManagerCart()">Visualizza Carrello Manager</button>
+                <button id="toggle-manager-cart-btn" style="margin-left:auto; padding:8px 12px; border-radius:6px; border:none; background:#10b981; color:white; cursor:pointer;" onclick="toggleManagerCart()">Nascondi Carrello Manager</button>
                 <button style="padding:8px 12px; border-radius:6px; border:none; background:#3b82f6; color:white; cursor:pointer; margin-left:8px;" onclick="apriEditorStock()">Editor Stock</button>
             </div>
 
@@ -94,7 +96,7 @@
                 </thead>
                 <tbody id="tabella-inventario"></tbody>
             </table>
-            <div id="manager-cart" style="margin-top:20px; display:none;">
+            <div id="manager-cart" style="margin-top:20px; display:block;">
                 <h3>Carrello Manager</h3>
                 <div id="manager-cart-items" style="background:white; padding:15px; border-radius:8px; box-shadow:0 4px 6px rgba(0,0,0,0.06);"></div>
                 <div style="text-align:right; margin-top:10px; font-weight:bold;">Totale: <span id="manager-cart-total">€ 0.00</span></div>
@@ -138,16 +140,7 @@
         let chartInstance = null;
 
         function inizializzaBudget() {
-            let budgetSalvato = localStorage.getItem('budgetAziendale');
-            if (budgetSalvato === null) {
-                // Configurazione iniziale se non esiste
-                let input = prompt("Configurazione Iniziale: Inserisci i fondi aziendali di partenza (€):", "5000");
-                budgetAziendale = parseFloat(input);
-                if (isNaN(budgetAziendale) || budgetAziendale < 0) budgetAziendale = 5000; // fallback
-                localStorage.setItem('budgetAziendale', budgetAziendale);
-            } else {
-                budgetAziendale = parseFloat(budgetSalvato);
-            }
+            budgetAziendale = loadBudget();
             aggiornaUIBudget();
         }
 
@@ -158,37 +151,14 @@
 
         // provo a modificare questa funzione "caricaDati"
         function caricaDati() {
-            // 1. Prova a caricare l'inventario dal localStorage
-            inventario = JSON.parse(localStorage.getItem('inventario')) || [];
-            
-            // 2. SE IL LOCALSTORAGE È VUOTO, INSERISCE I DATI DI BASE AUTOMATICAMENTE
-            if (inventario.length === 0) {
-                inventario = [
-                    { id: 1, nome: "Latte Intero", cat: "Alimentari", sub: "Da frigo", qty: 45, maxQty: 100, prezzo: 1.20 },
-                    { id: 2, nome: "Piselli Surgelati", cat: "Alimentari", sub: "Da freezer", qty: 20, maxQty: 60, prezzo: 2.50 },
-                    { id: 3, nome: "Biscotti Frollini", cat: "Alimentari", sub: "Biscotti", qty: 60, maxQty: 80, prezzo: 1.80 },
-                    { id: 4, nome: "Acqua Naturale 1.5L", cat: "Alimentari", sub: "Bevande", qty: 120, maxQty: 200, prezzo: 0.50 },
-                    { id: 5, nome: "Detersivo Piatti", cat: "Cura della casa", sub: "Cucina", qty: 30, maxQty: 50, prezzo: 1.90 },
-                    { id: 6, nome: "Scopa", cat: "Cura della casa", sub: "Casa", qty: 5, maxQty: 30, prezzo: 5.00 },
-                    { id: 7, nome: "Ammorbidente", cat: "Cura della casa", sub: "Bucato", qty: 25, maxQty: 50, prezzo: 3.20 },
-                    { id: 8, nome: "Pianta di Ficus", cat: "Giardinaggio", sub: "Piante", qty: 10, maxQty: 20, prezzo: 15.00 },
-                    { id: 9, nome: "Semi di Pomodoro", cat: "Giardinaggio", sub: "Semi", qty: 50, maxQty: 100, prezzo: 1.00 },
-                    { id: 10, nome: "Tubo Irrigazione", cat: "Giardinaggio", sub: "Irrigazione", qty: 8, maxQty: 50, prezzo: 25.00 },
-                    { id: 11, nome: "Rastrello", cat: "Giardinaggio", sub: "Cura del giardino", qty: 12, maxQty: 25, prezzo: 12.00 },
-                    { id: 12, nome: "Liquido Tergicristalli", cat: "Macchina", sub: "Pulizia", qty: 15, maxQty: 100, prezzo: 4.50 },
-                    { id: 13, nome: "Olio Motore 5W-30", cat: "Macchina", sub: "Manutenzione", qty: 18, maxQty: 40, prezzo: 9.90 }
-                ];
-                // Salva i dati di ripiego nel localStorage così l'area clienti vedrà gli stessi identici prodotti
-                localStorage.setItem('inventario', JSON.stringify(inventario));
-            }
-
-    vendite = JSON.parse(localStorage.getItem('vendite')) || [];
-    managerCart = JSON.parse(localStorage.getItem('managerCart')) || [];
-    inizializzaBudget();
-    aggiornaTabella();
-    aggiornaFinanze();
-    renderManagerCart();
-}
+            inventario = loadInventario();
+            vendite = loadVendite();
+            managerCart = loadManagerCart();
+            inizializzaBudget();
+            aggiornaTabella();
+            aggiornaFinanze();
+            renderManagerCart();
+        }
 
         function cambiaVista(vista, btn) {
             document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
@@ -277,19 +247,19 @@
             const input = document.getElementById(`desired-${id}`);
             const qty = input ? parseInt(input.value || '1', 10) : 1;
             const p = inventario.find(i => i.id === id);
-            if (!p) return alert('Prodotto non trovato');
-            if (qty > p.qty) return alert('Quantità richiesta maggiore della giacenza');
+            if (!p) return showMessage('Prodotto non trovato', 'error');
+            if (qty > p.qty) return showMessage('Quantità richiesta maggiore della giacenza', 'error');
 
             const existing = managerCart.find(c => c.id === id);
             if (existing) {
-                if (existing.qty + qty > p.qty) return alert('Superi la giacenza disponibile');
+                if (existing.qty + qty > p.qty) return showMessage('Superi la giacenza disponibile', 'error');
                 existing.qty += qty;
             } else {
                 managerCart.push({ id: p.id, nome: p.nome, prezzo: p.prezzo, qty: qty });
             }
-            localStorage.setItem('managerCart', JSON.stringify(managerCart));
+            saveManagerCart(managerCart);
             renderManagerCart();
-            alert('Aggiunto al carrello manager');
+            showMessage('Aggiunto al carrello manager');
         }
 
         function renderManagerCart() {
@@ -304,24 +274,26 @@
         function toggleManagerCart() {
             const el = document.getElementById('manager-cart');
             el.style.display = el.style.display === 'none' ? 'block' : 'none';
+            const button = document.querySelector('.controls button');
+            if (button) {
+                button.innerText = el.style.display === 'none' ? 'Visualizza Carrello Manager' : 'Nascondi Carrello Manager';
+            }
             renderManagerCart();
         }
 
         function svuotaCarrelloManager() {
-            if (!confirm('Svuotare il carrello manager?')) return;
             managerCart = [];
-            localStorage.removeItem('managerCart');
+            clearManagerCart();
             renderManagerCart();
+            showMessage('Carrello manager svuotato');
         }
 
         function procCompraManager() {
-            if (managerCart.length === 0) return alert('Carrello vuoto');
-            // Validate availability
+            if (managerCart.length === 0) return showMessage('Carrello manager vuoto', 'error');
             for (const it of managerCart) {
                 const prod = inventario.find(p => p.id === it.id);
-                if (!prod || prod.qty < it.qty) return alert(`Quantità non disponibile per ${it.nome}`);
+                if (!prod || prod.qty < it.qty) return showMessage(`Quantità non disponibile per ${it.nome}`, 'error');
             }
-            // Deduct inventory, record sale and update budget
             const totale = managerCart.reduce((s,i) => s + i.prezzo * i.qty, 0);
             managerCart.forEach(it => {
                 const prod = inventario.find(p => p.id === it.id);
@@ -329,15 +301,15 @@
             });
             vendite.push({ data: new Date().toISOString().split('T')[0], totale: totale });
             budgetAziendale += totale;
-            localStorage.setItem('inventario', JSON.stringify(inventario));
-            localStorage.setItem('vendite', JSON.stringify(vendite));
-            localStorage.setItem('budgetAziendale', budgetAziendale);
+            saveInventario(inventario);
+            saveVendite(vendite);
+            saveBudget(budgetAziendale);
             managerCart = [];
-            localStorage.removeItem('managerCart');
+            clearManagerCart();
             aggiornaUIBudget();
             aggiornaTabella();
             renderManagerCart();
-            alert('Acquisto manager registrato con successo');
+            showMessage('Acquisto manager registrato con successo');
         }
 
         function apriEditorStock() {
@@ -363,9 +335,8 @@
                     p.maxQty = v;
                 }
             });
-            localStorage.setItem('inventario', JSON.stringify(inventario));
-            alert('Max stock aggiornati');
-            // Torna alla vista magazzino
+            saveInventario(inventario);
+            showMessage('Massimi scorte aggiornati');
             cambiaVista('magazzino', document.querySelector('.sidebar > .category-btn'));
             aggiornaTabella();
         }
@@ -373,20 +344,18 @@
         function compraProdotto(id) {
             const item = inventario.find(i => i.id === id);
             if (item) {
-                if (item.qty >= item.maxQty) return alert("Magazzino pieno per questo prodotto!");
-                
+                if (item.qty >= item.maxQty) return showMessage("Magazzino pieno per questo prodotto!", 'error');
                 const costo = item.prezzo * 0.55;
                 if (budgetAziendale >= costo) {
                     budgetAziendale -= costo;
                     item.qty += 1;
-                    
-                    localStorage.setItem('budgetAziendale', budgetAziendale);
-                    localStorage.setItem('inventario', JSON.stringify(inventario));
-                    
+                    saveBudget(budgetAziendale);
+                    saveInventario(inventario);
                     aggiornaUIBudget();
                     aggiornaTabella();
+                    showMessage('Prodotto acquistato per il magazzino');
                 } else {
-                    alert("Fondi aziendali insufficienti per acquistare questo prodotto.");
+                    showMessage("Fondi aziendali insufficienti per acquistare questo prodotto.", 'error');
                 }
             }
         }
@@ -395,8 +364,9 @@
             const item = inventario.find(i => i.id === id);
             if (item && item.qty > 0) {
                 item.qty -= 1; // Rimuove prodotto senza rimborsi (es. merce rotta/scaduta)
-                localStorage.setItem('inventario', JSON.stringify(inventario));
+                saveInventario(inventario);
                 aggiornaTabella();
+                showMessage('Prodotto rimosso dal magazzino');
             }
         }
 
@@ -405,6 +375,15 @@
             document.querySelectorAll('.sub-btn').forEach(btn => btn.classList.remove('active'));
             event.target.classList.add('active');
             aggiornaTabella();
+        }
+
+        function showMessage(text, type = 'info') {
+            const el = document.getElementById('status-message');
+            if (!el) return;
+            el.style.color = type === 'error' ? '#c0392b' : '#0a0';
+            el.innerText = text;
+            clearTimeout(window.statusMessageTimeout);
+            window.statusMessageTimeout = setTimeout(() => { el.innerText = ''; }, 4000);
         }
 
         function aggiornaFinanze() {
@@ -426,6 +405,7 @@
 
             const ctx = document.getElementById('graficoVendite').getContext('2d');
             if (chartInstance) chartInstance.destroy(); 
+            const maxIncasso = Math.max(...datiIncasso, 10);
 
             chartInstance = new Chart(ctx, {
                 type: 'bar',
@@ -439,7 +419,17 @@
                         borderWidth: 1
                     }]
                 },
-                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            suggestedMax: maxIncasso * 1.2,
+                            ticks: { precision: 0 }
+                        }
+                    }
+                }
             });
         }
 

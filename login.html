@@ -23,6 +23,7 @@
             <input type="password" id="password" placeholder="Password (Inserisci: admin)" required>
             <button type="submit">Accedi</button>
         </form>
+        <div id="login-status" style="min-height:20px; margin-top:12px; color:#b91c1c; font-weight:600;"></div>
         <a href="index.html" class="back-link">← Torna allo Shop Cliente</a>
     </div>
 
@@ -36,7 +37,11 @@
             if (user === 'admin' && pass === 'admin') {
                 window.location.href = 'manager.html';
             } else {
-                alert('Credenziali errate! Usa admin / admin');
+                const msg = document.getElementById('login-status');
+                if (msg) {
+                    msg.innerText = 'Credenziali errate! Usa admin / admin';
+                    msg.style.color = '#b91c1c';
+                }
             }
         });
     </script>
