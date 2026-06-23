@@ -138,12 +138,132 @@ const STORAGE_KEYS = {
     saleInfo: 'saleInfo'
 };
 
+const SALE_DURATION_MS = 1000 * 60 * 30; // 30 minuti
+const NEXT_SALE_DELAY_MS = 1000 * 60 * 5; // 5 minuti
+const SALE_PRODUCTS_COUNT = 10;
+const SALE_DISCOUNT_MIN = 10;
+const SALE_DISCOUNT_MAX = 30;
+
 const SALE_INFO_DEFAULT = {
-    title: 'Offerte Lampo',
-    percentuale: 25,
-    expiresAt: new Date(Date.now() + 1000 * 60 * 30).toISOString(),
-    productIds: [1, 2, 8, 12]
+    title: 'Prossima Offerta',
+    expiresAt: new Date(Date.now() - 1000).toISOString(),
+    nextSaleAt: new Date(Date.now() + NEXT_SALE_DELAY_MS).toISOString(),
+    productIds: [],
+    productDiscounts: {}
 };
+
+function getRandomSaleDiscount() {
+    return Math.floor(Math.random() * (SALE_DISCOUNT_MAX - SALE_DISCOUNT_MIN + 1)) + SALE_DISCOUNT_MIN;
+}
+
+function pickRandomProductIds(items, count) {
+    const ids = items.map(item => item.id);
+    for (let i = ids.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [ids[i], ids[j]] = [ids[j], ids[i]];
+    }
+    return ids.slice(0, Math.min(count, ids.length));
+}
+
+async function createNewSaleInfo() {
+    const inventory = await loadInventario();
+    const candidates = inventory.filter(item => item.qty > 0);
+    const selectedIds = pickRandomProductIds(candidates, SALE_PRODUCTS_COUNT);
+    if (selectedIds.length === 0) {
+        return null;
+    }
+
+    const productDiscounts = {};
+    selectedIds.forEach(id => {
+        productDiscounts[id] = getRandomSaleDiscount();
+    });
+
+    return {
+        title: 'Offerte Lampo',
+        expiresAt: new Date(Date.now() + SALE_DURATION_MS).toISOString(),
+        nextSaleAt: null,
+        productIds: selectedIds,
+        productDiscounts
+    };
+}
+
+function createNextSaleInfo() {
+    return {
+        title: 'Prossima Offerta',
+        expiresAt: new Date(Date.now() - 1000).toISOString(),
+        nextSaleAt: new Date(Date.now() + NEXT_SALE_DELAY_MS).toISOString(),
+        productIds: [],
+        productDiscounts: {}
+    };
+}
+
+async function ensureSaleSchedule() {
+    ensureDatabase();
+    const info = loadSaleInfo();
+    const now = new Date();
+
+    if (!info) {
+        const newSale = await createNewSaleInfo();
+        if (newSale) {
+            saveSaleInfo(newSale);
+            return;
+        }
+        saveSaleInfo(createNextSaleInfo());
+        return;
+    }
+
+    const expiresAt = info.expiresAt ? new Date(info.expiresAt) : null;
+    const nextSaleAt = info.nextSaleAt ? new Date(info.nextSaleAt) : null;
+
+    if (expiresAt && expiresAt > now) {
+        return;
+    }
+
+    if (nextSaleAt && nextSaleAt > now) {
+        return;
+    }
+
+    if (nextSaleAt && nextSaleAt <= now) {
+        const newSale = await createNewSaleInfo();
+        if (newSale) {
+            saveSaleInfo(newSale);
+            return;
+        }
+    }
+
+    saveSaleInfo(createNextSaleInfo());
+}
+
+function getSaleDiscountPercent(item) {
+    const info = getSaleInfo();
+    if (!info || !info.active) return 0;
+    if (info.productDiscounts && info.productDiscounts[item.id] != null) {
+        return info.productDiscounts[item.id];
+    }
+    if (Array.isArray(info.productIds) && info.productIds.includes(item.id) && info.percentuale != null) {
+        return info.percentuale;
+    }
+    return 0;
+}
+
+function getSaleDiscountRange() {
+    const info = getSaleInfo();
+    if (!info || !info.active) return null;
+    const discounts = info.productDiscounts ? Object.values(info.productDiscounts) : [];
+    if (discounts.length > 0) {
+        return { min: Math.min(...discounts), max: Math.max(...discounts) };
+    }
+    if (info.percentuale != null) {
+        return { min: info.percentuale, max: info.percentuale };
+    }
+    return null;
+}
+
+function getNextSaleRemainingSeconds() {
+    const info = loadSaleInfo();
+    if (!info || !info.nextSaleAt) return 0;
+    return Math.max(0, Math.floor((new Date(info.nextSaleAt) - new Date()) / 1000));
+}
 
 function ensureDatabase() {
     if (!localStorage.getItem(STORAGE_KEYS.expenses)) {
@@ -207,9 +327,8 @@ function isProductOnSale(item) {
     return info && info.active && Array.isArray(info.productIds) && info.productIds.includes(item.id);
 }
 function getDiscountedPrice(prezzo, item) {
-    return isProductOnSale(item)
-        ? Number((prezzo * (1 - getSaleInfo().percentuale / 100)).toFixed(2))
-        : prezzo;
+    const discount = getSaleDiscountPercent(item);
+    return discount > 0 ? Number((prezzo * (1 - discount / 100)).toFixed(2)) : prezzo;
 }
 
 // ==========================================

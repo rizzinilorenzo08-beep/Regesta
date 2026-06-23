@@ -20,6 +20,12 @@
         .promo-banner p { margin: 0; font-weight: 600; }
         .promo-badge { background: rgba(255,255,255,.18); padding: 8px 14px; border-radius: 999px; font-size: 0.95rem; }
         .promo-banner.hidden { display: none; }
+        .promo-banner.flash { animation: salePulse 1.2s ease; }
+        @keyframes salePulse { 0% { box-shadow: 0 0 0 rgba(255,255,255,0); transform: scale(1); }
+            20% { box-shadow: 0 0 0 6px rgba(255,255,255,0.15); transform: scale(1.02); }
+            60% { box-shadow: 0 0 0 0 rgba(255,255,255,0); transform: scale(1); }
+            100% { box-shadow: 0 0 0 0 rgba(255,255,255,0); transform: scale(1); }
+        }
         .toast-container { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 1000; }
         .toast-message { display: none; background: rgba(45,55,72,0.95); color: white; padding: 14px 20px; border-radius: 14px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); font-weight: 700; }
         .navbar { background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: white; padding: 15px 40px; display: flex; justify-content: space-between; align-items: center; box-shadow: var(--shadow-md); position: sticky; top: 0; z-index: 100; }
@@ -147,10 +153,12 @@
         let carrello = [];
         let catAttuale = 'Tutte';
         let saleTimer = null;
+        let saleActivePrev = false;
 
         // ── Inizializzazione ─────────────────────────────────────────────
         async function initializePage() {
             ensureDatabase();
+            await ensureSaleSchedule();
             inventario = await loadInventario();
             // Assicura che tutti i prodotti abbiano un'icona
             inventario = inventario.map(p => ({ ...p, icona: p.icona || '📦' }));
@@ -160,14 +168,9 @@
             setupSearchBar();
             updateUserUI();
 
-            if (isSaleActive()) {
-                updateSaleTimer();
-                clearInterval(saleTimer);
-                saleTimer = setInterval(updateSaleTimer, 1000);
-            } else {
-                const timer = document.getElementById('promo-timer');
-                if (timer) timer.innerText = '';
-            }
+            updateSaleTimer();
+            clearInterval(saleTimer);
+            saleTimer = setInterval(updateSaleTimer, 1000);
         }
 
         // ── Promo Banner ─────────────────────────────────────────────────
@@ -177,34 +180,55 @@
             const message = document.getElementById('promo-message');
             const timer = document.getElementById('promo-timer');
             const saleInfo = getSaleInfo();
+            const nextSeconds = getNextSaleRemainingSeconds();
             if (!banner || !title || !message || !timer) return;
 
-            if (!saleInfo || !saleInfo.active) {
-                banner.classList.add('hidden');
-                timer.innerText = '';
+            if (saleInfo && saleInfo.active) {
+                const range = getSaleDiscountRange();
+                const rangeText = range && range.min !== range.max
+                    ? `${range.min}% - ${range.max}%`
+                    : `${range ? range.min : 0}%`;
+                banner.classList.remove('hidden');
+                title.innerText = saleInfo.title;
+                message.innerText = `Sconti del ${rangeText} su prodotti selezionati.`;
                 return;
             }
 
-            banner.classList.remove('hidden');
-            title.innerText = saleInfo.title;
-            message.innerText = `Sconti del ${saleInfo.percentuale}% su prodotti selezionati.`;
+            if (nextSeconds > 0) {
+                banner.classList.remove('hidden');
+                title.innerText = 'Prossima Offerta';
+                message.innerText = 'Presto torna una nuova promozione su 10 prodotti selezionati.';
+                return;
+            }
+
+            banner.classList.add('hidden');
+            timer.innerText = '';
         }
 
-        function updateSaleTimer() {
-            const remaining = getSaleRemainingSeconds();
+        async function updateSaleTimer() {
+            const active = isSaleActive();
+            const remaining = active ? getSaleRemainingSeconds() : getNextSaleRemainingSeconds();
             const timer = document.getElementById('promo-timer');
             if (!timer) return;
             if (remaining <= 0) {
-                timer.innerText = 'Offerta terminata';
-                clearInterval(saleTimer);
-                saleTimer = null;
+                const prevActive = active;
+                await ensureSaleSchedule();
+                const newActive = isSaleActive();
                 renderPromoBanner();
                 renderProducts();
+                if (!prevActive && newActive) {
+                    flashPromoBanner('Nuova offerta attiva!');
+                }
+                saleActivePrev = newActive;
                 return;
             }
             const minutes = String(Math.floor(remaining / 60)).padStart(2, '0');
             const seconds = String(remaining % 60).padStart(2, '0');
-            timer.innerText = `Scade tra ${minutes}:${seconds}`;
+            timer.innerText = active ? `Scade tra ${minutes}:${seconds}` : `Prossima offerta tra ${minutes}:${seconds}`;
+            if (!saleActivePrev && active) {
+                flashPromoBanner('Nuova offerta attiva!');
+            }
+            saleActivePrev = active;
         }
 
         function isProductOnSale(item) {
@@ -212,7 +236,8 @@
         }
 
         function getPriceHtml(p) {
-            if (isProductOnSale(p)) {
+            const discount = getSaleDiscountPercent(p);
+            if (discount > 0) {
                 const discounted = getDiscountedPrice(p.prezzo, p);
                 return `
                     <div class="price-row">
@@ -247,7 +272,8 @@
 
             container.innerHTML = filtrati.map(p => {
                 const esaurito = p.qty <= 0;
-                const saleBadge = isProductOnSale(p) ? `<div style="color:#059669;font-weight:700;margin-bottom:8px;">-${getSaleInfo().percentuale}% PROMO</div>` : '';
+                const discount = getSaleDiscountPercent(p);
+                const saleBadge = discount > 0 ? `<div style="color:#059669;font-weight:700;margin-bottom:8px;">-${discount}% PROMO</div>` : '';
                 return `
                     <div class="product-card fade-in" data-product-id="${p.id}">
                         <div class="product-icon">${p.icona}</div>
@@ -312,6 +338,17 @@
             toast.style.display = 'block';
             clearTimeout(toast._timer);
             toast._timer = setTimeout(() => toast.style.display = 'none', 3000);
+        }
+
+        function flashPromoBanner(message) {
+            const banner = document.getElementById('promo-banner');
+            if (!banner) return;
+            banner.classList.add('flash');
+            if (message) showIndexToast(message);
+            clearTimeout(banner._flashTimer);
+            banner._flashTimer = setTimeout(() => {
+                banner.classList.remove('flash');
+            }, 1200);
         }
 
         function acquista() {

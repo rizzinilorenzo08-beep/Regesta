@@ -80,17 +80,16 @@
 
         async function initializeSalePage() {
             ensureDatabase();
+            await ensureSaleSchedule();
             inventario = await loadInventario();
             // Assicura che tutti i prodotti abbiano un'icona
             inventario = inventario.map(p => ({ ...p, icona: p.icona || '📦' }));
             renderPromoBanner();
             renderProducts();
             renderCart();
-            if (isSaleActive()) {
-                updateSaleTimer();
-                clearInterval(saleTimer);
-                saleTimer = setInterval(updateSaleTimer, 1000);
-            }
+            updateSaleTimer();
+            clearInterval(saleTimer);
+            saleTimer = setInterval(updateSaleTimer, 1000);
         }
 
         function renderPromoBanner() {
@@ -99,34 +98,45 @@
             const message = document.getElementById('promo-message');
             const timer = document.getElementById('promo-timer');
             const saleInfo = getSaleInfo();
+            const nextSeconds = getNextSaleRemainingSeconds();
             if (!banner || !title || !message || !timer) return;
 
-            if (!saleInfo || !saleInfo.active) {
-                banner.classList.add('hidden');
-                timer.innerText = '';
+            if (saleInfo && saleInfo.active) {
+                const range = getSaleDiscountRange();
+                const rangeText = range && range.min !== range.max
+                    ? `${range.min}% - ${range.max}%`
+                    : `${range ? range.min : 0}%`;
+                banner.classList.remove('hidden');
+                title.innerText = saleInfo.title;
+                message.innerText = `Sconti del ${rangeText} su prodotti selezionati.`;
                 return;
             }
 
-            banner.classList.remove('hidden');
-            title.innerText = saleInfo.title;
-            message.innerText = `Sconti del ${saleInfo.percentuale}% su prodotti selezionati.`;
+            if (nextSeconds > 0) {
+                banner.classList.remove('hidden');
+                title.innerText = 'Prossima Offerta';
+                message.innerText = 'Presto torna una nuova promozione su 10 prodotti selezionati.';
+                return;
+            }
+
+            banner.classList.add('hidden');
+            timer.innerText = '';
         }
 
-        function updateSaleTimer() {
-            const remaining = getSaleRemainingSeconds();
+        async function updateSaleTimer() {
+            const active = isSaleActive();
+            const remaining = active ? getSaleRemainingSeconds() : getNextSaleRemainingSeconds();
             const timer = document.getElementById('promo-timer');
             if (!timer) return;
             if (remaining <= 0) {
-                timer.innerText = 'Offerta terminata';
-                clearInterval(saleTimer);
-                saleTimer = null;
+                await ensureSaleSchedule();
                 renderPromoBanner();
                 renderProducts();
                 return;
             }
             const minutes = String(Math.floor(remaining / 60)).padStart(2, '0');
             const seconds = String(remaining % 60).padStart(2, '0');
-            timer.innerText = `Scade tra ${minutes}:${seconds}`;
+            timer.innerText = active ? `Scade tra ${minutes}:${seconds}` : `Prossima offerta tra ${minutes}:${seconds}`;
         }
 
         function isProductOnSale(item) {
@@ -134,7 +144,8 @@
         }
 
         function getPriceHtml(p) {
-            if (isProductOnSale(p)) {
+            const discount = getSaleDiscountPercent(p);
+            if (discount > 0) {
                 const discounted = getDiscountedPrice(p.prezzo, p);
                 return `
                     <div class="price-row">
@@ -169,10 +180,11 @@
 
             container.innerHTML = saleProducts.map(p => {
                 const esaurito = p.qty <= 0;
+                const discount = getSaleDiscountPercent(p);
                 return `
                     <div class="product-card fade-in">
                         <div class="product-icon">${p.icona}</div>
-                        <div style="color:#059669;font-weight:700;margin-bottom:8px;">-${getSaleInfo().percentuale}% PROMO</div>
+                        <div style="color:#059669;font-weight:700;margin-bottom:8px;">-${discount}% PROMO</div>
                         <h3>${p.nome}</h3>
                         <p class="product-sub">${p.sub}</p>
                         ${getPriceHtml(p)}
