@@ -282,7 +282,6 @@
             const password = document.getElementById('password').value;
             const confermaPassword = document.getElementById('confermaPassword').value;
 
-            // Validazioni
             if (!nome || !email || !password) {
                 mostraMessaggio('Compila tutti i campi', 'error');
                 return;
@@ -298,7 +297,6 @@
                 return;
             }
 
-            // Disabilita il bottone durante il caricamento
             const btn = form.querySelector('.btn-register');
             btn.disabled = true;
             btn.textContent = 'Registrazione in corso...';
@@ -308,11 +306,8 @@
 
                 if (result.success) {
                     mostraMessaggio('✓ Registrazione completata! Reindirizzamento...', 'success');
-                    
-                    // Salva il cliente loggato
                     salvaClienteLoggato(result.cliente);
                     
-                    // Reindirizza dopo 1.5 secondi
                     setTimeout(() => {
                         window.location.href = 'index.html';
                     }, 1500);

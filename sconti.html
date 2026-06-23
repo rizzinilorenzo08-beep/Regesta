@@ -81,6 +81,8 @@
         async function initializeSalePage() {
             ensureDatabase();
             inventario = await loadInventario();
+            // Assicura che tutti i prodotti abbiano un'icona
+            inventario = inventario.map(p => ({ ...p, icona: p.icona || '📦' }));
             renderPromoBanner();
             renderProducts();
             renderCart();
@@ -151,7 +153,6 @@
 
         function renderProducts() {
             ensureDatabase();
-            inventario = inventario.map(p => ({ ...p, icona: p.icona || '📦' }));
             const saleProducts = inventario.filter(isProductOnSale);
             const container = document.getElementById('prodotti-container');
             container.innerHTML = '';

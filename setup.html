@@ -84,9 +84,7 @@
             margin-top: 15px;
             line-height: 1.5;
         }
-        .log-line {
-            margin: 2px 0;
-        }
+        .log-line { margin: 2px 0; }
         .success { color: #22c55e; }
         .error { color: #ef4444; }
         .info { color: #3b82f6; }
@@ -129,9 +127,7 @@
             width: auto;
             margin: 0;
         }
-        .copy-btn:hover {
-            background: #2563eb;
-        }
+        .copy-btn:hover { background: #2563eb; }
         .status {
             display: none;
             padding: 15px;
@@ -139,16 +135,9 @@
             margin-top: 15px;
             font-weight: 600;
         }
-        .status.success {
-            background: #dcfce7;
-            color: #166534;
-            border: 1px solid #86efac;
-        }
-        .status.error {
-            background: #fee2e2;
-            color: #991b1b;
-            border: 1px solid #fecaca;
-        }
+        .status.success { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+        .status.error { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+        .status.warning { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
     </style>
 </head>
 <body>
@@ -226,10 +215,9 @@
             btn.disabled = true;
             status.innerHTML = '';
             
-            addLog('🔄 Creazione tabella clienti...', 'info');
+            addLog('🔄 Verifica tabella clienti...', 'info');
 
             try {
-                // Prova a leggere se la tabella esiste
                 const { data, error: checkError } = await supabaseClient
                     .from('clienti')
                     .select('count(*)', { count: 'exact', head: true });
@@ -243,27 +231,55 @@
                     return;
                 }
 
-                addLog('⚠️ Tabella non trovata, tentativo di creazione...', 'warning');
-                addLog('💡 Per creare la tabella, usa il SQL Editor di Supabase:', 'info');
-                addLog('', 'info');
+                addLog('⚠️ Tabella non trovata, usa il SQL Editor di Supabase:', 'warning');
                 
-                const sqlScript = `CREATE TABLE IF NOT EXISTS clienti (
+                const sqlScript = `-- Tabella clienti
+CREATE TABLE IF NOT EXISTS clienti (
     id BIGSERIAL PRIMARY KEY,
     email TEXT UNIQUE NOT NULL,
     password TEXT NOT NULL,
     nome TEXT,
     punti_spesa INTEGER DEFAULT 0,
     data_registrazione TIMESTAMP DEFAULT NOW()
-);`;
-                
+);
+
+-- Tabella offerte_spesa
+CREATE TABLE IF NOT EXISTS offerte_spesa (
+    id BIGSERIAL PRIMARY KEY,
+    nome TEXT NOT NULL,
+    descrizione TEXT NOT NULL,
+    punti_richiesti INTEGER NOT NULL,
+    sconto_euro NUMERIC(10,2) NOT NULL
+);
+
+-- Inserisci offerte di esempio
+INSERT INTO offerte_spesa (nome, descrizione, punti_richiesti, sconto_euro)
+VALUES 
+    ('Sconto 5€', 'Risparmia 5€ sul prossimo acquisto', 15, 5.00),
+    ('Sconto 10€', 'Risparmia 10€ sul prossimo acquisto', 25, 10.00),
+    ('Sconto 20€', 'Risparmia 20€ sul prossimo acquisto', 45, 20.00)
+ON CONFLICT DO NOTHING;
+
+-- Inserisci utente di test
+INSERT INTO clienti (email, password, nome, punti_spesa)
+VALUES ('test@superstore.it', 'VGVzdDEyMyE=', 'Cliente Test', 0)
+ON CONFLICT (email) DO UPDATE SET
+    password = 'VGVzdDEyMyE=',
+    nome = 'Cliente Test';
+
+-- Disabilita RLS per tutte le tabelle
+ALTER TABLE clienti DISABLE ROW LEVEL SECURITY;
+ALTER TABLE offerte_spesa DISABLE ROW LEVEL SECURITY;
+ALTER TABLE inventario DISABLE ROW LEVEL SECURITY;
+ALTER TABLE vendite DISABLE ROW LEVEL SECURITY;
+ALTER TABLE configurazione DISABLE ROW LEVEL SECURITY;`;
+
                 sqlScript.split('\n').forEach(line => {
                     if (line.trim()) addLog(line, 'info');
                 });
 
                 status.className = 'status warning';
-                status.innerHTML = '⚠️ Hai due opzioni:<br>' +
-                    '1. Usa il <a href="https://app.supabase.com/project/nafessiwwdyjonisapxm/sql/new" target="_blank" style="color:#f59e0b; font-weight:600;">SQL Editor di Supabase</a><br>' +
-                    '2. Esegui il file setup.sql che è stato creato';
+                status.innerHTML = '⚠️ Copia il codice SQL qui sopra e eseguilo nel <a href="https://app.supabase.com/project/nafessiwwdyjonisapxm/sql/new" target="_blank" style="color:#f59e0b; font-weight:600;">SQL Editor di Supabase</a>';
                 status.style.display = 'block';
 
             } catch (error) {
@@ -292,8 +308,7 @@
                 const nomeTest = 'Cliente Test';
 
                 addLog(`📧 Email: ${emailTest}`, 'info');
-                addLog(`🔑 Password (originale): ${passwordTest}`, 'info');
-                addLog(`🔐 Password (codificata): ${passwordBase64}`, 'info');
+                addLog(`🔑 Password: ${passwordTest}`, 'info');
 
                 const { data, error } = await supabaseClient
                     .from('clienti')
@@ -314,7 +329,6 @@
                 status.innerHTML = '✅ Record di test creato!';
                 status.style.display = 'block';
 
-                // Mostra le credenziali
                 document.getElementById('credentialsSection').style.display = 'block';
                 addLog('', 'success');
                 addLog('🎯 CREDENZIALI DI TEST PRONTE!', 'success');
@@ -342,7 +356,6 @@
             });
         }
 
-        // Log iniziale
         addLog('🎯 Pronto per il setup del database', 'success');
         addLog('💡 Clicca "Crea Tabella" per iniziare', 'info');
     </script>

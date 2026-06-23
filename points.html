@@ -377,7 +377,6 @@
             document.getElementById('loginRequired').style.display = 'none';
             document.getElementById('mainContent').style.display = 'block';
 
-            // Aggiorna i dati del cliente
             const clienteAggiornato = await DB_CLIENTI.getCliente(cliente.id);
             if (clienteAggiornato) {
                 cliente = clienteAggiornato;
@@ -386,7 +385,6 @@
 
             document.getElementById('puntiValue').textContent = cliente.punti_spesa;
 
-            // Carica le offerte
             offerte = await DB_CLIENTI.getOfferteSpesa();
             renderOfferte();
         }
@@ -438,7 +436,6 @@
                 document.getElementById('puntiValue').textContent = cliente.punti_spesa;
                 showToast(`✅ Offerta "${nomeoOfferta}" acquistata! Hai ancora ${result.puntiRimanenti} punti.`);
                 
-                // Mostra il messaggio di successo
                 const messageBox = document.getElementById('messageBox');
                 messageBox.className = 'message success show';
                 messageBox.innerHTML = `

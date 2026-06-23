@@ -18,21 +18,18 @@
         .cart-actions { display: flex; gap: 10px; margin-top: 12px; justify-content: flex-end; }
         .cart-actions button { flex: 1; }
 
-        /* Modal */
         .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: none; align-items: center; justify-content: center; z-index: 999; padding: 20px; }
         .modal-card { background: white; border-radius: 18px; width: 100%; max-width: 520px; padding: 30px; box-shadow: 0 20px 45px rgba(0,0,0,0.2); text-align: center; }
         .modal-card h2 { margin-bottom: 16px; font-size: 1.4rem; }
-        .modal-card p { color: #4a5568; margin-bottom: 24px; line-height: 1.6; }
+        .modal-card p { color: #4a5568; margin-bottom: 24px; line-height: 1.6; white-space: pre-line; }
         .modal-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
         .modal-actions button { min-width: 120px; padding: 12px 18px; border-radius: 10px; border: none; cursor: pointer; font-weight: 700; }
         .modal-confirm { background: #10b981; color: white; }
         .modal-cancel { background: #e2e8f0; color: #2d3748; }
 
-        /* Toast */
         .toast { position: fixed; bottom: 24px; right: 24px; background: rgba(45,55,72,0.95); color: white; padding: 14px 20px; border-radius: 14px; box-shadow: 0 16px 40px rgba(0,0,0,0.2); opacity: 0; transform: translateY(16px); transition: opacity 0.25s ease, transform 0.25s ease; z-index: 1000; max-width: 340px; }
         .toast.show { opacity: 1; transform: translateY(0); }
 
-        /* Spinner overlay */
         .spinner-overlay { position: fixed; inset: 0; background: rgba(255,255,255,0.7); display: none; align-items: center; justify-content: center; z-index: 1100; }
         .spinner { width: 48px; height: 48px; border: 5px solid #e2e8f0; border-top-color: #27ae60; border-radius: 50%; animation: spin 0.7s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
@@ -50,7 +47,7 @@
 
         .section { display: none; }
         .section.active { display: block; }
-        .controls { display: flex; gap: 15px; margin-bottom: 20px; align-items: center; }
+        .controls { display: flex; gap: 15px; margin-bottom: 20px; align-items: center; flex-wrap: wrap; }
         select { padding: 8px; border-radius: 5px; border: 1px solid #ccc; font-size: 1rem; }
 
         table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
@@ -67,7 +64,13 @@
         .stats-cards { display: flex; gap: 20px; margin-bottom: 20px; }
         .card { flex: 1; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center; border-bottom: 4px solid var(--secondary); }
         .card h3 { color: #777; font-size: 1rem; }
-        .card p { font-size: 2rem; font-weight: bold; color: var(--primary); margin-top: 10px; }
+        .card p { font-size: 1.8rem; font-weight: bold; color: var(--primary); margin-top: 10px; }
+        .card p small { font-size: 0.9rem; color: #999; font-weight: normal; }
+
+        @media (max-width: 1200px) {
+            .manager-grid { grid-template-columns: 1fr; }
+            .cart-panel { position: static; max-height: none; }
+        }
     </style>
 </head>
 <body>
@@ -96,7 +99,6 @@
             <div class="budget-box" id="display-budget-top">Budget: € …</div>
         </div>
 
-        <!-- ── MAGAZZINO ── -->
         <div id="vista-magazzino" class="section active">
             <div class="controls">
                 <select id="filtro-stato" onchange="aggiornaTabella()">
@@ -132,14 +134,13 @@
                         Totale (costo): <span id="manager-cart-total">€ 0.00</span>
                     </div>
                     <div class="cart-actions" style="margin-top:12px;">
-                        <button onclick="procCompraManager()" style="background:#27ae60; color:white; padding:10px 14px; border-radius:6px; border:none; cursor:pointer;">Procedi all'acquisto</button>
+                        <button id="btn-proc-compra" onclick="procCompraManager()" style="background:#27ae60; color:white; padding:10px 14px; border-radius:6px; border:none; cursor:pointer;">Procedi all'acquisto</button>
                         <button onclick="svuotaCarrelloManager()" style="background:#e74c3c; color:white; padding:10px 14px; border-radius:6px; border:none; cursor:pointer;">Svuota</button>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- ── FINANZE ── -->
         <div id="vista-finanze" class="section">
             <div class="stats-cards">
                 <div class="card">
@@ -160,7 +161,6 @@
             </div>
         </div>
 
-        <!-- ── EDITOR STOCK ── -->
         <div id="vista-editor-stock" class="section">
             <h2>Editor Stock Massimo</h2>
             <div id="editor-stock-list" style="margin-top:10px; display:flex; flex-direction:column; gap:10px;"></div>
@@ -171,7 +171,6 @@
         </div>
     </div>
 
-    <!-- Modal conferma -->
     <div id="modal-backdrop" class="modal-backdrop" role="dialog" aria-modal="true">
         <div class="modal-card">
             <h2 id="modal-title"></h2>
@@ -183,493 +182,502 @@
         </div>
     </div>
 
-    <!-- Spinner caricamento -->
     <div id="spinner-overlay" class="spinner-overlay">
         <div class="spinner"></div>
     </div>
 
-    <!-- Toast notifiche -->
     <div id="toast" class="toast"></div>
 
     <script>
-    // ── Stato globale ────────────────────────────────────────────────
-    let inventario    = [];
-    let vendite       = [];
-    let expenses      = [];
-    let budgetAziendale = 0;
-    let categoriaAttuale = 'Tutte';
-    let chartInstance = null;
-    let managerCart   = [];
-    let modalCallback = null;
+        // ── Stato globale ────────────────────────────────────────────────
+        let inventario    = [];
+        let vendite       = [];
+        let expenses      = [];
+        let budgetAziendale = 0;
+        let categoriaAttuale = 'Tutte';
+        let chartInstance = null;
+        let managerCart   = [];
+        let modalCallback = null;
+        let isProcessing = false;
 
-    // ── UI helpers ───────────────────────────────────────────────────
-    function setSpinner(on) {
-        document.getElementById('spinner-overlay').style.display = on ? 'flex' : 'none';
-    }
-
-    function showToast(message, type = 'info') {
-        const toast = document.getElementById('toast');
-        toast.innerText = message;
-        toast.style.background =
-            type === 'error'   ? 'rgba(220,38,38,0.95)'  :
-            type === 'success' ? 'rgba(16,185,129,0.95)' :
-                                 'rgba(45,55,72,0.95)';
-        toast.classList.add('show');
-        clearTimeout(toast._t);
-        toast._t = setTimeout(() => toast.classList.remove('show'), 3500);
-    }
-
-    function showModal(title, message, callback) {
-        const backdrop   = document.getElementById('modal-backdrop');
-        const confirmBtn = document.getElementById('modal-confirm');
-        const cancelBtn  = document.getElementById('modal-cancel');
-        document.getElementById('modal-title').innerText   = title;
-        document.getElementById('modal-message').innerText = message;
-        modalCallback = callback;
-
-        // Rimuovi handler precedenti clonando i bottoni
-        const newConfirm = confirmBtn.cloneNode(true);
-        const newCancel  = cancelBtn.cloneNode(true);
-        confirmBtn.replaceWith(newConfirm);
-        cancelBtn.replaceWith(newCancel);
-
-        newConfirm.onclick = () => { backdrop.style.display = 'none'; if (modalCallback) modalCallback(true);  };
-        newCancel.onclick  = () => { backdrop.style.display = 'none'; if (modalCallback) modalCallback(false); };
-
-        backdrop.style.display = 'flex';
-    }
-
-    // ── Inizializzazione ─────────────────────────────────────────────
-    async function caricaDati() {
-        setSpinner(true);
-        try {
-            ensureDatabase(); // lancia se le credenziali non sono state configurate
-
-            inventario = await loadInventario();
-
-            if (inventario.length === 0) {
-                inventario = [
-                    { id:1,  nome:"Latte Intero",          cat:"Alimentari",       sub:"Da frigo",          qty:45,  maxQty:100, prezzo:1.20 },
-                    { id:2,  nome:"Piselli Surgelati",      cat:"Alimentari",       sub:"Da freezer",        qty:20,  maxQty:60,  prezzo:2.50 },
-                    { id:3,  nome:"Biscotti Frollini",      cat:"Alimentari",       sub:"Biscotti",          qty:60,  maxQty:80,  prezzo:1.80 },
-                    { id:4,  nome:"Acqua Naturale 1.5L",    cat:"Alimentari",       sub:"Bevande",           qty:120, maxQty:200, prezzo:0.50 },
-                    { id:5,  nome:"Detersivo Piatti",       cat:"Cura della casa",  sub:"Cucina",            qty:30,  maxQty:50,  prezzo:1.90 },
-                    { id:6,  nome:"Scopa",                  cat:"Cura della casa",  sub:"Casa",              qty:5,   maxQty:30,  prezzo:5.00 },
-                    { id:7,  nome:"Ammorbidente",           cat:"Cura della casa",  sub:"Bucato",            qty:25,  maxQty:50,  prezzo:3.20 },
-                    { id:8,  nome:"Pianta di Ficus",        cat:"Giardinaggio",     sub:"Piante",            qty:10,  maxQty:20,  prezzo:15.00},
-                    { id:9,  nome:"Semi di Pomodoro",       cat:"Giardinaggio",     sub:"Semi",              qty:50,  maxQty:100, prezzo:1.00 },
-                    { id:10, nome:"Tubo Irrigazione",       cat:"Giardinaggio",     sub:"Irrigazione",       qty:8,   maxQty:50,  prezzo:25.00},
-                    { id:11, nome:"Rastrello",              cat:"Giardinaggio",     sub:"Cura del giardino", qty:12,  maxQty:25,  prezzo:12.00},
-                    { id:12, nome:"Liquido Tergicristalli", cat:"Macchina",         sub:"Pulizia",           qty:15,  maxQty:100, prezzo:4.50 },
-                    { id:13, nome:"Olio Motore 5W-30",      cat:"Macchina",         sub:"Manutenzione",      qty:18,  maxQty:40,  prezzo:9.90 }
-                ];
-                await saveInventario(inventario);
-            }
-
-            vendite      = await loadVendite();
-            expenses     = await loadExpenses();
-            managerCart  = loadManagerCart();
-            budgetAziendale = await loadBudget();
-
-            aggiornaUIBudget();
-            aggiornaTabella();
-            aggiornaFinanze();
-            renderManagerCart();
-
-        } catch (err) {
-            showToast('Errore caricamento: ' + err.message, 'error');
-            console.error(err);
-        } finally {
-            setSpinner(false);
-        }
-    }
-
-    // ── Budget UI ────────────────────────────────────────────────────
-    function aggiornaUIBudget() {
-        const txt = `Budget: € ${budgetAziendale.toFixed(2)}`;
-        document.getElementById('display-budget-top').innerText = txt;
-        document.getElementById('budget-finanze').innerText = `€ ${budgetAziendale.toFixed(2)}`;
-    }
-
-    // ── Navigazione ──────────────────────────────────────────────────
-    function cambiaVista(vista, btn) {
-        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-        document.getElementById('vista-' + vista).classList.add('active');
-
-        document.querySelectorAll('.sidebar > .category-btn').forEach(b => b.classList.remove('active'));
-        if (btn) btn.classList.add('active');
-
-        document.getElementById('menu-categorie').style.display = vista === 'magazzino' ? 'flex' : 'none';
-        document.getElementById('titolo-sezione').innerText =
-            vista === 'magazzino' ? 'Gestione Magazzino' : 'Report Finanziario';
-
-        if (vista === 'finanze') aggiornaFinanze();
-    }
-
-    function filtraCategoria(categoria, btn) {
-        categoriaAttuale = categoria;
-        document.querySelectorAll('.sub-btn').forEach(b => b.classList.remove('active'));
-        if (btn) btn.classList.add('active');
-        aggiornaTabella();
-    }
-
-    // ── Tabella inventario ───────────────────────────────────────────
-    function valutaStato(qty, maxQty) {
-        const perc = (qty / maxQty) * 100;
-        if (perc < 20)  return { testo: 'Scarso', colore: 'darkorange' };
-        if (perc <= 50) return { testo: 'Medio',  colore: '#f1c40f'    };
-        return               { testo: 'Buono',  colore: '#27ae60'    };
-    }
-
-    function aggiornaTabella() {
-        const tbody      = document.getElementById('tabella-inventario');
-        const filtroStato = document.getElementById('filtro-stato').value;
-        tbody.innerHTML  = '';
-
-        let filtrati = categoriaAttuale === 'Tutte'
-            ? inventario
-            : inventario.filter(item => item.cat === categoriaAttuale);
-
-        if (filtroStato !== 'Tutti') {
-            filtrati = filtrati.filter(item => valutaStato(item.qty, item.maxQty).testo === filtroStato);
+        // ── UI helpers ───────────────────────────────────────────────────
+        function setSpinner(on) {
+            document.getElementById('spinner-overlay').style.display = on ? 'flex' : 'none';
         }
 
-        filtrati.forEach(item => {
-            const stato       = valutaStato(item.qty, item.maxQty);
-            const percentuale = ((item.qty / item.maxQty) * 100).toFixed(0);
-            const costoAcq    = item.prezzo * 0.55;
-            const spazio      = Math.max(0, item.maxQty - item.qty);
-            const disabled    = spazio === 0 ? 'disabled' : '';
-
-            tbody.innerHTML += `
-                <tr>
-                    <td>
-                        <strong>${item.nome}</strong><br>
-                        <small style="color:#777">${item.cat} › ${item.sub}</small>
-                    </td>
-                    <td><span class="badge" style="background:${stato.colore}">${stato.testo} (${percentuale}%)</span></td>
-                    <td><strong>${item.qty}</strong> / ${item.maxQty}</td>
-                    <td>€ ${item.prezzo.toFixed(2)}</td>
-                    <td>
-                        <div style="display:flex; align-items:center; gap:6px;">
-                            <button class="btn-qty btn-minus" onclick="modificaDesired(${item.id}, -1)" ${disabled}>−</button>
-                            <input id="desired-${item.id}" type="number" value="${spazio > 0 ? 1 : 0}"
-                                min="1" max="${spazio}"
-                                style="width:60px; padding:6px; border-radius:4px; border:1px solid #ddd; text-align:center;"
-                                onchange="normalizeDesired(${item.id})" ${disabled}>
-                            <button class="btn-qty btn-plus" onclick="modificaDesired(${item.id}, 1)" ${disabled}>+</button>
-                            <button style="background:#10b981; color:white; border:none; padding:6px 10px; border-radius:6px; cursor:pointer;"
-                                onclick="aggiungiAlCarrelloManager(${item.id})" ${disabled}>
-                                ${spazio === 0 ? 'Pieno' : 'Aggiungi'}
-                            </button>
-                        </div>
-                        <span class="costo-info">Costo rifornim.: €${costoAcq.toFixed(2)}/pz — spazio: ${spazio}</span>
-                    </td>
-                </tr>
-            `;
-        });
-    }
-
-    function modificaDesired(id, delta) {
-        const input = document.getElementById(`desired-${id}`);
-        if (!input) return;
-        const prod    = inventario.find(p => p.id === id);
-        const spazio  = prod ? Math.max(0, prod.maxQty - prod.qty) : 0;
-        let val = (parseInt(input.value, 10) || 1) + delta;
-        input.value = Math.min(spazio, Math.max(1, val));
-    }
-
-    function normalizeDesired(id) {
-        const input  = document.getElementById(`desired-${id}`);
-        const prod   = inventario.find(p => p.id === id);
-        if (!input || !prod) return;
-        const spazio = Math.max(0, prod.maxQty - prod.qty);
-        let val      = parseInt(input.value, 10);
-        if (isNaN(val) || val < 1) val = 1;
-        if (val > spazio) val = spazio;
-        input.value  = val;
-    }
-
-    // ── Carrello manager ─────────────────────────────────────────────
-    function aggiungiAlCarrelloManager(id) {
-        const input  = document.getElementById(`desired-${id}`);
-        const qty    = input ? (parseInt(input.value, 10) || 1) : 1;
-        const p      = inventario.find(i => i.id === id);
-        if (!p) { showToast('Prodotto non trovato', 'error'); return; }
-
-        const spazio = Math.max(0, p.maxQty - p.qty);
-        if (spazio === 0) { showToast('Stock già pieno', 'error'); return; }
-
-        const existing = managerCart.find(c => c.id === id);
-        const totaleRichiesto = (existing ? existing.qty : 0) + qty;
-        if (totaleRichiesto > spazio) {
-            showToast(`Superi lo spazio disponibile (max ${spazio} pz)`, 'error');
-            return;
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            toast.innerText = message;
+            toast.style.background =
+                type === 'error'   ? 'rgba(220,38,38,0.95)'  :
+                type === 'success' ? 'rgba(16,185,129,0.95)' :
+                                     'rgba(45,55,72,0.95)';
+            toast.classList.add('show');
+            clearTimeout(toast._t);
+            toast._t = setTimeout(() => toast.classList.remove('show'), 3500);
         }
 
-        if (existing) existing.qty += qty;
-        else managerCart.push({ id: p.id, nome: p.nome, prezzo: p.prezzo, qty });
+        function showModal(title, message, callback) {
+            const backdrop   = document.getElementById('modal-backdrop');
+            const confirmBtn = document.getElementById('modal-confirm');
+            const cancelBtn  = document.getElementById('modal-cancel');
+            document.getElementById('modal-title').innerText   = title;
+            document.getElementById('modal-message').innerText = message;
+            modalCallback = callback;
 
-        saveManagerCart(managerCart);
-        renderManagerCart();
-        showToast(`"${p.nome}" aggiunto al carrello (×${qty})`, 'success');
-    }
+            const newConfirm = confirmBtn.cloneNode(true);
+            const newCancel  = cancelBtn.cloneNode(true);
+            confirmBtn.replaceWith(newConfirm);
+            cancelBtn.replaceWith(newCancel);
 
-    function renderManagerCart() {
-        const el = document.getElementById('manager-cart-items');
-        if (!el) return;
-        if (managerCart.length === 0) {
-            el.innerHTML = '<em style="color:#aaa">Carrello vuoto</em>';
-        } else {
-            el.innerHTML = managerCart.map(c => `
-                <div class="cart-item-row">
-                    <span>${c.nome} ×${c.qty}</span>
-                    <strong>€ ${(c.prezzo * c.qty * 0.55).toFixed(2)}</strong>
-                </div>
-            `).join('');
+            newConfirm.onclick = () => { backdrop.style.display = 'none'; if (modalCallback) modalCallback(true);  };
+            newCancel.onclick  = () => { backdrop.style.display = 'none'; if (modalCallback) modalCallback(false); };
+
+            backdrop.style.display = 'flex';
         }
-        const tot = managerCart.reduce((s, i) => s + i.prezzo * i.qty * 0.55, 0);
-        document.getElementById('manager-cart-total').innerText = `€ ${tot.toFixed(2)}`;
-    }
 
-    function toggleManagerCart() {
-        const el = document.getElementById('manager-cart');
-        el.style.display = el.style.display === 'none' ? 'block' : 'none';
-    }
-
-    function svuotaCarrelloManager() {
-        if (managerCart.length === 0) { showToast('Carrello già vuoto', 'info'); return; }
-        showModal(
-            'Svuota carrello',
-            'Sei sicuro di voler svuotare il carrello manager?',
-            confirmed => {
-                if (!confirmed) return;
-                managerCart = [];
-                clearManagerCart();
-                renderManagerCart();
-                showToast('Carrello svuotato', 'success');
-            }
-        );
-    }
-
-    // ─────────────────────────────────────────────────────────────────
-    //  procCompraManager — FUNZIONE CORRETTA
-    //  Bug originale: il callback async non aveva try/catch, quindi
-    //  qualsiasi errore delle chiamate await veniva inghiottito
-    //  silenziosamente → "nulla accade"
-    // ─────────────────────────────────────────────────────────────────
-    function procCompraManager() {
-    if (managerCart.length === 0) {
-        showToast('Carrello vuoto', 'error');
-        return;
-    }
-
-    // Validazione prima di aprire il modal
-    for (const it of managerCart) {
-        const prod   = inventario.find(p => p.id === it.id);
-        const spazio = prod ? Math.max(0, prod.maxQty - prod.qty) : 0;
-        if (!prod || spazio < it.qty) {
-            showToast(`Quantità non disponibile per "${it.nome}"`, 'error');
-            return;
-        }
-    }
-
-    const costoTotale = managerCart.reduce((s, i) => s + i.prezzo * i.qty * 0.55, 0);
-
-    showModal(
-        'Conferma acquisto',
-        `Verranno acquistati ${managerCart.length} prodotto/i per un costo totale di €${costoTotale.toFixed(2)}. Il budget aziendale verrà aggiornato di conseguenza. Procedere?`,
-        async (confirmed) => {
-            if (!confirmed) return;
-
+        // ── Inizializzazione ─────────────────────────────────────────────
+        async function caricaDati() {
             setSpinner(true);
             try {
-                // 1. Aggiorna quantità nell'inventario locale locale
-                managerCart.forEach(it => {
-                    const prod = inventario.find(p => p.id === it.id);
-                    if (prod) prod.qty += it.qty;
-                });
+                ensureDatabase();
 
-                // 2. Salva l'inventario aggiornato su Supabase (sfrutta saveInventario del tuo db.js)
-                await saveInventario(inventario);
+                inventario = await loadInventario();
 
-                // 3. Registra la spesa localmente (usa recordExpense definito nel tuo db.js)
-                const spesa = {
-                    data: new Date().toISOString().split('T')[0],
-                    totale: costoTotale
-                };
-                recordExpense(spesa); 
-                expenses.push(spesa); // Aggiorna l'array della pagina per i grafici
+                if (inventario.length === 0) {
+                    inventario = [
+                        { id:1,  nome:"Latte Intero",          cat:"Alimentari",       sub:"Da frigo",          qty:45,  maxQty:100, prezzo:1.20 },
+                        { id:2,  nome:"Piselli Surgelati",      cat:"Alimentari",       sub:"Da freezer",        qty:20,  maxQty:60,  prezzo:2.50 },
+                        { id:3,  nome:"Biscotti Frollini",      cat:"Alimentari",       sub:"Biscotti",          qty:60,  maxQty:80,  prezzo:1.80 },
+                        { id:4,  nome:"Acqua Naturale 1.5L",    cat:"Alimentari",       sub:"Bevande",           qty:120, maxQty:200, prezzo:0.50 },
+                        { id:5,  nome:"Detersivo Piatti",       cat:"Cura della casa",  sub:"Cucina",            qty:30,  maxQty:50,  prezzo:1.90 },
+                        { id:6,  nome:"Scopa",                  cat:"Cura della casa",  sub:"Casa",              qty:5,   maxQty:30,  prezzo:5.00 },
+                        { id:7,  nome:"Ammorbidente",           cat:"Cura della casa",  sub:"Bucato",            qty:25,  maxQty:50,  prezzo:3.20 },
+                        { id:8,  nome:"Pianta di Ficus",        cat:"Giardinaggio",     sub:"Piante",            qty:10,  maxQty:20,  prezzo:15.00},
+                        { id:9,  nome:"Semi di Pomodoro",       cat:"Giardinaggio",     sub:"Semi",              qty:50,  maxQty:100, prezzo:1.00 },
+                        { id:10, nome:"Tubo Irrigazione",       cat:"Giardinaggio",     sub:"Irrigazione",       qty:8,   maxQty:50,  prezzo:25.00},
+                        { id:11, nome:"Rastrello",              cat:"Giardinaggio",     sub:"Cura del giardino", qty:12,  maxQty:25,  prezzo:12.00},
+                        { id:12, nome:"Liquido Tergicristalli", cat:"Macchina",         sub:"Pulizia",           qty:15,  maxQty:100, prezzo:4.50 },
+                        { id:13, nome:"Olio Motore 5W-30",      cat:"Macchina",         sub:"Manutenzione",      qty:18,  maxQty:40,  prezzo:9.90 }
+                    ];
+                    await saveInventario(inventario);
+                }
 
-                // 4. Aggiorna e salva il budget su Supabase (sfrutta saveBudget del tuo db.js)
-                budgetAziendale -= costoTotale;
-                await saveBudget(budgetAziendale);
+                vendite      = await loadVendite();
+                expenses     = loadExpenses();
+                managerCart  = loadManagerCart();
+                budgetAziendale = await loadBudget();
 
-                // 5. Svuota il carrello del manager (sfrutta clearManagerCart del tuo db.js)
-                managerCart = [];
-                clearManagerCart();
-
-                // 6. Aggiorna l'interfaccia grafica
                 aggiornaUIBudget();
                 aggiornaTabella();
-                renderManagerCart();
                 aggiornaFinanze();
-
-                showToast('✅ Rifornimento completato e salvato con successo!', 'success');
+                renderManagerCart();
 
             } catch (err) {
-                showToast('❌ Errore durante l\'acquisto: ' + err.message, 'error');
-                console.error('procCompraManager error:', err);
-                // In caso di errore rinfresca l'inventario ricaricandolo dal cloud
-                inventario = await loadInventario();
-                aggiornaTabella();
+                showToast('Errore caricamento: ' + err.message, 'error');
+                console.error(err);
             } finally {
                 setSpinner(false);
             }
         }
-    );
-}
 
-    // ── Editor Stock ─────────────────────────────────────────────────
-    function apriEditorStock() {
-        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-        document.getElementById('vista-editor-stock').classList.add('active');
-        renderEditorStock();
-    }
+        // ── Budget UI ────────────────────────────────────────────────────
+        function aggiornaUIBudget() {
+            const txt = `Budget: € ${budgetAziendale.toFixed(2)}`;
+            document.getElementById('display-budget-top').innerText = txt;
+            document.getElementById('budget-finanze').innerText = `€ ${budgetAziendale.toFixed(2)}`;
+        }
 
-    function renderEditorStock() {
-        const list = document.getElementById('editor-stock-list');
-        list.innerHTML = inventario.map(p => `
-            <div style="display:flex; gap:10px; align-items:center; background:white; padding:12px; border-radius:8px; box-shadow:0 1px 4px rgba(0,0,0,0.06);">
-                <div style="flex:1">
-                    <strong>${p.nome}</strong>
-                    <div style="font-size:0.85rem; color:#666;">Giacenza: ${p.qty} | Cat: ${p.cat}</div>
-                </div>
-                <label style="font-size:0.85rem; color:#555; white-space:nowrap;">
-                    Max scorta:
-                    <input type="number" id="editor-max-${p.id}" value="${p.maxQty}" min="${p.qty || 1}"
-                        style="width:90px; padding:6px; border-radius:4px; border:1px solid #ddd; margin-left:6px;">
-                </label>
-            </div>
-        `).join('');
-    }
+        // ── Navigazione ──────────────────────────────────────────────────
+        function cambiaVista(vista, btn) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.getElementById('vista-' + vista).classList.add('active');
 
-    async function salvaEditorStock() {
-        inventario.forEach(p => {
-            const el = document.getElementById(`editor-max-${p.id}`);
-            if (el) {
-                const v = parseInt(el.value, 10);
-                if (!isNaN(v) && v >= (p.qty || 0)) p.maxQty = v;
-            }
-        });
-        setSpinner(true);
-        try {
-            await saveInventario(inventario);
-            showToast('Stock massimo aggiornato', 'success');
-            cambiaVista('magazzino', document.querySelector('.sidebar .category-btn'));
+            document.querySelectorAll('.sidebar > .category-btn').forEach(b => b.classList.remove('active'));
+            if (btn) btn.classList.add('active');
+
+            document.getElementById('menu-categorie').style.display = vista === 'magazzino' ? 'flex' : 'none';
+            document.getElementById('titolo-sezione').innerText =
+                vista === 'magazzino' ? 'Gestione Magazzino' : 'Report Finanziario';
+
+            if (vista === 'finanze') aggiornaFinanze();
+        }
+
+        function filtraCategoria(categoria, btn) {
+            categoriaAttuale = categoria;
+            document.querySelectorAll('.sub-btn').forEach(b => b.classList.remove('active'));
+            if (btn) btn.classList.add('active');
             aggiornaTabella();
-        } catch (err) {
-            showToast('Errore salvataggio: ' + err.message, 'error');
-        } finally {
-            setSpinner(false);
         }
-    }
 
-    // ── Finanze & Grafico ────────────────────────────────────────────
-function aggiornaFinanze() {
-    // 1. Sommiamo forzando i valori a Float per evitare che vengano trattati come stringhe
-    const incasso = vendite.reduce((s, v) => s + parseFloat(v.totale || 0), 0);
-    const spese   = expenses.reduce((s, e) => s + parseFloat(e.totale || 0), 0);
+        // ── Tabella inventario ───────────────────────────────────────────
+        function valutaStato(qty, maxQty) {
+            if (maxQty === 0) return { testo: 'N/A', colore: '#999' };
+            const perc = (qty / maxQty) * 100;
+            if (perc < 20)  return { testo: 'Scarso', colore: '#e67e22' };
+            if (perc <= 50) return { testo: 'Medio',  colore: '#f1c40f' };
+            return { testo: 'Buono',  colore: '#27ae60' };
+        }
 
-    document.getElementById('incasso-totale').innerText = `€ ${incasso.toFixed(2)}`;
-    document.getElementById('spese-totali').innerText   = `€ ${spese.toFixed(2)}`;
+        function aggiornaTabella() {
+            const tbody      = document.getElementById('tabella-inventario');
+            const filtroStato = document.getElementById('filtro-stato').value;
+            tbody.innerHTML  = '';
 
-    // 2. Aggreghiamo per data in modo sicuro
-    const perData = {};
+            let filtrati = categoriaAttuale === 'Tutte'
+                ? inventario
+                : inventario.filter(item => item.cat === categoriaAttuale);
 
-    // Ciclo Vendite
-    vendite.forEach(v => {
-        // Estrapola la data sia che si chiami 'data' sia 'created_at' (standard Supabase)
-        let d = "Oggi";
-        if (v.data) d = String(v.data).split('T')[0].split(' ')[0];
-        else if (v.created_at) d = String(v.created_at).split('T')[0].split(' ')[0];
+            if (filtroStato !== 'Tutti') {
+                filtrati = filtrati.filter(item => valutaStato(item.qty, item.maxQty).testo === filtroStato);
+            }
 
-        if (!perData[d]) perData[d] = { e: 0, u: 0 };
-        perData[d].e += parseFloat(v.totale || 0);
-    });
+            if (filtrati.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:30px;color:#999;">Nessun prodotto trovato</td></tr>';
+                return;
+            }
 
-    // Ciclo Spese Manager
-    expenses.forEach(e => {
-        let d = "Oggi";
-        if (e.data) d = String(e.data).split('T')[0].split(' ')[0];
-        else if (e.created_at) d = String(e.created_at).split('T')[0].split(' ')[0];
+            filtrati.forEach(item => {
+                const stato       = valutaStato(item.qty, item.maxQty);
+                const percentuale = item.maxQty > 0 ? ((item.qty / item.maxQty) * 100).toFixed(0) : '0';
+                const costoAcq    = item.prezzo * 0.55;
+                const spazio      = Math.max(0, item.maxQty - item.qty);
+                const disabled    = spazio === 0 ? 'disabled' : '';
 
-        if (!perData[d]) perData[d] = { e: 0, u: 0 };
-        perData[d].u += parseFloat(e.totale || 0);
-    });
+                tbody.innerHTML += `
+                    <tr>
+                        <td>
+                            <strong>${item.nome}</strong><br>
+                            <small style="color:#777">${item.cat} › ${item.sub}</small>
+                        </td>
+                        <td><span class="badge" style="background:${stato.colore}">${stato.testo} (${percentuale}%)</span></td>
+                        <td><strong>${item.qty}</strong> / ${item.maxQty}</td>
+                        <td>€ ${item.prezzo.toFixed(2)}</td>
+                        <td>
+                            <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                                <button class="btn-qty btn-minus" onclick="modificaDesired(${item.id}, -1)" ${disabled}>−</button>
+                                <input id="desired-${item.id}" type="number" value="${spazio > 0 ? 1 : 0}"
+                                    min="1" max="${spazio}"
+                                    style="width:60px; padding:6px; border-radius:4px; border:1px solid #ddd; text-align:center;"
+                                    onchange="normalizeDesired(${item.id})" ${disabled}>
+                                <button class="btn-qty btn-plus" onclick="modificaDesired(${item.id}, 1)" ${disabled}>+</button>
+                                <button style="background:#10b981; color:white; border:none; padding:6px 10px; border-radius:6px; cursor:pointer;"
+                                    onclick="aggiungiAlCarrelloManager(${item.id})" ${disabled}>
+                                    ${spazio === 0 ? 'Pieno' : 'Aggiungi'}
+                                </button>
+                            </div>
+                            <span class="costo-info">Costo rifornim.: €${costoAcq.toFixed(2)}/pz — spazio: ${spazio}</span>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
 
-    // 3. Prepariamo gli array puliti per Chart.js
-    const labels  = Object.keys(perData).sort();
-    const entrate = labels.map(d => perData[d].e);
-    const uscite  = labels.map(d => perData[d].u);
+        function modificaDesired(id, delta) {
+            const input = document.getElementById(`desired-${id}`);
+            if (!input) return;
+            const prod    = inventario.find(p => p.id === id);
+            const spazio  = prod ? Math.max(0, prod.maxQty - prod.qty) : 0;
+            let val = (parseInt(input.value, 10) || 1) + delta;
+            input.value = Math.min(spazio, Math.max(1, val));
+        }
 
-    // Se non ci sono movimenti, mettiamo valori a zero per non spaccare il grafico
-    if (labels.length === 0) { 
-        labels.push('Nessun dato'); 
-        entrate.push(0); 
-        uscite.push(0); 
-    }
+        function normalizeDesired(id) {
+            const input  = document.getElementById(`desired-${id}`);
+            const prod   = inventario.find(p => p.id === id);
+            if (!input || !prod) return;
+            const spazio = Math.max(0, prod.maxQty - prod.qty);
+            let val      = parseInt(input.value, 10);
+            if (isNaN(val) || val < 1) val = 1;
+            if (val > spazio) val = spazio;
+            input.value  = val;
+        }
 
-    const ctx = document.getElementById('graficoVendite').getContext('2d');
-    
-    // Distrugge l'istanza precedente se esiste (fondamentale per evitare sovrapposizioni)
-    if (chartInstance) chartInstance.destroy();
+        // ── Carrello manager ─────────────────────────────────────────────
+        function aggiungiAlCarrelloManager(id) {
+            const input  = document.getElementById(`desired-${id}`);
+            const qty    = input ? (parseInt(input.value, 10) || 1) : 1;
+            const p      = inventario.find(i => i.id === id);
+            if (!p) { showToast('Prodotto non trovato', 'error'); return; }
 
-    // 4. Genera il grafico
-    chartInstance = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels,
-            datasets: [
-                { 
-                    label: 'Entrate Vendite (€)', 
-                    data: entrate, 
-                    borderColor: '#27ae60', 
-                    backgroundColor: 'rgba(39,174,96,0.15)', 
-                    tension: 0.3, 
-                    fill: true, 
-                    borderWidth: 2, 
-                    pointRadius: 4 
-                },
-                { 
-                    label: 'Uscite Acquisti (€)',  
-                    data: uscite,  
-                    borderColor: '#e74c3c', 
-                    backgroundColor: 'rgba(231,76,60,0.12)',  
-                    tension: 0.3, 
-                    fill: true, 
-                    borderWidth: 2, 
-                    pointRadius: 4 
+            const spazio = Math.max(0, p.maxQty - p.qty);
+            if (spazio === 0) { showToast('Stock già pieno', 'error'); return; }
+
+            const existing = managerCart.find(c => c.id === id);
+            const totaleRichiesto = (existing ? existing.qty : 0) + qty;
+            if (totaleRichiesto > spazio) {
+                showToast(`Superi lo spazio disponibile (max ${spazio} pz)`, 'error');
+                return;
+            }
+
+            if (existing) existing.qty += qty;
+            else managerCart.push({ id: p.id, nome: p.nome, prezzo: p.prezzo, qty });
+
+            saveManagerCart(managerCart);
+            renderManagerCart();
+            showToast(`"${p.nome}" aggiunto al carrello (×${qty})`, 'success');
+        }
+
+        function renderManagerCart() {
+            const el = document.getElementById('manager-cart-items');
+            if (!el) return;
+            if (managerCart.length === 0) {
+                el.innerHTML = '<em style="color:#aaa">Carrello vuoto</em>';
+            } else {
+                el.innerHTML = managerCart.map(c => `
+                    <div class="cart-item-row">
+                        <span>${c.nome} ×${c.qty}</span>
+                        <strong>€ ${(c.prezzo * c.qty * 0.55).toFixed(2)}</strong>
+                    </div>
+                `).join('');
+            }
+            const tot = managerCart.reduce((s, i) => s + i.prezzo * i.qty * 0.55, 0);
+            document.getElementById('manager-cart-total').innerText = `€ ${tot.toFixed(2)}`;
+        }
+
+        function toggleManagerCart() {
+            const el = document.getElementById('manager-cart');
+            el.style.display = el.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function svuotaCarrelloManager() {
+            if (managerCart.length === 0) { showToast('Carrello già vuoto', 'info'); return; }
+            showModal(
+                'Svuota carrello',
+                'Sei sicuro di voler svuotare il carrello manager?',
+                confirmed => {
+                    if (!confirmed) return;
+                    managerCart = [];
+                    clearManagerCart();
+                    renderManagerCart();
+                    showToast('Carrello svuotato', 'success');
                 }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: { 
-                y: { 
-                    beginAtZero: true 
-                } 
-            },
-            plugins: { 
-                legend: { position: 'top' } 
+            );
+        }
+
+        // ── ACQUISTO MANAGER (FIXATO) ───────────────────────────────────
+        function procCompraManager() {
+            if (isProcessing) {
+                showToast('⏳ Elaborazione in corso...', 'info');
+                return;
+            }
+
+            if (managerCart.length === 0) {
+                showToast('Carrello vuoto', 'error');
+                return;
+            }
+
+            // Validazione
+            for (const it of managerCart) {
+                const prod = inventario.find(p => p.id === it.id);
+                const spazio = prod ? Math.max(0, prod.maxQty - prod.qty) : 0;
+                if (!prod || spazio < it.qty) {
+                    showToast(`Quantità non disponibile per "${it.nome}"`, 'error');
+                    return;
+                }
+            }
+
+            const costoTotale = managerCart.reduce((s, i) => s + i.prezzo * i.qty * 0.55, 0);
+
+            // Verifica budget
+            if (budgetAziendale < costoTotale) {
+                showToast(`❌ Budget insufficiente! Necessario: €${costoTotale.toFixed(2)}, Disponibile: €${budgetAziendale.toFixed(2)}`, 'error');
+                return;
+            }
+
+            showModal(
+                'Conferma acquisto',
+                `Acquisto di ${managerCart.length} articoli per €${costoTotale.toFixed(2)}. Procedere?`,
+                async (confirmed) => {
+                    if (!confirmed) return;
+
+                    isProcessing = true;
+                    const btn = document.getElementById('btn-proc-compra');
+                    btn.disabled = true;
+                    btn.textContent = '⏳ In corso...';
+                    setSpinner(true);
+
+                    try {
+                        // Aggiorna inventario locale
+                        managerCart.forEach(it => {
+                            const prod = inventario.find(p => p.id === it.id);
+                            if (prod) {
+                                prod.qty += it.qty;
+                                console.log(`📦 ${prod.nome}: +${it.qty} → ${prod.qty}`);
+                            }
+                        });
+
+                        // Salva su Supabase
+                        await saveInventario(inventario);
+
+                        // Registra spesa
+                        const spesa = {
+                            data: new Date().toISOString().split('T')[0],
+                            totale: costoTotale
+                        };
+                        recordExpense(spesa);
+                        expenses.push(spesa);
+
+                        // Aggiorna budget
+                        budgetAziendale -= costoTotale;
+                        await saveBudget(budgetAziendale);
+
+                        // Svuota carrello
+                        managerCart = [];
+                        clearManagerCart();
+
+                        // Aggiorna UI
+                        aggiornaUIBudget();
+                        aggiornaTabella();
+                        renderManagerCart();
+                        aggiornaFinanze();
+
+                        showToast('✅ Rifornimento completato!', 'success');
+
+                    } catch (err) {
+                        showToast('❌ Errore: ' + err.message, 'error');
+                        console.error(err);
+                        // Ricarica inventario dal cloud per sicurezza
+                        inventario = await loadInventario();
+                        aggiornaTabella();
+                    } finally {
+                        isProcessing = false;
+                        btn.disabled = false;
+                        btn.textContent = 'Procedi all\'acquisto';
+                        setSpinner(false);
+                    }
+                }
+            );
+        }
+
+        // ── Editor Stock ─────────────────────────────────────────────────
+        function apriEditorStock() {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.getElementById('vista-editor-stock').classList.add('active');
+            renderEditorStock();
+        }
+
+        function renderEditorStock() {
+            const list = document.getElementById('editor-stock-list');
+            list.innerHTML = inventario.map(p => `
+                <div style="display:flex; gap:10px; align-items:center; background:white; padding:12px; border-radius:8px; box-shadow:0 1px 4px rgba(0,0,0,0.06);">
+                    <div style="flex:1">
+                        <strong>${p.nome}</strong>
+                        <div style="font-size:0.85rem; color:#666;">Giacenza: ${p.qty} | Cat: ${p.cat}</div>
+                    </div>
+                    <label style="font-size:0.85rem; color:#555; white-space:nowrap;">
+                        Max scorta:
+                        <input type="number" id="editor-max-${p.id}" value="${p.maxQty}" min="${p.qty || 1}"
+                            style="width:90px; padding:6px; border-radius:4px; border:1px solid #ddd; margin-left:6px;">
+                    </label>
+                </div>
+            `).join('');
+        }
+
+        async function salvaEditorStock() {
+            inventario.forEach(p => {
+                const el = document.getElementById(`editor-max-${p.id}`);
+                if (el) {
+                    const v = parseInt(el.value, 10);
+                    if (!isNaN(v) && v >= (p.qty || 0)) p.maxQty = v;
+                }
+            });
+            setSpinner(true);
+            try {
+                await saveInventario(inventario);
+                showToast('Stock massimo aggiornato', 'success');
+                cambiaVista('magazzino', document.querySelector('.sidebar .category-btn'));
+                aggiornaTabella();
+            } catch (err) {
+                showToast('Errore salvataggio: ' + err.message, 'error');
+            } finally {
+                setSpinner(false);
             }
         }
-    });
-}
 
-    // ── Avvio ────────────────────────────────────────────────────────
-    caricaDati();
+        // ── Finanze & Grafico ────────────────────────────────────────────
+        function aggiornaFinanze() {
+            const incasso = vendite.reduce((s, v) => s + parseFloat(v.totale || 0), 0);
+            const spese   = expenses.reduce((s, e) => s + parseFloat(e.totale || 0), 0);
+
+            document.getElementById('incasso-totale').innerHTML = `€ ${incasso.toFixed(2)}<br><small style="font-size:0.8rem;color:#999;">Totale vendite</small>`;
+            document.getElementById('spese-totali').innerHTML   = `€ ${spese.toFixed(2)}<br><small style="font-size:0.8rem;color:#999;">Totale acquisti</small>`;
+
+            const perData = {};
+
+            vendite.forEach(v => {
+                let d = "Oggi";
+                if (v.data) d = String(v.data).split('T')[0].split(' ')[0];
+                else if (v.created_at) d = String(v.created_at).split('T')[0].split(' ')[0];
+                if (!perData[d]) perData[d] = { e: 0, u: 0 };
+                perData[d].e += parseFloat(v.totale || 0);
+            });
+
+            expenses.forEach(e => {
+                let d = "Oggi";
+                if (e.data) d = String(e.data).split('T')[0].split(' ')[0];
+                else if (e.created_at) d = String(e.created_at).split('T')[0].split(' ')[0];
+                if (!perData[d]) perData[d] = { e: 0, u: 0 };
+                perData[d].u += parseFloat(e.totale || 0);
+            });
+
+            const labels  = Object.keys(perData).sort();
+            const entrate = labels.map(d => perData[d].e);
+            const uscite  = labels.map(d => perData[d].u);
+
+            if (labels.length === 0) { 
+                labels.push('Nessun dato'); 
+                entrate.push(0); 
+                uscite.push(0); 
+            }
+
+            const ctx = document.getElementById('graficoVendite').getContext('2d');
+            if (chartInstance) chartInstance.destroy();
+
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: [
+                        { 
+                            label: 'Entrate Vendite (€)', 
+                            data: entrate, 
+                            borderColor: '#27ae60', 
+                            backgroundColor: 'rgba(39,174,96,0.15)', 
+                            tension: 0.3, 
+                            fill: true, 
+                            borderWidth: 2, 
+                            pointRadius: 4 
+                        },
+                        { 
+                            label: 'Uscite Acquisti (€)',  
+                            data: uscite,  
+                            borderColor: '#e74c3c', 
+                            backgroundColor: 'rgba(231,76,60,0.12)',  
+                            tension: 0.3, 
+                            fill: true, 
+                            borderWidth: 2, 
+                            pointRadius: 4 
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { 
+                        y: { 
+                            beginAtZero: true 
+                        } 
+                    },
+                    plugins: { 
+                        legend: { position: 'top' } 
+                    }
+                }
+            });
+        }
+
+        // ── Avvio ────────────────────────────────────────────────────────
+        caricaDati();
     </script>
 </body>
 </html>

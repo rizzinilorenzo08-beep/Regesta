@@ -8,7 +8,7 @@ const SUPABASE_KEY = "sb_publishable_MapN_q9Z-FsXpapSkHHWHQ_6b0MF8hD";
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ==========================================
-// 2. OGGETTO DB (METODI BASE DAL vecchio db.js)
+// 2. OGGETTO DB (METODI BASE)
 // ==========================================
 const DB = {
     // Recupera l'intero inventario ordinato dal database
@@ -25,7 +25,7 @@ const DB = {
         return data ? data.map(p => ({ ...p, maxQty: p.max_qty })) : [];
     },
 
-    // Aggiorna un campo specifico di un determinato prodotto (es. la quantità 'qty')
+    // Aggiorna un campo specifico di un determinato prodotto
     async updateSpecificitaProdotto(id, nuoveProprieta) {
         if (nuoveProprieta.maxQty !== undefined) {
             nuoveProprieta.max_qty = nuoveProprieta.maxQty;
@@ -45,7 +45,7 @@ const DB = {
             .select('valore')
             .eq('chiave', 'budgetAziendale')
             .single();
-        if (error) return 5000.00; // Valore di riserva se c'è un errore
+        if (error) return 67000.00;
         return parseFloat(data.valore);
     },
 
@@ -78,7 +78,6 @@ const DB = {
 
 // ==========================================
 // 3. FUNZIONI GLOBALI (usate dalle pagine HTML)
-//    - Caricano/salvano su Supabase usando DB o direttamente supabaseClient
 // ==========================================
 
 // INVENTARIO
@@ -87,10 +86,11 @@ async function loadInventario() {
 }
 
 async function saveInventario(inventario) {
-    // Converte maxQty in max_qty per il database
     const dataToSave = inventario.map(p => {
         const item = { ...p, max_qty: p.maxQty };
         delete item.maxQty;
+        // Assicura che icona sia sempre presente
+        if (!item.icona) item.icona = '📦';
         return item;
     });
     const { error } = await supabaseClient.from('inventario').upsert(dataToSave);
@@ -112,14 +112,12 @@ async function loadVendite() {
 }
 
 async function saveVendite(vendite) {
-    // Sostituisce tutte le vendite con il nuovo array (upsert)
     const { error } = await supabaseClient.from('vendite').upsert(vendite);
     if (error) console.error("Errore nel salvataggio delle vendite su Supabase:", error);
 }
 
 // ==========================================
-// 4. FUNZIONI PER DATI LOCALI (spese, carrello manager, offerte)
-//    - Rimangono in localStorage per semplicità
+// 4. FUNZIONI PER DATI LOCALI
 // ==========================================
 
 const STORAGE_KEYS = {
@@ -226,7 +224,7 @@ const DB_CLIENTI = {
             .from('clienti')
             .insert([{ 
                 email, 
-                password: btoa(password), // Codifica semplice (non sicura in produzione)
+                password: btoa(password),
                 nome,
                 punti_spesa: 0,
                 data_registrazione: new Date().toISOString()
@@ -278,7 +276,6 @@ const DB_CLIENTI = {
 
     // Aggiorna i punti spesa di un cliente (dopo un acquisto)
     async aggiungiPuntiSpesa(clienteId, totaleAcquisto) {
-        // 1 punto ogni 15€ spesi
         const nuoviPunti = Math.floor(totaleAcquisto / 15);
         
         const cliente = await this.getCliente(clienteId);
@@ -366,28 +363,23 @@ const STORAGE_KEYS_CLIENTI = {
     clienteLoggato: 'clienteLoggato'
 };
 
-// Salva il cliente loggato nel localStorage
 function salvaClienteLoggato(cliente) {
     localStorage.setItem(STORAGE_KEYS_CLIENTI.clienteLoggato, JSON.stringify(cliente));
 }
 
-// Carica il cliente loggato dal localStorage
 function caricaClienteLoggato() {
     const cliente = localStorage.getItem(STORAGE_KEYS_CLIENTI.clienteLoggato);
     return cliente ? JSON.parse(cliente) : null;
 }
 
-// Effettua il logout del cliente
 function logoutCliente() {
     localStorage.removeItem(STORAGE_KEYS_CLIENTI.clienteLoggato);
 }
 
-// Verifica se un cliente è loggato
 function isClienteLoggato() {
     return caricaClienteLoggato() !== null;
 }
 
-// Utility
 function formatCurrency(value) {
     return `€ ${Number(value).toFixed(2)}`;
 }
