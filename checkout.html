@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>Checkout - Conferma Ordine</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
     <script src="db.js"></script>
     <style>
         body { font-family: sans-serif; background: #f4f7f6; display: flex; justify-content: center; padding: 50px; }
@@ -52,6 +53,8 @@
             <input type="text" id="indirizzoCap" placeholder="Es. 20100" />
             <label for="indirizzoProvincia">Provincia</label>
             <input type="text" id="indirizzoProvincia" placeholder="Es. MI" />
+            <label for="checkoutEmail">Email per lo scontrino</label>
+            <input type="email" id="checkoutEmail" placeholder="esempio@cliente.it" />
         </div>
         
         <div class="metodo" data-metodo="PayPal" onclick="salvaMetodo('PayPal', this)">PayPal</div>
@@ -71,11 +74,17 @@
 
     <script>
         // ===========================================
-        // 1. LOG DI DEBUG INIZIALE
+        // 1. LOG DI DEBUG INIZIALE E INIZIALIZZAZIONE EMAILJS
         // ===========================================
         console.log('🟢 checkout.html caricato');
         console.log('📦 supabase disponibile?', typeof supabase !== 'undefined');
         console.log('📦 loadInventario disponibile?', typeof loadInventario !== 'undefined');
+
+        (function(){
+            emailjs.init({
+                publicKey: "RG172glR3i3JvyyVL",
+            });
+        })();
 
         function debugLog(message, type = 'info') {
             const box = document.getElementById('debug-box');
@@ -88,7 +97,7 @@
             }
         }
 
-        debugLog('Pagina caricata correttamente');
+        debugLog('Pagina caricata correttamente e EmailJS configurato');
 
         // ===========================================
         // 2. VERIFICA CLIENTE REGISTRATO
@@ -144,6 +153,33 @@
         }
 
         // ===========================================
+        // 5. EMAILJS SETUP
+        // ===========================================
+        async function sendReceiptEmail({ toEmail, customerName, orderTotal, orderDate, paymentMethod, address, itemsHtml, itemsText }) {
+            if (typeof emailjs === 'undefined') {
+                debugLog('❌ EmailJS non caricato', 'error');
+                return { success: false, error: 'EmailJS non caricato' };
+            }
+
+            const templateParams = {
+                to_email: toEmail,
+                total_amount: orderTotal,
+                payment_method: paymentMethod,
+                items_list: itemsText
+            };
+
+            try {
+                const response = await emailjs.send('service_wlkzqi2', 'template_am6zdse', templateParams);
+                debugLog('✅ Scontrino inviato via EmailJS', 'success');
+                return { success: true, response };
+            } catch (error) {
+                console.error('Errore EmailJS:', error);
+                debugLog('❌ Errore invio email: ' + (error.text || error.message || error), 'error');
+                return { success: false, error: error.text || error.message || 'Errore EmailJS' };
+            }
+        }
+
+        // ===========================================
         // 6. TEST CONNESSIONE SUPABASE
         // ===========================================
         async function testConnessione() {
@@ -174,7 +210,7 @@
         }
 
         // ===========================================
-        // 7. CONFERMA ORDINE (FIXATO - usa registraVendita)
+        // 7. CONFERMA ORDINE (CON INVIO EMAILJS INTEGRATO)
         // ===========================================
         async function confermaOrdine() {
             console.log('🟢 confermaOrdine() chiamata');
@@ -201,10 +237,17 @@
             const indirizzoCitta = document.getElementById('indirizzoCitta').value.trim();
             const indirizzoCap = document.getElementById('indirizzoCap').value.trim();
             const indirizzoProvincia = document.getElementById('indirizzoProvincia').value.trim();
+            const checkoutEmail = document.getElementById('checkoutEmail').value.trim();
 
             if (!indirizzoVia || !indirizzoCitta || !indirizzoCap || !indirizzoProvincia) {
                 showCheckoutToast("❌ Inserisci tutti i campi dell'indirizzo di consegna.");
                 debugLog('❌ Indirizzo di consegna incompleto', 'error');
+                return;
+            }
+
+            if (!checkoutEmail || !/^\S+@\S+\.\S+$/.test(checkoutEmail)) {
+                showCheckoutToast("❌ Inserisci un'email valida per lo scontrino.");
+                debugLog('❌ Email scontrino mancante o non valida', 'error');
                 return;
             }
 
@@ -220,7 +263,6 @@
                 }
 
                 debugLog('📥 Caricamento inventario da Supabase...', 'info');
-                
                 const inventario = await loadInventario();
                 
                 if (!inventario || inventario.length === 0) {
@@ -244,9 +286,6 @@
                 await saveInventario(inventario);
                 debugLog('✅ Inventario salvato', 'success');
 
-                // =============================================
-                // 🔧 FIX: Registra vendita usando INSERT (non upsert)
-                // =============================================
                 debugLog('💾 Registrazione vendita con INSERT...', 'info');
                 const resultVendita = await registraVendita(parseFloat(totale));
                 if (resultVendita.success) {
@@ -268,7 +307,6 @@
                         const resultPunti = await DB_CLIENTI.aggiungiPuntiSpesa(cliente.id, parseFloat(totale));
                         if (resultPunti.success) {
                             debugLog(`✅ Punti spesa aggiunti: +${resultPunti.puntiAggiunti} (Totale: ${resultPunti.puntiTotali})`, 'success');
-                            // Aggiorna il cliente in localStorage
                             const clienteAggiornato = await DB_CLIENTI.getCliente(cliente.id);
                             if (clienteAggiornato) {
                                 salvaClienteLoggato(clienteAggiornato);
@@ -279,6 +317,37 @@
                     } catch (pErr) {
                         debugLog(`⚠️ Errore aggiunta punti (non critico): ${pErr.message}`, 'error');
                     }
+                }
+
+                // Generazione testo prodotti per lo scontrino EmailJS
+                const itemsHtml = cartToUse.map(item => {
+                    const unitPrice = isProductOnSale(item) ? getDiscountedPrice(item.prezzo, item) : item.prezzo;
+                    return `<li>${item.nome} x${item.qty} - € ${ (unitPrice * item.qty).toFixed(2) }</li>`;
+                }).join('');
+
+                const itemsText = cartToUse.map(item => {
+                    const unitPrice = isProductOnSale(item) ? getDiscountedPrice(item.prezzo, item) : item.prezzo;
+                    return `${item.nome} x${item.qty} - € ${ (unitPrice * item.qty).toFixed(2) }`;
+                }).join('\n');
+
+                const orderDate = new Date().toLocaleDateString('it-IT');
+                const deliveryAddress = `${indirizzoVia}, ${indirizzoCap} ${indirizzoCitta} (${indirizzoProvincia})`;
+                const customerName = cliente?.nome || 'Cliente';
+                
+                // Invio scontrino digitale via EmailJS
+                const receiptResult = await sendReceiptEmail({
+                    toEmail: checkoutEmail,
+                    customerName,
+                    orderTotal: `${parseFloat(totale).toFixed(2)}`,
+                    orderDate,
+                    paymentMethod: metodoSelezionato,
+                    address: deliveryAddress,
+                    itemsHtml: `<ul>${itemsHtml}</ul>`,
+                    itemsText
+                });
+
+                if (!receiptResult.success) {
+                    showCheckoutToast('⚠️ Ordine confermato, ma invio email fallito. Vedi console.');
                 }
 
                 localStorage.removeItem('carrelloCheckout');
@@ -325,7 +394,6 @@
                 debugLog('✅ supabaseClient disponibile', 'success');
             }
             
-            // Verifica che registraVendita esista
             if (typeof registraVendita === 'undefined') {
                 debugLog('❌ ERRORE: registraVendita non definita! Verifica db.js', 'error');
             } else {
