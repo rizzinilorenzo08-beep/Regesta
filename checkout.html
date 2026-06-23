@@ -153,7 +153,7 @@
         }
 
         // ===========================================
-        // 5. EMAILJS SETUP
+        // 5. EMAILJS SETUP (AGGIORNATO CON NUOVI ID)
         // ===========================================
         async function sendReceiptEmail({ toEmail, customerName, orderTotal, orderDate, paymentMethod, address, itemsHtml, itemsText }) {
             if (typeof emailjs === 'undefined') {
@@ -169,7 +169,8 @@
             };
 
             try {
-                const response = await emailjs.send('service_wlkzqi2', 'template_am6zdse', templateParams);
+                // Sostituiti con service_wiyuy2n e template_td9wtcv
+                const response = await emailjs.send('service_wiyuy2n', 'template_td9wtcv', templateParams);
                 debugLog('✅ Scontrino inviato via EmailJS', 'success');
                 return { success: true, response };
             } catch (error) {

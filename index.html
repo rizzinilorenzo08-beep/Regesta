@@ -235,7 +235,7 @@
             return isSaleActive() && Array.isArray(getSaleInfo().productIds) && getSaleInfo().productIds.includes(item.id);
         }
 
-        function getPriceHtml(p) {
+        function getPriceHtml(p, esaurito = false) {
             const discount = getSaleDiscountPercent(p);
             if (discount > 0) {
                 const discounted = getDiscountedPrice(p.prezzo, p);
@@ -246,10 +246,13 @@
                     </div>
                 `;
             }
+            const badgeHtml = esaurito 
+                ? `<span style="font-size:0.7rem; font-weight:bold; color:#dc2626; background:#fee2e2; padding:4px 8px; border-radius:4px;">ESAURITO</span>`
+                : `<span style="font-size:0.7rem; font-weight:bold; color:green;">DISPONIBILE</span>`;
             return `
                 <div class="price-row">
                     <span class="prezzo">€ ${p.prezzo.toFixed(2)}</span>
-                    <span style="font-size:0.7rem; font-weight:bold; color:green;">DISPONIBILE</span>
+                    ${badgeHtml}
                 </div>
             `;
         }
