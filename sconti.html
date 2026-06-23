@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SuperStore Premium - Offerte</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
-    <script src="database.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="db.js"></script>
     <style>
         :root { 
             --primary: #1E293B; --primary-light: #334155; --secondary: #10B981; 
@@ -77,9 +78,9 @@
         let carrello = [];
         let saleTimer = null;
 
-        function initializeSalePage() {
+        async function initializeSalePage() {
             ensureDatabase();
-            inventario = loadInventario();
+            inventario = await loadInventario();
             renderPromoBanner();
             renderProducts();
             renderCart();
@@ -150,7 +151,7 @@
 
         function renderProducts() {
             ensureDatabase();
-            inventario = loadInventario().map(p => ({ ...p, icona: p.icona || '📦' }));
+            inventario = inventario.map(p => ({ ...p, icona: p.icona || '📦' }));
             const saleProducts = inventario.filter(isProductOnSale);
             const container = document.getElementById('prodotti-container');
             container.innerHTML = '';

@@ -3,13 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <title>Checkout - Conferma Ordine</title>
+    <!-- PRIMA Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- POI db.js (che usa supabase) -->
+    <script src="db.js"></script>
     <style>
         body { font-family: sans-serif; background: #f4f7f6; display: flex; justify-content: center; padding: 50px; }
         .card { background: white; padding: 30px; border-radius: 10px; width: 400px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
         h2 { color: #2c3e50; }
         .metodo { margin: 15px 0; padding: 10px; border: 2px solid #ddd; border-radius: 6px; cursor: pointer; }
         .metodo:hover { border-color: #27ae60; }
+        .metodo.selezionato { border-color: #27ae60; background: #e8f5e9; }
         button { width: 100%; padding: 15px; background: #27ae60; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; margin-top: 20px; }
+        button:disabled { opacity: 0.6; cursor: not-allowed; }
+        .btn-test { background: #3b82f6; margin-top: 10px; }
+        .debug-box { background: #f1f5f9; padding: 10px; border-radius: 6px; font-size: 0.8rem; margin-top: 15px; max-height: 150px; overflow-y: auto; font-family: monospace; }
+        .debug-box.error { background: #fee2e2; color: #991b1b; }
+        .debug-box.success { background: #dcfce7; color: #166534; }
     </style>
 </head>
 <body>
@@ -18,61 +28,261 @@
         <h2>Seleziona Pagamento</h2>
         <div id="riepilogo"></div>
         
-        <div class="metodo" onclick="salvaMetodo('PayPal')">PayPal</div>
-        <div class="metodo" onclick="salvaMetodo('Bonifico')">Bonifico Bancario</div>
-        <div class="metodo" onclick="salvaMetodo('Contanti')">Contanti alla consegna</div>
+        <div class="metodo" data-metodo="PayPal" onclick="salvaMetodo('PayPal', this)">PayPal</div>
+        <div class="metodo" data-metodo="Bonifico" onclick="salvaMetodo('Bonifico', this)">Bonifico Bancario</div>
+        <div class="metodo" data-metodo="Contanti" onclick="salvaMetodo('Contanti', this)">Contanti alla consegna</div>
         
-        <button onclick="confermaOrdine()">Conferma Acquisto</button>
+        <button id="btn-conferma" onclick="confermaOrdine()">Conferma Acquisto</button>
+        
+        <!-- Pulsante di test per verificare la connessione -->
+        <button class="btn-test" onclick="testConnessione()">🔌 Test Connessione Supabase</button>
+        
         <a href="index.html" style="display:block; text-align:center; margin-top:15px; color:#777;">Torna indietro</a>
+        
+        <!-- Box di debug -->
+        <div id="debug-box" class="debug-box">In attesa di azioni...</div>
+        
         <div id="checkout-toast" style="display:none; position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:rgba(45,55,72,0.95); color:white; padding:14px 20px; border-radius:12px; box-shadow:0 20px 40px rgba(0,0,0,0.2); z-index:1000; font-weight:700;"></div>
     </div>
 
     <script>
-        // Legge il totale e il carrello dal localStorage (supporta sia cliente che manager)
+        // ===========================================
+        // 1. LOG DI DEBUG INIZIALE
+        // ===========================================
+        console.log('🟢 checkout.html caricato');
+        console.log('📦 supabase disponibile?', typeof supabase !== 'undefined');
+        console.log('📦 loadInventario disponibile?', typeof loadInventario !== 'undefined');
+
+        // Aggiorna il debug box
+        function debugLog(message, type = 'info') {
+            const box = document.getElementById('debug-box');
+            if (!box) return;
+            const time = new Date().toLocaleTimeString();
+            box.innerHTML = `<strong>[${time}]</strong> ${message}<br>` + box.innerHTML;
+            box.className = 'debug-box ' + type;
+            if (box.children.length > 20) {
+                box.lastChild?.remove();
+            }
+        }
+
+        debugLog('Pagina caricata correttamente');
+
+        // ===========================================
+        // 2. LEGGI DATI DAL LOCALSTORAGE
+        // ===========================================
         const totale = localStorage.getItem('totaleCheckout') || localStorage.getItem('ultimoTotale') || "0.00";
         const carrelloCliente = JSON.parse(localStorage.getItem('carrelloCheckout') || 'null');
         const carrelloManager = JSON.parse(localStorage.getItem('managerCart') || 'null');
         const cartToUse = carrelloCliente || carrelloManager || [];
-        document.getElementById('riepilogo').innerHTML = `<p>Totale da pagare: <strong>€ ${totale}</strong></p><p>Articoli: ${cartToUse.length}</p>`;
 
+        debugLog(`Totale: €${totale}, Articoli: ${cartToUse.length}`);
+        console.log('🛒 Carrello:', cartToUse);
+
+        document.getElementById('riepilogo').innerHTML = 
+            `<p>Totale da pagare: <strong>€ ${totale}</strong></p><p>Articoli: ${cartToUse.length}</p>`;
+
+        // ===========================================
+        // 3. VARIABILI DI STATO
+        // ===========================================
         let metodoSelezionato = "";
+        let isProcessing = false;
+
+        // ===========================================
+        // 4. FUNZIONI PRINCIPALI
+        // ===========================================
         function showCheckoutToast(message) {
             const toast = document.getElementById('checkout-toast');
             toast.innerText = message;
             toast.style.display = 'block';
             clearTimeout(toast._timer);
             toast._timer = setTimeout(() => toast.style.display = 'none', 3000);
+            debugLog('Toast: ' + message);
         }
-        function salvaMetodo(m) { metodoSelezionato = m; showCheckoutToast("Selezionato: " + m); }
 
-        function confermaOrdine() {
-            if(!metodoSelezionato) {
-                showCheckoutToast("Scegli un metodo!");
+        function salvaMetodo(m, el) {
+            metodoSelezionato = m;
+            // Rimuovi classe da tutti i metodi
+            document.querySelectorAll('.metodo').forEach(e => e.classList.remove('selezionato'));
+            if (el) el.classList.add('selezionato');
+            showCheckoutToast("✅ Selezionato: " + m);
+            debugLog('Metodo selezionato: ' + m, 'success');
+        }
+
+        // ===========================================
+        // 5. TEST CONNESSIONE SUPABASE
+        // ===========================================
+        async function testConnessione() {
+            debugLog('🔍 Test connessione Supabase in corso...', 'info');
+            try {
+                // Verifica che supabaseClient esista
+                if (typeof supabaseClient === 'undefined') {
+                    throw new Error('supabaseClient non definito! Verifica che db.js sia caricato.');
+                }
+                
+                // Prova a leggere 1 prodotto
+                const { data, error } = await supabaseClient
+                    .from('inventario')
+                    .select('*')
+                    .limit(1);
+                
+                if (error) {
+                    throw new Error('Errore Supabase: ' + error.message);
+                }
+                
+                debugLog('✅ Connessione OK! Trovati ' + (data?.length || 0) + ' prodotti.', 'success');
+                showCheckoutToast('✅ Connessione a Supabase funzionante!');
+                console.log('📦 Dati di test:', data);
+                
+            } catch (error) {
+                debugLog('❌ ERRORE: ' + error.message, 'error');
+                showCheckoutToast('❌ Errore connessione: ' + error.message);
+                console.error('Errore di connessione:', error);
+            }
+        }
+
+        // ===========================================
+        // 6. CONFERMA ORDINE
+        // ===========================================
+        async function confermaOrdine() {
+            console.log('🟢 confermaOrdine() chiamata');
+            debugLog('🔄 Inizio conferma ordine...', 'info');
+            
+            // Evita click multipli
+            if (isProcessing) {
+                debugLog('⏳ Già in elaborazione, attendi...', 'info');
                 return;
             }
-            const inventario = JSON.parse(localStorage.getItem('inventario') || '[]');
-            cartToUse.forEach(it => {
-                const p = inventario.find(prod => prod.id === it.id);
-                if (p) p.qty = Math.max(0, p.qty - it.qty);
-            });
-            localStorage.setItem('inventario', JSON.stringify(inventario));
+            
+            if (!metodoSelezionato) {
+                showCheckoutToast("❌ Scegli un metodo di pagamento!");
+                debugLog('❌ Nessun metodo selezionato', 'error');
+                return;
+            }
 
-            const vendite = JSON.parse(localStorage.getItem('vendite') || '[]');
-            vendite.push({ data: new Date().toISOString().split('T')[0], totale: parseFloat(totale) });
-            localStorage.setItem('vendite', JSON.stringify(vendite));
+            if (cartToUse.length === 0) {
+                showCheckoutToast("❌ Carrello vuoto!");
+                debugLog('❌ Carrello vuoto', 'error');
+                return;
+            }
 
-            let budget = parseFloat(localStorage.getItem('budgetAziendale') || '0');
-            budget += parseFloat(totale);
-            localStorage.setItem('budgetAziendale', budget);
+            try {
+                isProcessing = true;
+                const btn = document.getElementById('btn-conferma');
+                btn.disabled = true;
+                btn.textContent = '⏳ Elaborazione...';
+                debugLog('⏳ Elaborazione in corso...', 'info');
 
-            localStorage.removeItem('carrelloCheckout');
-            localStorage.removeItem('totaleCheckout');
-            localStorage.removeItem('managerCart');
-            localStorage.removeItem('ultimoTotale');
+                // Verifica che le funzioni siano disponibili
+                if (typeof loadInventario !== 'function') {
+                    throw new Error('loadInventario non è definita. Verifica che db.js sia caricato correttamente.');
+                }
 
-            showCheckoutToast("Ordine completato con " + metodoSelezionato + "! Grazie.");
-            setTimeout(() => window.location.href = "index.html", 700);
+                debugLog('📥 Caricamento inventario da Supabase...', 'info');
+                
+                // Carica inventario da Supabase
+                const inventario = await loadInventario();
+                
+                if (!inventario || inventario.length === 0) {
+                    throw new Error('Impossibile caricare l\'inventario dal database.');
+                }
+
+                debugLog('✅ Inventario caricato: ' + inventario.length + ' prodotti', 'success');
+
+                // Aggiorna le quantità
+                cartToUse.forEach(it => {
+                    const p = inventario.find(prod => prod.id === it.id);
+                    if (p) {
+                        const oldQty = p.qty;
+                        p.qty = Math.max(0, p.qty - it.qty);
+                        debugLog(`📦 ${p.nome}: ${oldQty} → ${p.qty}`, 'info');
+                    } else {
+                        debugLog(`⚠️ Prodotto non trovato in inventario: ID ${it.id}`, 'error');
+                    }
+                });
+
+                // Salva inventario aggiornato
+                debugLog('💾 Salvataggio inventario su Supabase...', 'info');
+                await saveInventario(inventario);
+                debugLog('✅ Inventario salvato', 'success');
+
+                // Registra vendita
+                debugLog('💾 Registrazione vendita...', 'info');
+                let vendite = await loadVendite();
+                vendite.push({ 
+                    data: new Date().toISOString().split('T')[0], 
+                    totale: parseFloat(totale) 
+                });
+                await saveVendite(vendite);
+                debugLog(`✅ Vendita registrata: €${totale}`, 'success');
+
+                // Aggiorna budget
+                debugLog('💾 Aggiornamento budget...', 'info');
+                let budget = await loadBudget();
+                const oldBudget = budget;
+                budget += parseFloat(totale);
+                await saveBudget(budget);
+                debugLog(`✅ Budget: €${oldBudget.toFixed(2)} → €${budget.toFixed(2)}`, 'success');
+
+                // Pulisci localStorage
+                localStorage.removeItem('carrelloCheckout');
+                localStorage.removeItem('totaleCheckout');
+                localStorage.removeItem('managerCart');
+                localStorage.removeItem('ultimoTotale');
+                debugLog('🧹 localStorage pulito', 'info');
+
+                showCheckoutToast("✅ Ordine completato con " + metodoSelezionato + "! Grazie.");
+                debugLog('✅ ORDINE COMPLETATO!', 'success');
+                
+                // Redirect dopo un attimo
+                setTimeout(() => {
+                    window.location.href = "index.html";
+                }, 1500);
+
+            } catch (error) {
+                console.error('❌ Errore durante il checkout:', error);
+                debugLog('❌ ERRORE: ' + error.message, 'error');
+                showCheckoutToast("❌ Errore: " + error.message);
+                // Riabilita il bottone
+                const btn = document.getElementById('btn-conferma');
+                btn.disabled = false;
+                btn.textContent = 'Conferma Acquisto';
+                isProcessing = false;
+            }
         }
+
+        // ===========================================
+        // 7. VERIFICA CARICAMENTO PAGINA
+        // ===========================================
+        document.addEventListener('DOMContentLoaded', function() {
+            debugLog('📄 DOM caricato, verifico dipendenze...', 'info');
+            
+            if (typeof loadInventario === 'undefined') {
+                debugLog('❌ ERRORE: db.js non caricato!', 'error');
+                document.getElementById('riepilogo').innerHTML += 
+                    '<p style="color:red;font-weight:bold;">⚠️ ERRORE: db.js non caricato. Ricarica la pagina.</p>';
+            } else {
+                debugLog('✅ db.js caricato correttamente', 'success');
+            }
+            
+            if (typeof supabaseClient === 'undefined') {
+                debugLog('❌ ERRORE: supabaseClient non definito!', 'error');
+            } else {
+                debugLog('✅ supabaseClient disponibile', 'success');
+            }
+            
+            // Test automatico connessione dopo 2 secondi
+            setTimeout(() => {
+                debugLog('🔍 Eseguo test connessione automatico...', 'info');
+                testConnessione();
+            }, 2000);
+        });
+
+        // ===========================================
+        // 8. DEBUG IN CONSOLE
+        // ===========================================
+        console.log('✅ checkout.html pronto');
+        console.log('📦 carrello:', cartToUse);
+        console.log('💰 totale:', totale);
     </script>
 </body>
 </html>

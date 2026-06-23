@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard Gestionale</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="database.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="db.js"></script>
     <style>
         :root { --primary: #2c3e50; --secondary: #27ae60; --bg: #f4f7f6; --text: #333; }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
@@ -173,6 +174,7 @@
         let categoriaAttuale = 'Tutte';
         let chartInstance = null;
         let modalCallback = null;
+        let managerCart = [];
 
         function showModal(title, message, callback) {
             const backdrop = document.getElementById('modal-backdrop');
@@ -209,15 +211,8 @@
             toast._timeout = setTimeout(() => toast.classList.remove('show'), 3000);
         }
 
-        function inizializzaBudget() {
-            let budgetSalvato = localStorage.getItem('budgetAziendale');
-            if (budgetSalvato === null) {
-                budgetAziendale = 5000;
-                saveBudget(budgetAziendale);
-                showToast('Budget aziendale impostato a € 5.000');
-            } else {
-                budgetAziendale = parseFloat(budgetSalvato);
-            }
+        async function inizializzaBudget() {
+            budgetAziendale = await loadBudget();
             aggiornaUIBudget();
         }
 
@@ -226,12 +221,11 @@
             document.getElementById('budget-finanze').innerText = `€ ${budgetAziendale.toFixed(2)}`;
         }
 
-        // provo a modificare questa funzione "caricaDati"
-        function caricaDati() {
+        async function caricaDati() {
             ensureDatabase();
-            inventario = loadInventario();
+            inventario = await loadInventario();
             
-            // 2. SE IL LOCALSTORAGE È VUOTO, INSERISCE I DATI DI BASE AUTOMATICAMENTE
+            // Se inventario vuoto, popola con dati iniziali (solo se non ci sono)
             if (inventario.length === 0) {
                 inventario = [
                     { id: 1, nome: "Latte Intero", cat: "Alimentari", sub: "Da frigo", qty: 45, maxQty: 100, prezzo: 1.20 },
@@ -248,19 +242,17 @@
                     { id: 12, nome: "Liquido Tergicristalli", cat: "Macchina", sub: "Pulizia", qty: 15, maxQty: 100, prezzo: 4.50 },
                     { id: 13, nome: "Olio Motore 5W-30", cat: "Macchina", sub: "Manutenzione", qty: 18, maxQty: 40, prezzo: 9.90 }
                 ];
-                // Salva i dati di ripiego nel localStorage così l'area clienti vedrà gli stessi identici prodotti
-                saveInventario(inventario);
+                await saveInventario(inventario);
             }
 
-    vendite = loadVendite();
-    expenses = loadExpenses();
-    managerCart = loadManagerCart();
-    budgetAziendale = loadBudget();
-    inizializzaBudget();
-    aggiornaTabella();
-    aggiornaFinanze();
-    renderManagerCart();
-}
+            vendite = await loadVendite();
+            expenses = loadExpenses();
+            managerCart = loadManagerCart();
+            await inizializzaBudget();
+            aggiornaTabella();
+            aggiornaFinanze();
+            renderManagerCart();
+        }
 
         function cambiaVista(vista, btn) {
             document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
@@ -282,8 +274,6 @@
             return { testo: 'Buono', colore: '#27ae60' };
         }
 
-        let managerCart = [];
-
         function aggiornaTabella() {
             const tbody = document.getElementById('tabella-inventario');
             const filtroStato = document.getElementById('filtro-stato').value;
@@ -298,7 +288,7 @@
             filtrati.forEach(item => {
                 const stato = valutaStato(item.qty, item.maxQty);
                 const percentuale = ((item.qty / item.maxQty) * 100).toFixed(0);
-                const costoAcquisto = item.prezzo * 0.55; // Sconto 45% per il magazzino
+                const costoAcquisto = item.prezzo * 0.55;
                 const remaining = Math.max(0, item.maxQty - item.qty);
                 const desiredId = `desired-${item.id}`;
                 const disabled = remaining === 0 ? 'disabled' : '';
@@ -408,7 +398,7 @@
             });
         }
 
-        function procCompraManager() {
+        async function procCompraManager() {
             if (managerCart.length === 0) {
                 showToast('Carrello vuoto', 'error');
                 return;
@@ -421,7 +411,7 @@
                     return;
                 }
             }
-            showModal('Conferma acquisto manager', 'Vuoi procedere con l\'acquisto dei prodotti presenti nel carrello manager?', confirmed => {
+            showModal('Conferma acquisto manager', 'Vuoi procedere con l\'acquisto dei prodotti presenti nel carrello manager?', async (confirmed) => {
                 if (!confirmed) return;
                 const totale = managerCart.reduce((s,i) => s + i.prezzo * i.qty * 0.55, 0);
                 managerCart.forEach(it => {
@@ -429,10 +419,10 @@
                     prod.qty += it.qty;
                 });
                 expenses.push({ data: new Date().toISOString().split('T')[0], totale: totale });
-                saveInventario(inventario);
+                await saveInventario(inventario);
                 saveExpenses(expenses);
                 budgetAziendale -= totale;
-                saveBudget(budgetAziendale);
+                await saveBudget(budgetAziendale);
                 managerCart = [];
                 clearManagerCart();
                 aggiornaUIBudget();
@@ -456,7 +446,7 @@
             });
         }
 
-        function salvaEditorStock() {
+        async function salvaEditorStock() {
             inventario.forEach(p => {
                 const el = document.getElementById(`editor-max-${p.id}`);
                 if (el) {
@@ -465,14 +455,13 @@
                     p.maxQty = v;
                 }
             });
-            saveInventario(inventario);
+            await saveInventario(inventario);
             showToast('Max stock aggiornati', 'success');
-            // Torna alla vista magazzino
             cambiaVista('magazzino', document.querySelector('.sidebar > .category-btn'));
             aggiornaTabella();
         }
 
-        function compraProdotto(id) {
+        async function compraProdotto(id) {
             const item = inventario.find(i => i.id === id);
             if (item) {
                 if (item.qty >= item.maxQty) {
@@ -483,8 +472,8 @@
                 if (budgetAziendale >= costo) {
                     budgetAziendale -= costo;
                     item.qty += 1;
-                    saveBudget(budgetAziendale);
-                    saveInventario(inventario);
+                    await saveBudget(budgetAziendale);
+                    await saveInventario(inventario);
                     aggiornaUIBudget();
                     aggiornaTabella();
                     showToast("Prodotto acquistato per il magazzino", 'success');
@@ -497,7 +486,7 @@
         function rimuoviProdotto(id) {
             const item = inventario.find(i => i.id === id);
             if (item && item.qty > 0) {
-                item.qty -= 1; // Rimuove prodotto senza rimborsi (es. merce rotta/scaduta)
+                item.qty -= 1;
                 saveInventario(inventario);
                 aggiornaTabella();
             }

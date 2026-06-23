@@ -13,6 +13,7 @@
         button:hover { background-color: #34495e; }
         .back-link { display: inline-block; margin-top: 15px; color: #777; text-decoration: none; font-size: 0.9rem; }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
@@ -33,7 +34,6 @@
             const user = document.getElementById('username').value;
             const pass = document.getElementById('password').value;
 
-            // Credenziali demo semplici
             if (user === 'admin' && pass === 'admin') {
                 window.location.href = 'manager.html';
             } else {
