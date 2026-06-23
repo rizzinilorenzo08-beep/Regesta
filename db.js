@@ -21,7 +21,6 @@ const DB = {
             console.error("Errore nel caricamento dell'inventario:", error);
             return [];
         }
-        // Trasformiamo max_qty (database) in maxQty (usato nel codice HTML)
         return data ? data.map(p => ({ ...p, maxQty: p.max_qty })) : [];
     },
 
@@ -63,16 +62,27 @@ const DB = {
             .from('vendite')
             .select('*')
             .order('data', { ascending: true });
-        if (error) console.error("Errore nel recupero delle vendite:", error);
+        if (error) {
+            console.error("Errore nel recupero delle vendite:", error);
+            return [];
+        }
         return data || [];
     },
 
-    // Aggiunge una nuova riga di vendita con data odierna automatica
+    // Aggiunge una nuova riga di vendita con data odierna automatica (INSERT)
     async registraVendita(totale) {
-        const { error } = await supabaseClient
+        const { data, error } = await supabaseClient
             .from('vendite')
-            .insert([{ totale: parseFloat(totale), data: new Date().toISOString().split('T')[0] }]);
-        if (error) console.error("Errore nella registrazione della vendita:", error);
+            .insert([{ 
+                totale: parseFloat(totale), 
+                data: new Date().toISOString().split('T')[0] 
+            }])
+            .select();
+        if (error) {
+            console.error("Errore nella registrazione della vendita:", error);
+            return { success: false, error: error.message };
+        }
+        return { success: true, data: data };
     }
 };
 
@@ -89,7 +99,6 @@ async function saveInventario(inventario) {
     const dataToSave = inventario.map(p => {
         const item = { ...p, max_qty: p.maxQty };
         delete item.maxQty;
-        // Assicura che icona sia sempre presente
         if (!item.icona) item.icona = '📦';
         return item;
     });
@@ -106,14 +115,14 @@ async function saveBudget(budget) {
     await DB.updateBudget(budget);
 }
 
-// VENDITE
+// VENDITE - VERSIONE CORRETTA CON INSERT
 async function loadVendite() {
     return await DB.getVendite();
 }
 
-async function saveVendite(vendite) {
-    const { error } = await supabaseClient.from('vendite').upsert(vendite);
-    if (error) console.error("Errore nel salvataggio delle vendite su Supabase:", error);
+// ❌ RIMOSSA saveVendite() - usa invece registraVendita()
+async function registraVendita(totale) {
+    return await DB.registraVendita(totale);
 }
 
 // ==========================================
@@ -208,7 +217,6 @@ function getDiscountedPrice(prezzo, item) {
 // ==========================================
 
 const DB_CLIENTI = {
-    // Registra un nuovo cliente
     async registraCliente(email, password, nome) {
         const { data, error } = await supabaseClient
             .from('clienti')
@@ -239,7 +247,6 @@ const DB_CLIENTI = {
         return { success: true, cliente: newClient[0] };
     },
 
-    // Effettua il login di un cliente
     async loginCliente(email, password) {
         const { data, error } = await supabaseClient
             .from('clienti')
@@ -258,7 +265,6 @@ const DB_CLIENTI = {
         return { success: true, cliente: data };
     },
 
-    // Recupera i dati del cliente per ID
     async getCliente(clienteId) {
         const { data, error } = await supabaseClient
             .from('clienti')
@@ -274,7 +280,6 @@ const DB_CLIENTI = {
         return data;
     },
 
-    // Aggiorna i punti spesa di un cliente (dopo un acquisto)
     async aggiungiPuntiSpesa(clienteId, totaleAcquisto) {
         const nuoviPunti = Math.floor(totaleAcquisto / 15);
         
@@ -296,7 +301,6 @@ const DB_CLIENTI = {
         return { success: true, puntiAggiunti: nuoviPunti, puntiTotali };
     },
 
-    // Deduce i punti per un acquisto con punti
     async usaPuntiSpesa(clienteId, puntiBudget, totaleAcquisto) {
         const cliente = await this.getCliente(clienteId);
         if (!cliente) return { success: false, error: 'Cliente non trovato' };
@@ -319,7 +323,6 @@ const DB_CLIENTI = {
         return { success: true, puntiRimanenti };
     },
 
-    // Recupera le offerte con punti
     async getOfferteSpesa() {
         const { data, error } = await supabaseClient
             .from('offerte_spesa')
@@ -334,7 +337,6 @@ const DB_CLIENTI = {
         return data || [];
     },
 
-    // Aggiunge una nuova offerta
     async aggiungiOffertaSpesa(nome, descrizione, puntiRichiesti, scontoEuro) {
         const { data, error } = await supabaseClient
             .from('offerte_spesa')

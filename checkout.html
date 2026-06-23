@@ -174,7 +174,7 @@
         }
 
         // ===========================================
-        // 7. CONFERMA ORDINE
+        // 7. CONFERMA ORDINE (FIXATO - usa registraVendita)
         // ===========================================
         async function confermaOrdine() {
             console.log('🟢 confermaOrdine() chiamata');
@@ -244,14 +244,16 @@
                 await saveInventario(inventario);
                 debugLog('✅ Inventario salvato', 'success');
 
-                debugLog('💾 Registrazione vendita...', 'info');
-                let vendite = await loadVendite();
-                vendite.push({ 
-                    data: new Date().toISOString().split('T')[0], 
-                    totale: parseFloat(totale) 
-                });
-                await saveVendite(vendite);
-                debugLog(`✅ Vendita registrata: €${totale}`, 'success');
+                // =============================================
+                // 🔧 FIX: Registra vendita usando INSERT (non upsert)
+                // =============================================
+                debugLog('💾 Registrazione vendita con INSERT...', 'info');
+                const resultVendita = await registraVendita(parseFloat(totale));
+                if (resultVendita.success) {
+                    debugLog(`✅ Vendita registrata: €${totale} (ID: ${resultVendita.data?.[0]?.id || 'N/A'})`, 'success');
+                } else {
+                    throw new Error('Errore registrazione vendita: ' + resultVendita.error);
+                }
 
                 debugLog('💾 Aggiornamento budget...', 'info');
                 let budget = await loadBudget();
@@ -321,6 +323,13 @@
                 debugLog('❌ ERRORE: supabaseClient non definito!', 'error');
             } else {
                 debugLog('✅ supabaseClient disponibile', 'success');
+            }
+            
+            // Verifica che registraVendita esista
+            if (typeof registraVendita === 'undefined') {
+                debugLog('❌ ERRORE: registraVendita non definita! Verifica db.js', 'error');
+            } else {
+                debugLog('✅ registraVendita disponibile', 'success');
             }
             
             setTimeout(() => {
