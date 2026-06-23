@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Cliente - SuperStore Premium</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="db.js"></script>
+    <style>
+        :root {
+            --primary: #1E293B;
+            --secondary: #10B981;
+            --secondary-hover: #059669;
+            --bg: #F8FAFC;
+            --text: #0F172A;
+            --text-muted: #64748B;
+            --card-bg: #FFFFFF;
+            --border: #E2E8F0;
+            --error: #ef4444;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .login-container {
+            background: var(--card-bg);
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 420px;
+            animation: slideIn 0.5s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 35px;
+        }
+
+        .login-header h1 {
+            color: var(--primary);
+            font-size: 1.8rem;
+            margin-bottom: 8px;
+        }
+
+        .login-header p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            color: var(--text);
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 0.95rem;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            font-size: 1rem;
+            font-family: 'Poppins', sans-serif;
+            transition: all 0.3s ease;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--secondary);
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+        }
+
+        .btn-login {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, var(--secondary), var(--secondary-hover));
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(16, 185, 129, 0.3);
+        }
+
+        .btn-login:disabled {
+            background: #cbd5e1;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .form-links {
+            text-align: center;
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border);
+        }
+
+        .form-links p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            margin-bottom: 8px;
+        }
+
+        .form-links a {
+            color: var(--secondary);
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.3s ease;
+        }
+
+        .form-links a:hover {
+            color: var(--secondary-hover);
+        }
+
+        .message {
+            padding: 12px 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-weight: 600;
+            display: none;
+            animation: slideIn 0.3s ease;
+        }
+
+        .message.error {
+            background-color: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+
+        .message.success {
+            background-color: #dcfce7;
+            color: #166534;
+            border: 1px solid #86efac;
+        }
+
+        .message.show {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-header">
+            <h1>👋 Benvenuto!</h1>
+            <p>Accedi al tuo profilo e ai tuoi punti spesa</p>
+        </div>
+
+        <div id="messageBox" class="message"></div>
+
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" placeholder="tua.email@example.com" required>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" placeholder="Inserisci la tua password" required>
+            </div>
+
+            <button type="submit" class="btn-login">Accedi</button>
+        </form>
+
+        <div class="form-links">
+            <p>Non hai ancora un account?</p>
+            <a href="register.html">Registrati ora</a>
+            <p style="margin-top: 15px; border-top: 1px solid var(--border); padding-top: 15px;">
+                <a href="index.html">← Torna allo Shop</a>
+            </p>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('loginForm');
+        const messageBox = document.getElementById('messageBox');
+
+        form.addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+
+            if (!email || !password) {
+                mostraMessaggio('Compila tutti i campi', 'error');
+                return;
+            }
+
+            // Disabilita il bottone
+            const btn = form.querySelector('.btn-login');
+            btn.disabled = true;
+            btn.textContent = 'Login in corso...';
+
+            try {
+                const result = await DB_CLIENTI.loginCliente(email, password);
+
+                if (result.success) {
+                    mostraMessaggio('✓ Login riuscito! Reindirizzamento...', 'success');
+                    salvaClienteLoggato(result.cliente);
+                    
+                    setTimeout(() => {
+                        window.location.href = 'index.html';
+                    }, 1500);
+                } else {
+                    mostraMessaggio(result.error, 'error');
+                    btn.disabled = false;
+                    btn.textContent = 'Accedi';
+                }
+            } catch (error) {
+                console.error('Errore durante il login:', error);
+                mostraMessaggio('Errore durante il login. Riprova.', 'error');
+                btn.disabled = false;
+                btn.textContent = 'Accedi';
+            }
+        });
+
+        function mostraMessaggio(testo, tipo) {
+            messageBox.textContent = testo;
+            messageBox.className = `message ${tipo} show`;
+            setTimeout(() => {
+                messageBox.classList.remove('show');
+            }, 4000);
+        }
+    </script>
+</body>
+</html>

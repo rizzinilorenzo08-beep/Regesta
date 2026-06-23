@@ -28,6 +28,12 @@
         <h2>Seleziona Pagamento</h2>
         <div id="riepilogo"></div>
         
+        <div id="puntiSection" style="display:none; background:#e0f7e0; padding:15px; border-radius:6px; margin:15px 0; border:2px solid #27ae60;">
+            <div style="font-weight:bold; color:#27ae60; margin-bottom:8px;">⭐ Guadagnerai Punti Spesa!</div>
+            <div style="font-size:1.1rem; color:#27ae60;" id="puntiGuadagnati"></div>
+            <div style="font-size:0.85rem; color:#555; margin-top:8px;">Con questi punti potrai acquistare sconti esclusivi!</div>
+        </div>
+        
         <div class="metodo" data-metodo="PayPal" onclick="salvaMetodo('PayPal', this)">PayPal</div>
         <div class="metodo" data-metodo="Bonifico" onclick="salvaMetodo('Bonifico', this)">Bonifico Bancario</div>
         <div class="metodo" data-metodo="Contanti" onclick="salvaMetodo('Contanti', this)">Contanti alla consegna</div>
@@ -68,6 +74,12 @@
         debugLog('Pagina caricata correttamente');
 
         // ===========================================
+        // 1.5 VERIFICA CLIENTE REGISTRATO
+        // ===========================================
+        const cliente = caricaClienteLoggato();
+        debugLog('Cliente registrato: ' + (cliente ? 'SÌ (' + cliente.nome + ')' : 'NO'), cliente ? 'success' : 'info');
+
+        // ===========================================
         // 2. LEGGI DATI DAL LOCALSTORAGE
         // ===========================================
         const totale = localStorage.getItem('totaleCheckout') || localStorage.getItem('ultimoTotale') || "0.00";
@@ -78,8 +90,17 @@
         debugLog(`Totale: €${totale}, Articoli: ${cartToUse.length}`);
         console.log('🛒 Carrello:', cartToUse);
 
+        // Calcola punti spesa (1 punto ogni 15€)
+        const puntiGuadagnati = Math.floor(parseFloat(totale) / 15);
+        
         document.getElementById('riepilogo').innerHTML = 
             `<p>Totale da pagare: <strong>€ ${totale}</strong></p><p>Articoli: ${cartToUse.length}</p>`;
+
+        // Mostra punti se cliente registrato
+        if (cliente && puntiGuadagnati > 0) {
+            document.getElementById('puntiSection').style.display = 'block';
+            document.getElementById('puntiGuadagnati').textContent = `Guadagnerai ${puntiGuadagnati} ⭐ punti spesa!`;
+        }
 
         // ===========================================
         // 3. VARIABILI DI STATO
@@ -222,6 +243,21 @@
                 budget += parseFloat(totale);
                 await saveBudget(budget);
                 debugLog(`✅ Budget: €${oldBudget.toFixed(2)} → €${budget.toFixed(2)}`, 'success');
+
+                // Aggiungi punti spesa se cliente registrato
+                if (cliente && puntiGuadagnati > 0) {
+                    debugLog('💾 Aggiunta punti spesa al cliente...', 'info');
+                    try {
+                        const resultPunti = await DB_CLIENTI.aggiungiPuntiSpesa(cliente.id, parseFloat(totale));
+                        if (resultPunti.success) {
+                            debugLog(`✅ Punti spesa aggiunti: +${resultPunti.puntiAggiunti} (Totale: ${resultPunti.puntiTotali})`, 'success');
+                        } else {
+                            debugLog(`⚠️ Errore nell'aggiunta punti: ${resultPunti.error}`, 'error');
+                        }
+                    } catch (pErr) {
+                        debugLog(`⚠️ Errore aggiunta punti (non critico): ${pErr.message}`, 'error');
+                    }
+                }
 
                 // Pulisci localStorage
                 localStorage.removeItem('carrelloCheckout');

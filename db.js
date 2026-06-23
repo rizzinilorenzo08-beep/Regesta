@@ -205,7 +205,189 @@ function getDiscountedPrice(prezzo, item) {
         : prezzo;
 }
 
-// UTILITY
+// ==========================================
+// 5. FUNZIONI PER CLIENTI REGISTRATI E PUNTI SPESA
+// ==========================================
+
+const DB_CLIENTI = {
+    // Registra un nuovo cliente
+    async registraCliente(email, password, nome) {
+        const { data, error } = await supabaseClient
+            .from('clienti')
+            .select('email')
+            .eq('email', email)
+            .single();
+        
+        if (data) {
+            return { success: false, error: 'Email già registrata' };
+        }
+
+        const { data: newClient, error: insertError } = await supabaseClient
+            .from('clienti')
+            .insert([{ 
+                email, 
+                password: btoa(password), // Codifica semplice (non sicura in produzione)
+                nome,
+                punti_spesa: 0,
+                data_registrazione: new Date().toISOString()
+            }])
+            .select();
+
+        if (insertError) {
+            console.error("Errore nella registrazione del cliente:", insertError);
+            return { success: false, error: insertError.message };
+        }
+
+        return { success: true, cliente: newClient[0] };
+    },
+
+    // Effettua il login di un cliente
+    async loginCliente(email, password) {
+        const { data, error } = await supabaseClient
+            .from('clienti')
+            .select('*')
+            .eq('email', email)
+            .single();
+
+        if (error || !data) {
+            return { success: false, error: 'Email non trovata' };
+        }
+
+        if (atob(data.password) !== password) {
+            return { success: false, error: 'Password errata' };
+        }
+
+        return { success: true, cliente: data };
+    },
+
+    // Recupera i dati del cliente per ID
+    async getCliente(clienteId) {
+        const { data, error } = await supabaseClient
+            .from('clienti')
+            .select('*')
+            .eq('id', clienteId)
+            .single();
+
+        if (error) {
+            console.error("Errore nel caricamento del cliente:", error);
+            return null;
+        }
+
+        return data;
+    },
+
+    // Aggiorna i punti spesa di un cliente (dopo un acquisto)
+    async aggiungiPuntiSpesa(clienteId, totaleAcquisto) {
+        // 1 punto ogni 15€ spesi
+        const nuoviPunti = Math.floor(totaleAcquisto / 15);
+        
+        const cliente = await this.getCliente(clienteId);
+        if (!cliente) return { success: false, error: 'Cliente non trovato' };
+
+        const puntiTotali = cliente.punti_spesa + nuoviPunti;
+
+        const { error } = await supabaseClient
+            .from('clienti')
+            .update({ punti_spesa: puntiTotali })
+            .eq('id', clienteId);
+
+        if (error) {
+            console.error("Errore nell'aggiornamento dei punti:", error);
+            return { success: false, error: error.message };
+        }
+
+        return { success: true, puntiAggiunti: nuoviPunti, puntiTotali };
+    },
+
+    // Deduce i punti per un acquisto con punti
+    async usaPuntiSpesa(clienteId, puntiBudget, totaleAcquisto) {
+        const cliente = await this.getCliente(clienteId);
+        if (!cliente) return { success: false, error: 'Cliente non trovato' };
+
+        const puntiRimanenti = cliente.punti_spesa - puntiBudget;
+        if (puntiRimanenti < 0) {
+            return { success: false, error: 'Punti insufficienti' };
+        }
+
+        const { error } = await supabaseClient
+            .from('clienti')
+            .update({ punti_spesa: puntiRimanenti })
+            .eq('id', clienteId);
+
+        if (error) {
+            console.error("Errore nell'utilizzo dei punti:", error);
+            return { success: false, error: error.message };
+        }
+
+        return { success: true, puntiRimanenti };
+    },
+
+    // Recupera le offerte con punti
+    async getOfferteSpesa() {
+        const { data, error } = await supabaseClient
+            .from('offerte_spesa')
+            .select('*')
+            .order('punti_richiesti', { ascending: true });
+
+        if (error) {
+            console.error("Errore nel caricamento delle offerte:", error);
+            return [];
+        }
+
+        return data || [];
+    },
+
+    // Aggiunge una nuova offerta
+    async aggiungiOffertaSpesa(nome, descrizione, puntiRichiesti, scontoEuro) {
+        const { data, error } = await supabaseClient
+            .from('offerte_spesa')
+            .insert([{
+                nome,
+                descrizione,
+                punti_richiesti: puntiRichiesti,
+                sconto_euro: scontoEuro
+            }])
+            .select();
+
+        if (error) {
+            console.error("Errore nell'aggiunta dell'offerta:", error);
+            return { success: false, error: error.message };
+        }
+
+        return { success: true, offerta: data[0] };
+    }
+};
+
+// ==========================================
+// 6. FUNZIONI GLOBALI PER CLIENTI E PUNTI
+// ==========================================
+
+const STORAGE_KEYS_CLIENTI = {
+    clienteLoggato: 'clienteLoggato'
+};
+
+// Salva il cliente loggato nel localStorage
+function salvaClienteLoggato(cliente) {
+    localStorage.setItem(STORAGE_KEYS_CLIENTI.clienteLoggato, JSON.stringify(cliente));
+}
+
+// Carica il cliente loggato dal localStorage
+function caricaClienteLoggato() {
+    const cliente = localStorage.getItem(STORAGE_KEYS_CLIENTI.clienteLoggato);
+    return cliente ? JSON.parse(cliente) : null;
+}
+
+// Effettua il logout del cliente
+function logoutCliente() {
+    localStorage.removeItem(STORAGE_KEYS_CLIENTI.clienteLoggato);
+}
+
+// Verifica se un cliente è loggato
+function isClienteLoggato() {
+    return caricaClienteLoggato() !== null;
+}
+
+// Utility
 function formatCurrency(value) {
     return `€ ${Number(value).toFixed(2)}`;
 }

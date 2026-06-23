@@ -58,6 +58,13 @@
     <div class="navbar">
         <h2>🛍️ SuperStore Premium</h2>
         <div style="display:flex; gap:12px; align-items:center;">
+            <div id="userSection" style="display:flex; align-items:center; gap:12px;">
+                <span id="userGreeting" style="display:none; color:white; font-weight:600;"></span>
+                <a id="puntiLink" href="points.html" style="display:none; background:rgba(255,193,7,0.9);">⭐ I Miei Punti</a>
+                <button id="logoutBtn" style="display:none; background:rgba(255,255,255,0.15); color:white; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; font-weight:600; transition:0.3s;" onclick="logoutUser()">Logout</button>
+                <a id="registerLink" href="register.html" style="display:none;">📝 Registrati</a>
+                <a id="loginLink" href="login-cliente.html" style="display:none;">🔓 Login</a>
+            </div>
             <a href="sconti.html">🔥 Offerte</a>
             <a href="login.html">⚙️ Area Manager</a>
         </div>
@@ -69,6 +76,23 @@
             <p id="promo-message"></p>
         </div>
         <div class="promo-badge" id="promo-timer"></div>
+    </div>
+
+    <div style="background: white; padding: 20px 40px; border-bottom: 1px solid #E2E8F0; position: sticky; top: 60px; z-index: 99;">
+        <div style="max-width: 1600px; margin: 0 auto;">
+            <div style="position: relative; max-width: 400px;">
+                <input 
+                    type="text" 
+                    id="searchInput" 
+                    placeholder="🔍 Cerca prodotti per nome..." 
+                    style="width: 100%; padding: 12px 15px; border: 2px solid #E2E8F0; border-radius: 10px; font-size: 0.95rem; transition: all 0.3s ease;"
+                >
+                <div 
+                    id="searchResults" 
+                    style="position: absolute; top: 45px; left: 0; right: 0; background: white; border: 1px solid #E2E8F0; border-radius: 10px; max-height: 300px; overflow-y: auto; box-shadow: 0 10px 25px rgba(0,0,0,0.1); display: none; z-index: 1000;"
+                ></div>
+            </div>
+        </div>
     </div>
 
     <div class="container">
@@ -84,6 +108,16 @@
 
         <div class="cart-panel">
             <h3>🛒 Il tuo Carrello</h3>
+            
+            <div id="notRegisteredAlert" style="background: #fef3c7; border: 2px solid #fcd34d; border-radius: 10px; padding: 15px; margin-bottom: 15px; display: none;">
+                <div style="color: #92400e; font-weight: 600; margin-bottom: 8px;">📢 Guadagna Punti!</div>
+                <p style="color: #78350f; font-size: 0.9rem; margin-bottom: 10px;">Registrati e ricevi 1 punto spesa ogni 15€ acquistati. Usa i tuoi punti per ottenere sconti!</p>
+                <div style="display: flex; gap: 8px;">
+                    <a href="register.html" style="flex: 1; text-align: center; background: #f59e0b; color: white; padding: 8px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 0.9rem;">Registrati</a>
+                    <a href="login-cliente.html" style="flex: 1; text-align: center; background: #2c3e50; color: white; padding: 8px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 0.9rem;">Accedi</a>
+                </div>
+            </div>
+
             <div id="carrello-container" class="cart-items-wrapper"></div>
             <div id="totale-container" class="totale-carrello">Totale: € 0.00</div>
             <button class="btn-checkout" onclick="acquista()">Procedi al Pagamento ➔</button>
@@ -268,6 +302,143 @@
             localStorage.setItem('totaleCheckout', totale);
             localStorage.setItem('ultimoTotale', totale);
             window.location.href = "checkout.html";
+        }
+
+        // ========== RICERCA PRODOTTI ==========
+        function setupSearchBar() {
+            const searchInput = document.getElementById('searchInput');
+            const searchResults = document.getElementById('searchResults');
+
+            searchInput.addEventListener('input', function (e) {
+                const query = e.target.value.toLowerCase().trim();
+
+                if (query.length === 0) {
+                    searchResults.style.display = 'none';
+                    return;
+                }
+
+                const risultati = inventario.filter(p =>
+                    p.nome.toLowerCase().includes(query) ||
+                    p.sub.toLowerCase().includes(query)
+                );
+
+                if (risultati.length === 0) {
+                    searchResults.innerHTML = `
+                        <div style="padding: 15px; text-align: center; color: #94a3b8;">
+                            Nessun prodotto trovato per "${query}"
+                        </div>
+                    `;
+                    searchResults.style.display = 'block';
+                    return;
+                }
+
+                searchResults.innerHTML = risultati.slice(0, 8).map(p => `
+                    <div style="padding: 12px 15px; border-bottom: 1px solid #E2E8F0; cursor: pointer; transition: background 0.2s;" 
+                         onmouseover="this.style.background='#F8FAFC'" 
+                         onmouseout="this.style.background='white'"
+                         onclick="scrollToProduct(${p.id}); document.getElementById('searchInput').value=''; document.getElementById('searchResults').style.display='none';">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span style="font-size: 1.5rem;">${p.icona}</span>
+                            <div style="flex: 1;">
+                                <div style="font-weight: 600; color: #1E293B;">${p.nome}</div>
+                                <div style="font-size: 0.85rem; color: #94a3b8;">${p.sub}</div>
+                            </div>
+                            <div style="font-weight: 700; color: #10B981;">€ ${p.prezzo.toFixed(2)}</div>
+                        </div>
+                    </div>
+                `).join('');
+                searchResults.style.display = 'block';
+            });
+
+            // Chiudi i risultati quando clicchi fuori
+            document.addEventListener('click', function (e) {
+                if (!e.target.closest('#searchInput') && !e.target.closest('#searchResults')) {
+                    searchResults.style.display = 'none';
+                }
+            });
+        }
+
+        function scrollToProduct(id) {
+            const product = inventario.find(p => p.id === id);
+            if (!product) return;
+
+            // Se il prodotto non è nella categoria attuale, filtra per la sua categoria
+            if (catAttuale !== 'Tutte' && catAttuale !== product.cat) {
+                filtra(product.cat, document.querySelector('[onclick*="' + product.cat + '"]'));
+            } else if (catAttuale === 'Tutte') {
+                renderProducts();
+            }
+
+            // Scroll al prodotto
+            setTimeout(() => {
+                const productCard = Array.from(document.querySelectorAll('.product-card')).find(card => {
+                    return card.textContent.includes(product.nome);
+                });
+                if (productCard) {
+                    productCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+            }, 100);
+        }
+
+        // ========== GESTIONE UTENTE ==========
+        function updateUserUI() {
+            const cliente = caricaClienteLoggato();
+            const userSection = document.getElementById('userSection');
+            const userGreeting = document.getElementById('userGreeting');
+            const puntiLink = document.getElementById('puntiLink');
+            const logoutBtn = document.getElementById('logoutBtn');
+            const registerLink = document.getElementById('registerLink');
+            const loginLink = document.getElementById('loginLink');
+            const notRegisteredAlert = document.getElementById('notRegisteredAlert');
+
+            if (cliente) {
+                // Utente loggato
+                userGreeting.style.display = 'inline-block';
+                userGreeting.textContent = `👤 Ciao ${cliente.nome}!`;
+                puntiLink.style.display = 'inline-block';
+                logoutBtn.style.display = 'inline-block';
+                registerLink.style.display = 'none';
+                loginLink.style.display = 'none';
+                notRegisteredAlert.style.display = 'none';
+            } else {
+                // Utente non loggato
+                userGreeting.style.display = 'none';
+                puntiLink.style.display = 'none';
+                logoutBtn.style.display = 'none';
+                registerLink.style.display = 'inline-block';
+                loginLink.style.display = 'inline-block';
+                notRegisteredAlert.style.display = 'block';
+            }
+        }
+
+        function logoutUser() {
+            if (confirm('Sei sicuro di voler fare il logout?')) {
+                logoutCliente();
+                updateUserUI();
+                carrello = [];
+                renderCart();
+                showIndexToast('Logout effettuato');
+            }
+        }
+
+        // ========== INIZIALIZZAZIONE ==========
+        async function initializePage() {
+            ensureDatabase();
+            inventario = await loadInventario();
+            renderPromoBanner();
+            renderProducts();
+            renderCart();
+            setupSearchBar();
+            updateUserUI();
+
+            if (isSaleActive()) {
+                updateSaleTimer();
+                clearInterval(saleTimer);
+                saleTimer = setInterval(updateSaleTimer, 1000);
+            } else {
+                const timer = document.getElementById('promo-timer');
+                if (timer) timer.innerText = '';
+            }
         }
 
         initializePage();

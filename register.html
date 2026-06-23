@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registrazione - SuperStore Premium</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="db.js"></script>
+    <style>
+        :root {
+            --primary: #1E293B;
+            --primary-light: #334155;
+            --secondary: #10B981;
+            --secondary-hover: #059669;
+            --accent: #F59E0B;
+            --bg: #F8FAFC;
+            --text: #0F172A;
+            --text-muted: #64748B;
+            --card-bg: #FFFFFF;
+            --border: #E2E8F0;
+            --success: #22c55e;
+            --error: #ef4444;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .register-container {
+            background: var(--card-bg);
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 450px;
+            animation: slideIn 0.5s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .register-header {
+            text-align: center;
+            margin-bottom: 35px;
+        }
+
+        .register-header h1 {
+            color: var(--primary);
+            font-size: 1.8rem;
+            margin-bottom: 8px;
+        }
+
+        .register-header p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            color: var(--text);
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 0.95rem;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            font-size: 1rem;
+            font-family: 'Poppins', sans-serif;
+            transition: all 0.3s ease;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--secondary);
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+        }
+
+        input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .form-group small {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            display: block;
+            margin-top: 6px;
+        }
+
+        .btn-register {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, var(--secondary), var(--secondary-hover));
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+
+        .btn-register:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(16, 185, 129, 0.3);
+        }
+
+        .btn-register:disabled {
+            background: #cbd5e1;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .form-links {
+            text-align: center;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border);
+        }
+
+        .form-links p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            margin-bottom: 10px;
+        }
+
+        .form-links a {
+            color: var(--secondary);
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.3s ease;
+        }
+
+        .form-links a:hover {
+            color: var(--secondary-hover);
+        }
+
+        .message {
+            padding: 12px 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-weight: 600;
+            display: none;
+            animation: slideIn 0.3s ease;
+        }
+
+        .message.error {
+            background-color: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+
+        .message.success {
+            background-color: #dcfce7;
+            color: #166534;
+            border: 1px solid #86efac;
+        }
+
+        .message.show {
+            display: block;
+        }
+
+        .benefits {
+            background: var(--bg);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+            color: var(--text);
+        }
+
+        .benefits ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .benefits li {
+            padding: 6px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .benefits li:before {
+            content: "✓";
+            color: var(--secondary);
+            font-weight: 700;
+            font-size: 1.2rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="register-container">
+        <div class="register-header">
+            <h1>🎉 Iscriviti Ora</h1>
+            <p>Entra nel programma fedeltà SuperStore Premium</p>
+        </div>
+
+        <div id="messageBox" class="message"></div>
+
+        <div class="benefits">
+            <ul>
+                <li>1 punto spesa ogni 15€ acquistati</li>
+                <li>Accedi a offerte esclusive</li>
+                <li>Gestisci i tuoi punti facilmente</li>
+            </ul>
+        </div>
+
+        <form id="registerForm">
+            <div class="form-group">
+                <label for="nome">Nome Completo</label>
+                <input type="text" id="nome" placeholder="Es. Mario Rossi" required>
+            </div>
+
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" placeholder="tua.email@example.com" required>
+                <small>Usa questa email per il login</small>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" placeholder="Almeno 6 caratteri" required>
+                <small>Scegli una password sicura</small>
+            </div>
+
+            <div class="form-group">
+                <label for="confermaPassword">Conferma Password</label>
+                <input type="password" id="confermaPassword" placeholder="Ripeti la password" required>
+            </div>
+
+            <button type="submit" class="btn-register">Registrati</button>
+        </form>
+
+        <div class="form-links">
+            <p>Hai già un account?</p>
+            <a href="login-cliente.html">Accedi al tuo profilo</a>
+            <p style="margin-top: 15px; border-top: 1px solid var(--border); padding-top: 15px;">
+                <a href="index.html">← Torna allo Shop</a>
+            </p>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('registerForm');
+        const messageBox = document.getElementById('messageBox');
+
+        form.addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const nome = document.getElementById('nome').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            const confermaPassword = document.getElementById('confermaPassword').value;
+
+            // Validazioni
+            if (!nome || !email || !password) {
+                mostraMessaggio('Compila tutti i campi', 'error');
+                return;
+            }
+
+            if (password.length < 6) {
+                mostraMessaggio('La password deve essere di almeno 6 caratteri', 'error');
+                return;
+            }
+
+            if (password !== confermaPassword) {
+                mostraMessaggio('Le password non coincidono', 'error');
+                return;
+            }
+
+            // Disabilita il bottone durante il caricamento
+            const btn = form.querySelector('.btn-register');
+            btn.disabled = true;
+            btn.textContent = 'Registrazione in corso...';
+
+            try {
+                const result = await DB_CLIENTI.registraCliente(email, password, nome);
+
+                if (result.success) {
+                    mostraMessaggio('✓ Registrazione completata! Reindirizzamento...', 'success');
+                    
+                    // Salva il cliente loggato
+                    salvaClienteLoggato(result.cliente);
+                    
+                    // Reindirizza dopo 1.5 secondi
+                    setTimeout(() => {
+                        window.location.href = 'index.html';
+                    }, 1500);
+                } else {
+                    mostraMessaggio(result.error, 'error');
+                    btn.disabled = false;
+                    btn.textContent = 'Registrati';
+                }
+            } catch (error) {
+                console.error('Errore durante la registrazione:', error);
+                mostraMessaggio('Errore durante la registrazione. Riprova.', 'error');
+                btn.disabled = false;
+                btn.textContent = 'Registrati';
+            }
+        });
+
+        function mostraMessaggio(testo, tipo) {
+            messageBox.textContent = testo;
+            messageBox.className = `message ${tipo} show`;
+            setTimeout(() => {
+                messageBox.classList.remove('show');
+            }, 4000);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestione Punti Spesa - SuperStore Premium</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="db.js"></script>
+    <style>
+        :root {
+            --primary: #1E293B;
+            --primary-light: #334155;
+            --secondary: #10B981;
+            --secondary-hover: #059669;
+            --accent: #F59E0B;
+            --bg: #F8FAFC;
+            --text: #0F172A;
+            --text-muted: #64748B;
+            --card-bg: #FFFFFF;
+            --border: #E2E8F0;
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+        }
+
+        .navbar {
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            color: white;
+            padding: 15px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: var(--shadow-md);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .navbar h2 {
+            font-weight: 700;
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .navbar a {
+            color: white;
+            text-decoration: none;
+            font-weight: 600;
+            background: rgba(255, 255, 255, 0.15);
+            padding: 10px 20px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .navbar a:hover {
+            background: rgba(255, 255, 255, 0.25);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, var(--secondary), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header p {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+
+        .points-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            border-radius: 16px;
+            text-align: center;
+            margin-bottom: 40px;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .points-value {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .points-label {
+            font-size: 1.1rem;
+            opacity: 0.95;
+        }
+
+        .login-required {
+            background: #fee2e2;
+            border: 2px solid #fecaca;
+            border-radius: 16px;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .login-required h2 {
+            color: #991b1b;
+            margin-bottom: 15px;
+        }
+
+        .login-required p {
+            color: #7c2d12;
+            margin-bottom: 20px;
+            font-size: 1.05rem;
+        }
+
+        .login-required a {
+            display: inline-block;
+            background: #dc2626;
+            color: white;
+            padding: 12px 30px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            margin: 0 10px;
+        }
+
+        .login-required a:hover {
+            background: #991b1b;
+            transform: translateY(-2px);
+        }
+
+        .offerte-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 24px;
+            margin-bottom: 40px;
+        }
+
+        .offerta-card {
+            background: var(--card-bg);
+            border: 2px solid var(--border);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: var(--shadow-sm);
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .offerta-card:hover {
+            box-shadow: var(--shadow-lg);
+            border-color: var(--secondary);
+            transform: translateY(-4px);
+        }
+
+        .offerta-header {
+            margin-bottom: 15px;
+        }
+
+        .offerta-nome {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 8px;
+        }
+
+        .offerta-descrizione {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            line-height: 1.5;
+            margin-bottom: 15px;
+        }
+
+        .offerta-punti {
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+            color: white;
+            padding: 12px;
+            border-radius: 10px;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+        }
+
+        .offerta-sconto {
+            background: var(--bg);
+            padding: 12px;
+            border-radius: 10px;
+            text-align: center;
+            margin-bottom: 15px;
+            font-weight: 600;
+            color: var(--secondary);
+            font-size: 1rem;
+        }
+
+        .btn-acquista {
+            background: linear-gradient(135deg, var(--secondary), var(--secondary-hover));
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 10px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: auto;
+            font-size: 0.95rem;
+        }
+
+        .btn-acquista:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(16, 185, 129, 0.3);
+        }
+
+        .btn-acquista:disabled {
+            background: #cbd5e1;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .message {
+            padding: 16px 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-weight: 600;
+            display: none;
+            animation: slideIn 0.3s ease;
+        }
+
+        .message.success {
+            background-color: #dcfce7;
+            color: #166534;
+            border: 1px solid #86efac;
+        }
+
+        .message.error {
+            background-color: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+
+        .message.show {
+            display: block;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-muted);
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+        }
+
+        .toast-container {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+        }
+
+        .toast-message {
+            display: none;
+            background: rgba(45, 55, 72, 0.95);
+            color: white;
+            padding: 14px 20px;
+            border-radius: 14px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+            font-weight: 700;
+        }
+
+        .section-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 25px;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <h2>⭐ Punti Spesa</h2>
+        <div style="display: flex; gap: 12px;">
+            <a href="index.html">← Torna allo Shop</a>
+            <button id="logoutBtn" style="background: rgba(255, 255, 255, 0.15); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; transition: 0.3s;" onclick="logoutUser()">Logout</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div id="loginRequired" class="login-required" style="display: none;">
+            <h2>🔐 Accedi per Gestire i Tuoi Punti</h2>
+            <p>Registrati o accedi per visualizzare i tuoi punti spesa e le offerte disponibili.</p>
+            <div>
+                <a href="register.html">📝 Registrati</a>
+                <a href="login-cliente.html">🔓 Accedi</a>
+            </div>
+        </div>
+
+        <div id="mainContent" style="display: none;">
+            <div class="header">
+                <h1>✨ Il Tuo Programma Fedeltà</h1>
+                <p>Guadagna punti ad ogni acquisto e ottieni esclusivi vantaggi</p>
+            </div>
+
+            <div class="points-card">
+                <div class="points-value" id="puntiValue">0</div>
+                <div class="points-label">Punti Spesa Disponibili</div>
+            </div>
+
+            <div id="messageBox" class="message"></div>
+
+            <div>
+                <h2 class="section-title">🎁 Offerte Disponibili</h2>
+                <div id="offerteContainer" class="offerte-grid"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container">
+        <div id="points-toast" class="toast-message"></div>
+    </div>
+
+    <script>
+        let cliente = null;
+        let offerte = [];
+
+        async function initPage() {
+            cliente = caricaClienteLoggato();
+
+            if (!cliente) {
+                document.getElementById('loginRequired').style.display = 'block';
+                document.getElementById('mainContent').style.display = 'none';
+                return;
+            }
+
+            document.getElementById('loginRequired').style.display = 'none';
+            document.getElementById('mainContent').style.display = 'block';
+
+            // Aggiorna i dati del cliente
+            const clienteAggiornato = await DB_CLIENTI.getCliente(cliente.id);
+            if (clienteAggiornato) {
+                cliente = clienteAggiornato;
+                salvaClienteLoggato(cliente);
+            }
+
+            document.getElementById('puntiValue').textContent = cliente.punti_spesa;
+
+            // Carica le offerte
+            offerte = await DB_CLIENTI.getOfferteSpesa();
+            renderOfferte();
+        }
+
+        function renderOfferte() {
+            const container = document.getElementById('offerteContainer');
+
+            if (offerte.length === 0) {
+                container.innerHTML = `
+                    <div style="grid-column: 1 / -1;">
+                        <div class="empty-state">
+                            <div class="empty-state-icon">📭</div>
+                            <p>Non ci sono offerte disponibili al momento.</p>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = offerte.map(offerta => {
+                const puntiBastano = cliente.punti_spesa >= offerta.punti_richiesti;
+                return `
+                    <div class="offerta-card">
+                        <div class="offerta-header">
+                            <div class="offerta-nome">${offerta.nome}</div>
+                        </div>
+                        <div class="offerta-descrizione">${offerta.descrizione}</div>
+                        <div class="offerta-punti">⭐ ${offerta.punti_richiesti} punti</div>
+                        <div class="offerta-sconto">💰 Risparmia € ${offerta.sconto_euro.toFixed(2)}</div>
+                        <button class="btn-acquista" ${!puntiBastano ? 'disabled' : ''} onclick="acquistaOfferta(${offerta.id}, ${offerta.punti_richiesti}, '${offerta.nome}', ${offerta.sconto_euro})">
+                            ${puntiBastano ? 'Usa i Punti' : `Punti Insufficienti (ne servono ${offerta.punti_richiesti})`}
+                        </button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function acquistaOfferta(offeID, puntiRichiesti, nomeoOfferta, sconto) {
+            if (cliente.punti_spesa < puntiRichiesti) {
+                showToast('❌ Punti insufficienti');
+                return;
+            }
+
+            const result = await DB_CLIENTI.usaPuntiSpesa(cliente.id, puntiRichiesti, sconto);
+
+            if (result.success) {
+                cliente.punti_spesa = result.puntiRimanenti;
+                salvaClienteLoggato(cliente);
+                document.getElementById('puntiValue').textContent = cliente.punti_spesa;
+                showToast(`✅ Offerta "${nomeoOfferta}" acquistata! Hai ancora ${result.puntiRimanenti} punti.`);
+                
+                // Mostra il messaggio di successo
+                const messageBox = document.getElementById('messageBox');
+                messageBox.className = 'message success show';
+                messageBox.innerHTML = `
+                    <div>✅ <strong>Offerta Acquistata!</strong></div>
+                    <div style="font-size: 0.9rem; margin-top: 5px;">
+                        Hai utilizzato ${puntiRichiesti} punti. Sconto di € ${sconto.toFixed(2)} applicato al tuo prossimo acquisto.
+                    </div>
+                `;
+                setTimeout(() => messageBox.classList.remove('show'), 5000);
+            } else {
+                showToast('❌ ' + result.error);
+            }
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('points-toast');
+            toast.textContent = message;
+            toast.style.display = 'block';
+            clearTimeout(toast._timer);
+            toast._timer = setTimeout(() => toast.style.display = 'none', 3000);
+        }
+
+        function logoutUser() {
+            if (confirm('Sei sicuro di voler fare il logout?')) {
+                logoutCliente();
+                window.location.href = 'index.html';
+            }
+        }
+
+        initPage();
+    </script>
+</body>
+</html>
