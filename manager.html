@@ -459,77 +459,76 @@
     //  silenziosamente → "nulla accade"
     // ─────────────────────────────────────────────────────────────────
     function procCompraManager() {
-        if (managerCart.length === 0) {
-            showToast('Carrello vuoto', 'error');
+    if (managerCart.length === 0) {
+        showToast('Carrello vuoto', 'error');
+        return;
+    }
+
+    // Validazione prima di aprire il modal
+    for (const it of managerCart) {
+        const prod   = inventario.find(p => p.id === it.id);
+        const spazio = prod ? Math.max(0, prod.maxQty - prod.qty) : 0;
+        if (!prod || spazio < it.qty) {
+            showToast(`Quantità non disponibile per "${it.nome}"`, 'error');
             return;
         }
+    }
 
-        // Validazione prima di aprire il modal
-        for (const it of managerCart) {
-            const prod   = inventario.find(p => p.id === it.id);
-            const spazio = prod ? Math.max(0, prod.maxQty - prod.qty) : 0;
-            if (!prod || spazio < it.qty) {
-                showToast(`Quantità non disponibile per "${it.nome}"`, 'error');
-                return;
+    const costoTotale = managerCart.reduce((s, i) => s + i.prezzo * i.qty * 0.55, 0);
+
+    showModal(
+        'Conferma acquisto',
+        `Verranno acquistati ${managerCart.length} prodotto/i per un costo totale di €${costoTotale.toFixed(2)}. Il budget aziendale verrà aggiornato di conseguenza. Procedere?`,
+        async (confirmed) => {
+            if (!confirmed) return;
+
+            setSpinner(true);
+            try {
+                // 1. Aggiorna quantità nell'inventario locale locale
+                managerCart.forEach(it => {
+                    const prod = inventario.find(p => p.id === it.id);
+                    if (prod) prod.qty += it.qty;
+                });
+
+                // 2. Salva l'inventario aggiornato su Supabase (sfrutta saveInventario del tuo db.js)
+                await saveInventario(inventario);
+
+                // 3. Registra la spesa localmente (usa recordExpense definito nel tuo db.js)
+                const spesa = {
+                    data: new Date().toISOString().split('T')[0],
+                    totale: costoTotale
+                };
+                recordExpense(spesa); 
+                expenses.push(spesa); // Aggiorna l'array della pagina per i grafici
+
+                // 4. Aggiorna e salva il budget su Supabase (sfrutta saveBudget del tuo db.js)
+                budgetAziendale -= costoTotale;
+                await saveBudget(budgetAziendale);
+
+                // 5. Svuota il carrello del manager (sfrutta clearManagerCart del tuo db.js)
+                managerCart = [];
+                clearManagerCart();
+
+                // 6. Aggiorna l'interfaccia grafica
+                aggiornaUIBudget();
+                aggiornaTabella();
+                renderManagerCart();
+                aggiornaFinanze();
+
+                showToast('✅ Rifornimento completato e salvato con successo!', 'success');
+
+            } catch (err) {
+                showToast('❌ Errore durante l\'acquisto: ' + err.message, 'error');
+                console.error('procCompraManager error:', err);
+                // In caso di errore rinfresca l'inventario ricaricandolo dal cloud
+                inventario = await loadInventario();
+                aggiornaTabella();
+            } finally {
+                setSpinner(false);
             }
         }
-
-        const costoTotale = managerCart.reduce((s, i) => s + i.prezzo * i.qty * 0.55, 0);
-
-        showModal(
-            'Conferma acquisto',
-            `Verranno acquistati ${managerCart.length} prodotto/i per un costo totale di €${costoTotale.toFixed(2)}. Il budget aziendale verrà aggiornato di conseguenza. Procedere?`,
-            async (confirmed) => {
-                if (!confirmed) return;
-
-                setSpinner(true);
-                try {
-                    // 1. Aggiorna quantità nell'inventario locale
-                    managerCart.forEach(it => {
-                        const prod = inventario.find(p => p.id === it.id);
-                        if (prod) prod.qty += it.qty;
-                    });
-
-                    // 2. Salva inventario aggiornato su Supabase
-                    await saveInventario(inventario);
-
-                    // 3. Registra la spesa su Supabase
-                    const spesa = {
-                        data: new Date().toISOString().split('T')[0],
-                        totale: costoTotale
-                    };
-                    await saveExpense(spesa);
-                    expenses.push(spesa);
-
-                    // 4. Aggiorna e salva il budget
-                    budgetAziendale -= costoTotale;
-                    await saveBudget(budgetAziendale);
-
-                    // 5. Svuota carrello
-                    managerCart = [];
-                    clearManagerCart();
-
-                    // 6. Aggiorna UI
-                    aggiornaUIBudget();
-                    aggiornaTabella();
-                    renderManagerCart();
-                    aggiornaFinanze();
-
-                    showToast('✅ Acquisto registrato con successo!', 'success');
-
-                } catch (err) {
-                    // ← QUESTO ERA IL BUG: senza questo catch l'errore spariva
-                    showToast('❌ Errore durante l\'acquisto: ' + err.message, 'error');
-                    console.error('procCompraManager error:', err);
-                    // Rollback locale dell'inventario
-                    inventario = await loadInventario();
-                    aggiornaTabella();
-                } finally {
-                    setSpinner(false);
-                }
-            }
-        );
-    }
+    );
+}
 
     // ── Editor Stock ─────────────────────────────────────────────────
     function apriEditorStock() {
