@@ -73,11 +73,11 @@
         
         <div id="menu-categorie" style="display: flex; flex-direction: column; gap: 5px;">
             <div class="menu-label">Filtra Categorie</div>
-            <button class="category-btn sub-btn active" onclick="filtraCategoria('Tutte')">Tutte</button>
-            <button class="category-btn sub-btn" onclick="filtraCategoria('Alimentari')">Alimentari</button>
-            <button class="category-btn sub-btn" onclick="filtraCategoria('Cura della casa')">Cura della casa</button>
-            <button class="category-btn sub-btn" onclick="filtraCategoria('Giardinaggio')">Giardinaggio</button>
-            <button class="category-btn sub-btn" onclick="filtraCategoria('Macchina')">Macchina</button>
+            <button class="category-btn sub-btn active" onclick="filtraCategoria('Tutte', this)">Tutte</button>
+            <button class="category-btn sub-btn" onclick="filtraCategoria('Alimentari', this)">Alimentari</button>
+            <button class="category-btn sub-btn" onclick="filtraCategoria('Cura della casa', this)">Cura della casa</button>
+            <button class="category-btn sub-btn" onclick="filtraCategoria('Giardinaggio', this)">Giardinaggio</button>
+            <button class="category-btn sub-btn" onclick="filtraCategoria('Macchina', this)">Macchina</button>
         </div>
 
         <a href="index.html" class="logout-btn">Esci alla Vista Cliente</a>
@@ -503,10 +503,10 @@
             }
         }
 
-        function filtraCategoria(categoria) {
+        function filtraCategoria(categoria, btn) {
             categoriaAttuale = categoria;
-            document.querySelectorAll('.sub-btn').forEach(btn => btn.classList.remove('active'));
-            event.target.classList.add('active');
+            document.querySelectorAll('.sub-btn').forEach(button => button.classList.remove('active'));
+            if (btn) btn.classList.add('active');
             aggiornaTabella();
         }
 

@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SuperStore Premium - Offerte</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="database.js"></script>
+    <style>
+        :root { 
+            --primary: #1E293B; --primary-light: #334155; --secondary: #10B981; 
+            --secondary-hover: #059669; --accent: #F59E0B; --bg: #F8FAFC; 
+            --text: #0F172A; --text-muted: #64748B; --card-bg: #FFFFFF; --border: #E2E8F0;
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05); --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1); --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Poppins', sans-serif; }
+        body { background-color: var(--bg); color: var(--text); min-height: 100vh; }
+        .navbar { background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: white; padding: 15px 40px; display: flex; justify-content: space-between; align-items: center; box-shadow: var(--shadow-md); position: sticky; top: 0; z-index: 100; }
+        .navbar h2 { font-weight: 700; font-size: 1.5rem; }
+        .navbar a { color: white; text-decoration: none; font-weight: 600; background: rgba(255,255,255,0.15); padding: 10px 20px; border-radius: 8px; transition: all 0.3s ease; font-size: 0.9rem; }
+        .navbar a:hover { background: rgba(255,255,255,0.25); }
+        .promo-banner { background: linear-gradient(135deg, #16a34a, #10b981); color: white; padding: 16px 24px; border-radius: 16px; margin: 20px auto; max-width: 1200px; display: flex; justify-content: space-between; align-items: center; gap: 20px; box-shadow: 0 15px 35px rgba(16, 185, 129, 0.18); }
+        .promo-banner p { margin: 0; font-weight: 600; }
+        .promo-badge { background: rgba(255,255,255,.18); padding: 8px 14px; border-radius: 999px; font-size: 0.95rem; }
+        .promo-banner.hidden { display: none; }
+        .container { display: flex; flex-wrap: wrap; gap: 24px; padding: 30px 40px; max-width: 1600px; margin: 0 auto; }
+        .products-grid { flex: 1; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 24px; }
+        .product-card { background: var(--card-bg); padding: 20px; border-radius: 16px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; border: 1px solid var(--border); transition: all 0.3s ease; }
+        .product-card:hover { box-shadow: var(--shadow-lg); transform: translateY(-4px); }
+        .product-icon { font-size: 2.5rem; margin-bottom: 15px; background: var(--bg); width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 12px; }
+        .product-card h3 { font-size: 1.15rem; font-weight: 600; margin-bottom: 4px; }
+        .product-sub { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px; text-transform: uppercase; font-weight: 600; }
+        .price-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .prezzo { font-weight: 700; color: var(--primary); font-size: 1.4rem; }
+        .btn-add { background-color: var(--secondary); color: white; border: none; padding: 12px; border-radius: 10px; cursor: pointer; width: 100%; font-weight: 600; transition: 0.2s; }
+        .btn-add:disabled { background-color: #E2E8F0; color: #94A3B8; cursor: not-allowed; }
+        .cart-panel { width: 340px; background: var(--card-bg); padding: 25px; border-radius: 16px; box-shadow: var(--shadow-lg); border: 1px solid var(--border); min-height: 240px; }
+        .cart-items-wrapper { max-height: 40vh; overflow-y: auto; margin-bottom: 16px; }
+        .cart-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding: 12px; background: var(--bg); border-radius: 10px; }
+        .totale-carrello { font-size: 1.4rem; font-weight: 700; margin-top: 12px; text-align: right; color: var(--primary); }
+        .btn-checkout { background-color: var(--accent); color: white; border: none; padding: 15px; border-radius: 10px; cursor: pointer; width: 100%; font-weight: 700; font-size: 1.1rem; margin-top: 20px; transition: 0.3s; }
+        .btn-checkout:hover { background-color: #D97706; transform: translateY(-2px); }
+        .empty-state { grid-column: 1/-1; text-align: center; padding: 40px 20px; color: #475569; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .fade-in { animation: fadeIn 0.4s ease forwards; }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <h2>🔥 Offerte - SuperStore Premium</h2>
+        <div style="display:flex; gap:12px; align-items:center;">
+            <a href="index.html">🏠 Torna allo Shop</a>
+            <a href="login.html">⚙️ Area Manager</a>
+        </div>
+    </div>
+
+    <div id="promo-banner" class="promo-banner hidden">
+        <div>
+            <p id="promo-title"></p>
+            <p id="promo-message"></p>
+        </div>
+        <div class="promo-badge" id="promo-timer"></div>
+    </div>
+
+    <div class="container">
+        <div class="products-grid" id="prodotti-container"></div>
+        <div class="cart-panel">
+            <h3>🛒 Il tuo Carrello</h3>
+            <div id="carrello-container" class="cart-items-wrapper"></div>
+            <div id="totale-container" class="totale-carrello">Totale: € 0.00</div>
+            <button class="btn-checkout" onclick="acquista()">Procedi al Pagamento ➔</button>
+        </div>
+    </div>
+
+    <script>
+        let inventario = [];
+        let carrello = [];
+        let saleTimer = null;
+
+        function initializeSalePage() {
+            ensureDatabase();
+            inventario = loadInventario();
+            renderPromoBanner();
+            renderProducts();
+            renderCart();
+            if (isSaleActive()) {
+                updateSaleTimer();
+                clearInterval(saleTimer);
+                saleTimer = setInterval(updateSaleTimer, 1000);
+            }
+        }
+
+        function renderPromoBanner() {
+            const banner = document.getElementById('promo-banner');
+            const title = document.getElementById('promo-title');
+            const message = document.getElementById('promo-message');
+            const timer = document.getElementById('promo-timer');
+            const saleInfo = getSaleInfo();
+            if (!banner || !title || !message || !timer) return;
+
+            if (!saleInfo || !saleInfo.active) {
+                banner.classList.add('hidden');
+                timer.innerText = '';
+                return;
+            }
+
+            banner.classList.remove('hidden');
+            title.innerText = saleInfo.title;
+            message.innerText = `Sconti del ${saleInfo.percentuale}% su prodotti selezionati.`;
+        }
+
+        function updateSaleTimer() {
+            const remaining = getSaleRemainingSeconds();
+            const timer = document.getElementById('promo-timer');
+            if (!timer) return;
+            if (remaining <= 0) {
+                timer.innerText = 'Offerta terminata';
+                clearInterval(saleTimer);
+                saleTimer = null;
+                renderPromoBanner();
+                renderProducts();
+                return;
+            }
+            const minutes = String(Math.floor(remaining / 60)).padStart(2, '0');
+            const seconds = String(remaining % 60).padStart(2, '0');
+            timer.innerText = `Scade tra ${minutes}:${seconds}`;
+        }
+
+        function isProductOnSale(item) {
+            return isSaleActive() && Array.isArray(getSaleInfo().productIds) && getSaleInfo().productIds.includes(item.id);
+        }
+
+        function getPriceHtml(p) {
+            if (isProductOnSale(p)) {
+                const discounted = getDiscountedPrice(p.prezzo, p);
+                return `
+                    <div class="price-row">
+                        <span class="prezzo">€ ${discounted.toFixed(2)}</span>
+                        <span style="color:#94a3b8;text-decoration:line-through;font-size:0.9rem;">€ ${p.prezzo.toFixed(2)}</span>
+                    </div>
+                `;
+            }
+            return `
+                <div class="price-row">
+                    <span class="prezzo">€ ${p.prezzo.toFixed(2)}</span>
+                    <span style="font-size:0.7rem; font-weight:bold; color:green;">DISPONIBILE</span>
+                </div>
+            `;
+        }
+
+        function renderProducts() {
+            ensureDatabase();
+            inventario = loadInventario().map(p => ({ ...p, icona: p.icona || '📦' }));
+            const saleProducts = inventario.filter(isProductOnSale);
+            const container = document.getElementById('prodotti-container');
+            container.innerHTML = '';
+
+            if (saleProducts.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <h3>Nessuna offerta disponibile</h3>
+                        <p>Controlla tra poco, le promozioni potrebbero tornare attive.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = saleProducts.map(p => {
+                const esaurito = p.qty <= 0;
+                return `
+                    <div class="product-card fade-in">
+                        <div class="product-icon">${p.icona}</div>
+                        <div style="color:#059669;font-weight:700;margin-bottom:8px;">-${getSaleInfo().percentuale}% PROMO</div>
+                        <h3>${p.nome}</h3>
+                        <p class="product-sub">${p.sub}</p>
+                        ${getPriceHtml(p)}
+                        <button class="btn-add" ${esaurito ? 'disabled' : ''} onclick="aggiungiAlCarrello(${p.id})">Aggiungi</button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function aggiungiAlCarrello(id) {
+            const p = inventario.find(item => item.id === id);
+            if (!p) return;
+            const item = carrello.find(c => c.id === id);
+            if (item) {
+                if (item.qty < p.qty) item.qty++;
+            } else {
+                carrello.push({ ...p, qty: 1 });
+            }
+            renderCart();
+        }
+
+        function renderCart() {
+            const container = document.getElementById('carrello-container');
+            container.innerHTML = carrello.map(c => {
+                const totale = calcItemTotal(c);
+                return `
+                    <div class="cart-item">
+                        <span>${c.nome} (x${c.qty})</span>
+                        <span>€ ${totale.toFixed(2)}</span>
+                    </div>
+                `;
+            }).join('');
+            document.getElementById('totale-container').innerText = `Totale: € ${calcolaTotale().toFixed(2)}`;
+        }
+
+        function calcolaTotale() {
+            return carrello.reduce((total, item) => total + calcItemTotal(item), 0);
+        }
+
+        function calcItemTotal(item) {
+            const prezzoUnitario = isProductOnSale(item) ? getDiscountedPrice(item.prezzo, item) : item.prezzo;
+            return prezzoUnitario * item.qty;
+        }
+
+        function acquista() {
+            if (carrello.length === 0) return;
+            localStorage.setItem('carrelloCheckout', JSON.stringify(carrello));
+            const totale = calcolaTotale().toFixed(2);
+            localStorage.setItem('totaleCheckout', totale);
+            localStorage.setItem('ultimoTotale', totale);
+            window.location.href = 'checkout.html';
+        }
+
+        initializeSalePage();
+    </script>
+</body>
+</html>

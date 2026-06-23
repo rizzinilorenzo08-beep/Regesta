@@ -24,7 +24,15 @@ const STORAGE_KEYS = {
     managerCart: 'managerCart',
     carrelloCheckout: 'carrelloCheckout',
     totaleCheckout: 'totaleCheckout',
-    ultimoTotale: 'ultimoTotale'
+    ultimoTotale: 'ultimoTotale',
+    saleInfo: 'saleInfo'
+};
+
+const SALE_INFO_DEFAULT = {
+    title: 'Offerte Lampo',
+    percentuale: 25,
+    expiresAt: new Date(Date.now() + 1000 * 60 * 30).toISOString(),
+    productIds: [1, 2, 8, 12]
 };
 
 function ensureDatabase() {
@@ -40,12 +48,54 @@ function ensureDatabase() {
     if (!localStorage.getItem(STORAGE_KEYS.budget)) {
         localStorage.setItem(STORAGE_KEYS.budget, DEFAULT_BUDGET);
     }
+    if (!localStorage.getItem(STORAGE_KEYS.saleInfo)) {
+        localStorage.setItem(STORAGE_KEYS.saleInfo, JSON.stringify(SALE_INFO_DEFAULT));
+    }
 }
 
 function loadInventario() {
     ensureDatabase();
     return JSON.parse(localStorage.getItem(STORAGE_KEYS.inventario));
 }
+
+function loadSaleInfo() {
+    ensureDatabase();
+    return JSON.parse(localStorage.getItem(STORAGE_KEYS.saleInfo));
+}
+
+function saveSaleInfo(saleInfo) {
+    localStorage.setItem(STORAGE_KEYS.saleInfo, JSON.stringify(saleInfo));
+}
+
+function getSaleInfo() {
+    const info = loadSaleInfo();
+    if (!info || !info.expiresAt) return null;
+    const expired = new Date(info.expiresAt) <= new Date();
+    return { ...info, active: !expired };
+}
+
+function isSaleActive() {
+    const info = getSaleInfo();
+    return info && info.active;
+}
+
+function getSaleRemainingSeconds() {
+    const info = getSaleInfo();
+    if (!info || !info.active) return 0;
+    return Math.max(0, Math.floor((new Date(info.expiresAt) - new Date()) / 1000));
+}
+
+function isProductOnSale(item) {
+    const info = getSaleInfo();
+    return info && info.active && Array.isArray(info.productIds) && info.productIds.includes(item.id);
+}
+
+function getDiscountedPrice(prezzo, item) {
+    return isProductOnSale(item)
+        ? Number((prezzo * (1 - getSaleInfo().percentuale / 100)).toFixed(2))
+        : prezzo;
+}
+
 
 function saveInventario(inventario) {
     localStorage.setItem(STORAGE_KEYS.inventario, JSON.stringify(inventario));

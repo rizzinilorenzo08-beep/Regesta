@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Supermercato Premium - Shop Online</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="database.js"></script>
     <style>
         :root { 
             --primary: #1E293B; --primary-light: #334155; --secondary: #10B981; 
@@ -14,6 +15,12 @@
         }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Poppins', sans-serif; }
         body { background-color: var(--bg); color: var(--text); display: flex; flex-direction: column; min-height: 100vh; }
+        .promo-banner { background: linear-gradient(135deg, #16a34a, #10b981); color: white; padding: 16px 24px; border-radius: 16px; margin: 20px auto 0; width: calc(100% - 80px); max-width: 1200px; display: flex; justify-content: space-between; align-items: center; gap: 20px; box-shadow: 0 15px 35px rgba(16, 185, 129, 0.18); }
+        .promo-banner p { margin: 0; font-weight: 600; }
+        .promo-badge { background: rgba(255,255,255,.18); padding: 8px 14px; border-radius: 999px; font-size: 0.95rem; }
+        .promo-banner.hidden { display: none; }
+        .toast-container { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 1000; }
+        .toast-message { display: none; background: rgba(45,55,72,0.95); color: white; padding: 14px 20px; border-radius: 14px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); font-weight: 700; }
         .navbar { background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: white; padding: 15px 40px; display: flex; justify-content: space-between; align-items: center; box-shadow: var(--shadow-md); position: sticky; top: 0; z-index: 100; }
         .navbar h2 { font-weight: 700; font-size: 1.5rem; display: flex; align-items: center; gap: 10px; }
         .navbar a { color: white; text-decoration: none; font-weight: 600; background: rgba(255,255,255,0.15); padding: 10px 20px; border-radius: 8px; transition: all 0.3s ease; font-size: 0.9rem; }
@@ -49,16 +56,27 @@
 
     <div class="navbar">
         <h2>🛍️ SuperStore Premium</h2>
-        <a href="login.html">⚙️ Area Manager</a>
+        <div style="display:flex; gap:12px; align-items:center;">
+            <a href="sconti.html">🔥 Offerte</a>
+            <a href="login.html">⚙️ Area Manager</a>
+        </div>
+    </div>
+
+    <div id="promo-banner" class="promo-banner hidden">
+        <div>
+            <p id="promo-title"></p>
+            <p id="promo-message"></p>
+        </div>
+        <div class="promo-badge" id="promo-timer"></div>
     </div>
 
     <div class="container">
         <div class="sidebar">
-            <button class="category-btn active" onclick="filtra('Tutte')">🛒 Tutti i Prodotti</button>
-            <button class="category-btn" onclick="filtra('Alimentari')">🍎 Alimentari</button>
-            <button class="category-btn" onclick="filtra('Cura della casa')">🧼 Cura della casa</button>
-            <button class="category-btn" onclick="filtra('Giardinaggio')">🌱 Giardinaggio</button>
-            <button class="category-btn" onclick="filtra('Macchina')">🚗 Macchina</button>
+            <button class="category-btn active" onclick="filtra('Tutte', this)">🛒 Tutti i Prodotti</button>
+            <button class="category-btn" onclick="filtra('Alimentari', this)">🍎 Alimentari</button>
+            <button class="category-btn" onclick="filtra('Cura della casa', this)">🧼 Cura della casa</button>
+            <button class="category-btn" onclick="filtra('Giardinaggio', this)">🌱 Giardinaggio</button>
+            <button class="category-btn" onclick="filtra('Macchina', this)">🚗 Macchina</button>
         </div>
 
         <div class="products-grid" id="prodotti-container"></div>
@@ -71,88 +89,168 @@
         </div>
     </div>
 
+    <div class="toast-container"><div id="index-toast" class="toast-message"></div></div>
+
     <script>
-        // Database dei prodotti storici di base (con icone coordinate per la veste Premium)
-        const datiIniziali = [
-            { id: 1, nome: "Latte Intero", cat: "Alimentari", sub: "Da frigo", qty: 45, maxQty: 100, prezzo: 1.20, icona: "🥛" },
-            { id: 2, nome: "Piselli Surgelati", cat: "Alimentari", sub: "Da freezer", qty: 20, maxQty: 60, prezzo: 2.50, icona: "🫛" },
-            { id: 3, nome: "Biscotti Frollini", cat: "Alimentari", sub: "Biscotti", qty: 60, maxQty: 80, prezzo: 1.80, icona: "🍪" },
-            { id: 4, nome: "Acqua Naturale 1.5L", cat: "Alimentari", sub: "Bevande", qty: 120, maxQty: 200, prezzo: 0.50, icona: "💧" },
-            { id: 5, nome: "Detersivo Piatti", cat: "Cura della casa", sub: "Cucina", qty: 30, maxQty: 50, prezzo: 1.90, icona: "🧼" },
-            { id: 6, nome: "Scopa", cat: "Cura della casa", sub: "Casa", qty: 5, maxQty: 30, prezzo: 5.00, icona: "🧹" },
-            { id: 7, nome: "Ammorbidente", cat: "Cura della casa", sub: "Bucato", qty: 25, maxQty: 50, prezzo: 3.20, icona: "🧴" },
-            { id: 8, nome: "Pianta di Ficus", cat: "Giardinaggio", sub: "Piante", qty: 10, maxQty: 20, prezzo: 15.00, icona: "🪴" },
-            { id: 9, nome: "Semi di Pomodoro", cat: "Giardinaggio", sub: "Semi", qty: 50, maxQty: 100, prezzo: 1.00, icona: "🍅" },
-            { id: 10, nome: "Tubo Irrigazione", cat: "Giardinaggio", sub: "Irrigazione", qty: 8, maxQty: 50, prezzo: 25.00, icona: "🚰" },
-            { id: 11, nome: "Rastrello", cat: "Giardinaggio", sub: "Cura del giardino", qty: 12, maxQty: 25, prezzo: 12.00, icona: "🍂" },
-            { id: 12, nome: "Liquido Tergicristalli", cat: "Macchina", sub: "Pulizia", qty: 15, maxQty: 100, prezzo: 4.50, icona: "🧪" },
-            { id: 13, nome: "Olio Motore 5W-30", cat: "Macchina", sub: "Manutenzione", qty: 18, maxQty: 40, prezzo: 9.90, icona: "🛢️" }
-        ];
-
-        // Caricamento controllato dell'inventario
-        let inventario = JSON.parse(localStorage.getItem('inventario'));
-
-        // Se non esiste ancora nulla in memoria o l'array si è svuotato, usa i dati di base
-        if (!inventario || inventario.length === 0) {
-            inventario = datiIniziali;
-            localStorage.setItem('inventario', JSON.stringify(inventario));
-        }
-
+        let inventario = [];
         let carrello = [];
         let catAttuale = 'Tutte';
+        let saleTimer = null;
 
-        function renderingProdotti() {
+        function initializePage() {
+            ensureDatabase();
+            inventario = loadInventario();
+            renderPromoBanner();
+            renderProducts();
+            renderCart();
+
+            if (isSaleActive()) {
+                updateSaleTimer();
+                clearInterval(saleTimer);
+                saleTimer = setInterval(updateSaleTimer, 1000);
+            } else {
+                const timer = document.getElementById('promo-timer');
+                if (timer) timer.innerText = '';
+            }
+        }
+
+        function renderPromoBanner() {
+            const banner = document.getElementById('promo-banner');
+            const title = document.getElementById('promo-title');
+            const message = document.getElementById('promo-message');
+            const timer = document.getElementById('promo-timer');
+            const saleInfo = getSaleInfo();
+            if (!banner || !title || !message || !timer) return;
+
+            if (!saleInfo || !saleInfo.active) {
+                banner.classList.add('hidden');
+                timer.innerText = '';
+                return;
+            }
+
+            banner.classList.remove('hidden');
+            title.innerText = saleInfo.title;
+            message.innerText = `Sconti del ${saleInfo.percentuale}% su prodotti selezionati.`;
+        }
+
+        function updateSaleTimer() {
+            const remaining = getSaleRemainingSeconds();
+            const timer = document.getElementById('promo-timer');
+            if (!timer) return;
+            if (remaining <= 0) {
+                timer.innerText = 'Offerta terminata';
+                clearInterval(saleTimer);
+                saleTimer = null;
+                renderPromoBanner();
+                renderProducts();
+                return;
+            }
+            const minutes = String(Math.floor(remaining / 60)).padStart(2, '0');
+            const seconds = String(remaining % 60).padStart(2, '0');
+            timer.innerText = `Scade tra ${minutes}:${seconds}`;
+        }
+
+        function isProductOnSale(item) {
+            return isSaleActive() && Array.isArray(getSaleInfo().productIds) && getSaleInfo().productIds.includes(item.id);
+        }
+
+        function getPriceHtml(p) {
+            if (isProductOnSale(p)) {
+                const discounted = getDiscountedPrice(p.prezzo, p);
+                return `
+                    <div class="price-row">
+                        <span class="prezzo">€ ${discounted.toFixed(2)}</span>
+                        <span style="color:#94a3b8;text-decoration:line-through;font-size:0.9rem;">€ ${p.prezzo.toFixed(2)}</span>
+                    </div>
+                `;
+            }
+            return `
+                <div class="price-row">
+                    <span class="prezzo">€ ${p.prezzo.toFixed(2)}</span>
+                    <span style="font-size:0.7rem; font-weight:bold; color:green;">DISPONIBILE</span>
+                </div>
+            `;
+        }
+
+        function renderProducts() {
+            ensureDatabase();
+            inventario = loadInventario();
+            inventario = inventario.map(p => ({ ...p, icona: p.icona || '📦' }));
             const container = document.getElementById('prodotti-container');
             container.innerHTML = '';
             const filtrati = catAttuale === 'Tutte' ? inventario : inventario.filter(p => p.cat === catAttuale);
-            filtrati.forEach((p, index) => {
+
+            if (filtrati.length === 0) {
+                container.innerHTML = `
+                    <div style="grid-column:1/-1; padding:30px; text-align:center; color:#475569;">
+                        Nessun prodotto disponibile in questa categoria.
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = filtrati.map(p => {
                 const esaurito = p.qty <= 0;
-                container.innerHTML += `
+                const saleBadge = isProductOnSale(p) ? `<div style="color:#059669;font-weight:700;margin-bottom:8px;">-${getSaleInfo().percentuale}% PROMO</div>` : '';
+                return `
                     <div class="product-card fade-in">
-                        <div class="product-icon">${p.icona || '📦'}</div>
+                        <div class="product-icon">${p.icona}</div>
+                        ${saleBadge}
                         <h3>${p.nome}</h3>
                         <p class="product-sub">${p.sub}</p>
-                        <div class="price-row">
-                            <span class="prezzo">€ ${p.prezzo.toFixed(2)}</span>
-                            <span style="font-size:0.7rem; font-weight:bold; color:${esaurito?'red':'green'}">${esaurito?'ESAURITO':'DISPONIBILE'}</span>
-                        </div>
+                        ${getPriceHtml(p)}
                         <button class="btn-add" ${esaurito ? 'disabled' : ''} onclick="aggiungiAlCarrello(${p.id})">Aggiungi</button>
                     </div>
                 `;
-            });
+            }).join('');
         }
 
-        function filtra(cat) { 
-            catAttuale = cat; 
-            // Aggiorna graficamente lo stato del pulsante attivo nella sidebar
+        function filtra(cat, button) {
+            catAttuale = cat;
             document.querySelectorAll('.category-btn').forEach(btn => btn.classList.remove('active'));
-            event.target.classList.add('active');
-            renderingProdotti(); 
-        }
-        
-        function aggiungiAlCarrello(id) {
-            const p = inventario.find(i => i.id === id);
-            const item = carrello.find(c => c.id === id);
-            if(item) { if(item.qty < p.qty) item.qty++; } 
-            else { carrello.push({...p, qty: 1}); }
-            renderingCarrello();
+            if (button) button.classList.add('active');
+            renderProducts();
         }
 
-        function renderingCarrello() {
+        function aggiungiAlCarrello(id) {
+            const p = inventario.find(item => item.id === id);
+            if (!p) return;
+            const item = carrello.find(c => c.id === id);
+            if (item) {
+                if (item.qty < p.qty) item.qty++;
+            } else {
+                carrello.push({ ...p, qty: 1 });
+            }
+            renderCart();
+            showIndexToast(`${p.nome} aggiunto al carrello`);
+        }
+
+        function renderCart() {
             const container = document.getElementById('carrello-container');
-            container.innerHTML = carrello.map(c => `
-                <div class="cart-item">
-                    <span>${c.nome} (x${c.qty})</span>
-                    <span>€ ${(c.prezzo * c.qty).toFixed(2)}</span>
-                </div>
-            `).join('');
+            container.innerHTML = carrello.map(c => {
+                const lineTotal = calcItemTotal(c);
+                return `
+                    <div class="cart-item">
+                        <span>${c.nome} (x${c.qty})</span>
+                        <span>€ ${lineTotal.toFixed(2)}</span>
+                    </div>
+                `;
+            }).join('');
             document.getElementById('totale-container').innerText = `Totale: € ${calcolaTotale().toFixed(2)}`;
         }
 
-        function calcolaTotale() { return carrello.reduce((tot, item) => tot + (item.qty * item.prezzo), 0); }
+        function calcolaTotale() {
+            return carrello.reduce((tot, item) => tot + calcItemTotal(item), 0);
+        }
+
+        function calcItemTotal(item) {
+            const prezzoUnitario = isProductOnSale(item) ? getDiscountedPrice(item.prezzo, item) : item.prezzo;
+            return prezzoUnitario * item.qty;
+        }
 
         function showIndexToast(message) {
             const toast = document.getElementById('index-toast');
+            if (!toast) return;
             toast.innerText = message;
             toast.style.display = 'block';
             clearTimeout(toast._timer);
@@ -171,9 +269,7 @@
             window.location.href = "checkout.html";
         }
 
-        renderingProdotti();
+        initializePage();
     </script>
 </body>
 </html>
-
-// prova rizzosa
