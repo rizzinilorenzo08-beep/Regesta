@@ -6,61 +6,74 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
     <script src="db.js"></script>
+    <link rel="stylesheet" href="styles.css">
     <style>
-        body { font-family: sans-serif; background: #f4f7f6; display: flex; justify-content: center; padding: 50px; }
-        .card { background: white; padding: 30px; border-radius: 10px; width: 400px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        h2 { color: #2c3e50; }
-        .metodo { margin: 15px 0; padding: 10px; border: 2px solid #ddd; border-radius: 6px; cursor: pointer; }
-        .metodo:hover { border-color: #27ae60; }
-        .metodo.selezionato { border-color: #27ae60; background: #e8f5e9; }
-        button { width: 100%; padding: 15px; background: #27ae60; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; margin-top: 20px; }
-        button:disabled { opacity: 0.6; cursor: not-allowed; }
-        .indirizzo-section { background:#f9fafb; padding:15px; border-radius:8px; border:1px solid #d1d5db; margin:15px 0; }
-        .indirizzo-section h3 { margin-top:0; color:#1f2937; }
-        .indirizzo-section label { display:block; margin:10px 0 4px; color:#374151; font-size:0.95rem; }
-        .indirizzo-section input { width:100%; padding:10px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:1rem; }
-        .indirizzo-section input:focus { outline:none; border-color:#3b82f6; box-shadow:0 0 0 3px rgba(59,130,246,0.15); }
-        .punti-section { display:none; background:#e0f7e0; padding:15px; border-radius:6px; margin:15px 0; border:2px solid #27ae60; }
-        .punti-section .title { font-weight:bold; color:#27ae60; margin-bottom:8px; }
-        .punti-section .value { font-size:1.1rem; color:#27ae60; }
-        .punti-section .sub { font-size:0.85rem; color:#555; margin-top:8px; }
+        /* Checkout page specific styles (uses shared variables in styles.css) */
+        body { font-family: 'Poppins', sans-serif; background: var(--bg); color: var(--text); }
+        .checkout-grid { max-width: 1100px; margin: 48px auto; display: grid; grid-template-columns: 1fr 380px; gap: 24px; padding: 0 20px; }
+        .card { background: var(--card); padding: 22px; border-radius: 12px; box-shadow: 0 8px 30px rgba(15,23,42,0.06); border: 1px solid var(--border); }
+        h2 { color: var(--primary); margin-bottom: 8px; }
+        .metodo { margin: 10px 0; padding: 12px; border: 2px solid #e6e9ee; border-radius: 8px; cursor: pointer; background: transparent; transition: all .18s ease; }
+        .metodo:hover { transform: translateY(-2px); border-color: var(--accent); }
+        .metodo.selezionato { border-color: var(--accent); background: rgba(16,185,129,0.06); }
+        .btn-full { display:inline-block; width:100%; padding:12px 14px; background:var(--accent); color:white; border-radius:10px; text-align:center; font-weight:700; border:none; cursor:pointer; }
+        .btn-full:disabled { opacity: 0.6; cursor: not-allowed; }
+        .indirizzo-section { background: linear-gradient(180deg,#ffffff,#fbfdff); padding:14px; border-radius:10px; border:1px solid var(--border); margin:12px 0; }
+        .indirizzo-section h3 { margin-top:0; color:var(--primary); }
+        .indirizzo-section label { display:block; margin:8px 0 6px; color:var(--muted); font-size:0.95rem; }
+        .indirizzo-section input { width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px; font-size:0.95rem; }
+        .indirizzo-section input:focus { outline:none; border-color:var(--secondary); box-shadow:0 0 0 6px rgba(16,185,129,0.06); }
+        .punti-section { display:none; background:rgba(16,185,129,0.06); padding:12px; border-radius:8px; margin:12px 0; border:1px solid rgba(16,185,129,0.12); }
+        .punti-section .title { font-weight:700; color:var(--secondary); margin-bottom:6px; }
+        .order-summary h3 { margin-top:0; }
+        .order-items { max-height: 320px; overflow-y: auto; margin: 8px 0 12px; display:flex; flex-direction:column; gap:8px; }
+        .order-item { display:flex; justify-content:space-between; gap:8px; padding:10px; border-radius:8px; background:var(--bg); border:1px solid var(--border); }
+        .order-total { font-size:1.3rem; font-weight:800; color:var(--primary); text-align:right; margin-top:12px; }
+        @media (max-width: 900px) { .checkout-grid { grid-template-columns: 1fr; padding: 0 14px; } }
     </style>
 </head>
 <body>
 
-    <div class="card">
-        <h2>Seleziona Pagamento</h2>
-        <div id="riepilogo"></div>
-        
-        <div id="puntiSection" class="punti-section">
-            <div class="title">⭐ Guadagnerai Punti Spesa!</div>
-            <div class="value" id="puntiGuadagnati"></div>
-            <div class="sub">Con questi punti potrai acquistare sconti esclusivi!</div>
+    <div class="checkout-grid">
+        <div class="card">
+            <h2>Dettagli di consegna</h2>
+            <div id="riepilogo"></div>
+
+            <div id="puntiSection" class="punti-section">
+                <div class="title">⭐ Guadagnerai Punti Spesa!</div>
+                <div class="value" id="puntiGuadagnati"></div>
+                <div class="sub">Con questi punti potrai acquistare sconti esclusivi!</div>
+            </div>
+
+            <div class="indirizzo-section">
+                <h3>Indirizzo di consegna</h3>
+                <label for="indirizzoVia">Via e numero civico</label>
+                <input type="text" id="indirizzoVia" placeholder="Es. Via Roma 10" />
+                <label for="indirizzoCitta">Città</label>
+                <input type="text" id="indirizzoCitta" placeholder="Es. Milano" />
+                <label for="indirizzoCap">CAP</label>
+                <input type="text" id="indirizzoCap" placeholder="Es. 20100" />
+                <label for="indirizzoProvincia">Provincia</label>
+                <input type="text" id="indirizzoProvincia" placeholder="Es. MI" />
+                <label for="checkoutEmail">Email per lo scontrino</label>
+                <input type="email" id="checkoutEmail" placeholder="esempio@cliente.it" />
+            </div>
+
+            <h2 style="margin-top:6px;">Metodo di pagamento</h2>
+            <div class="metodo" data-metodo="PayPal" onclick="salvaMetodo('PayPal', this)">PayPal</div>
+            <div class="metodo" data-metodo="Bonifico" onclick="salvaMetodo('Bonifico', this)">Bonifico Bancario</div>
+            <div class="metodo" data-metodo="Contanti" onclick="salvaMetodo('Contanti', this)">Contanti alla consegna</div>
+
+            <a href="index.html" style="display:block; text-align:center; margin-top:18px; color:var(--muted);">← Torna allo Shop</a>
         </div>
-        
-        <div class="indirizzo-section">
-            <h3>Indirizzo di consegna</h3>
-            <label for="indirizzoVia">Via e numero civico</label>
-            <input type="text" id="indirizzoVia" placeholder="Es. Via Roma 10" />
-            <label for="indirizzoCitta">Città</label>
-            <input type="text" id="indirizzoCitta" placeholder="Es. Milano" />
-            <label for="indirizzoCap">CAP</label>
-            <input type="text" id="indirizzoCap" placeholder="Es. 20100" />
-            <label for="indirizzoProvincia">Provincia</label>
-            <input type="text" id="indirizzoProvincia" placeholder="Es. MI" />
-            <label for="checkoutEmail">Email per lo scontrino</label>
-            <input type="email" id="checkoutEmail" placeholder="esempio@cliente.it" />
-        </div>
-        
-        <div class="metodo" data-metodo="PayPal" onclick="salvaMetodo('PayPal', this)">PayPal</div>
-        <div class="metodo" data-metodo="Bonifico" onclick="salvaMetodo('Bonifico', this)">Bonifico Bancario</div>
-        <div class="metodo" data-metodo="Contanti" onclick="salvaMetodo('Contanti', this)">Contanti alla consegna</div>
-        
-        <button id="btn-conferma" onclick="confermaOrdine()">Conferma Acquisto</button>
-        
-        <a href="index.html" style="display:block; text-align:center; margin-top:15px; color:#777;">Torna indietro</a>
-        
-        <div id="checkout-toast" style="display:none; position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:rgba(45,55,72,0.95); color:white; padding:14px 20px; border-radius:12px; box-shadow:0 20px 40px rgba(0,0,0,0.2); z-index:1000; font-weight:700;"></div>
+
+        <aside class="card order-summary">
+            <h3>Riepilogo ordine</h3>
+            <div class="order-items" id="orderItems"></div>
+            <div class="order-total" id="orderTotal">Totale: € 0.00</div>
+            <button id="btn-conferma" class="btn-full" onclick="confermaOrdine()">Conferma Acquisto</button>
+            <div id="checkout-toast" style="display:none; position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:rgba(45,55,72,0.95); color:white; padding:14px 20px; border-radius:12px; box-shadow:0 20px 40px rgba(0,0,0,0.2); z-index:1000; font-weight:700;"></div>
+        </aside>
     </div>
 
     <script>
@@ -104,8 +117,24 @@
 
         const puntiGuadagnati = Math.floor(parseFloat(totale) / 15);
         
-        document.getElementById('riepilogo').innerHTML = 
-            `<p>Totale da pagare: <strong>€ ${totale}</strong></p><p>Articoli: ${cartToUse.length}</p>`;
+        function renderOrderSummary() {
+            const itemsContainer = document.getElementById('orderItems');
+            const totalEl = document.getElementById('orderTotal');
+            if (!itemsContainer || !totalEl) return;
+            itemsContainer.innerHTML = '';
+            cartToUse.forEach(item => {
+                const unitPrice = (typeof isProductOnSale === 'function' && isProductOnSale(item)) ? getDiscountedPrice(item.prezzo, item) : item.prezzo;
+                const div = document.createElement('div');
+                div.className = 'order-item';
+                div.innerHTML = `<div><strong>${item.nome}</strong><div style="font-size:0.85rem;color:var(--muted);">x${item.qty}</div></div><div>€ ${(unitPrice * item.qty).toFixed(2)}</div>`;
+                itemsContainer.appendChild(div);
+            });
+            totalEl.innerText = `Totale: € ${parseFloat(totale).toFixed(2)}`;
+            const riepilogo = document.getElementById('riepilogo');
+            if (riepilogo) riepilogo.innerHTML = `<p style="color:var(--muted);margin-bottom:6px;">Articoli: ${cartToUse.length}</p>`;
+        }
+
+        renderOrderSummary();
 
         if (cliente && puntiGuadagnati > 0) {
             document.getElementById('puntiSection').style.display = 'block';
@@ -395,5 +424,21 @@
         console.log('📦 carrello:', cartToUse);
         console.log('💰 totale:', totale);
     </script>
+    <footer class="footer">
+        <div>
+            <div class="logo-mark">SinGo</div>
+            <p>Spesa fresca, offerte esclusive e consegna direttamente a casa tua.</p>
+        </div>
+        <div class="footer-links">
+            <a href="home.html">Home</a>
+            <a href="index.html">Shop</a>
+            <a href="sconti.html">Offerte</a>
+            <a href="terms.html">Termini e Condizioni</a>
+        </div>
+        <div>
+            <a href="mailto:supporto@singoshop.it">supporto@singoshop.it</a>
+            <p>+39 02 1234 5678</p>
+        </div>
+    </footer>
 </body>
 </html>

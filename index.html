@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SinGo - Shop Online</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="db.js"></script>
     <style>
@@ -89,7 +90,11 @@
 
     <div class="navbar">
         <h2>🛍️ SinGo</h2>
-        <div style="display:flex; gap:12px; align-items:center;">
+        <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+            <a href="home.html">🏠 Home</a>
+            <a href="sconti.html">🔥 Offerte</a>
+            <a href="terms.html">📄 Termini</a>
+            <a href="login.html">⚙️ Area Manager</a>
             <div class="user-section">
                 <span class="user-greeting" id="userGreeting"></span>
                 <a class="points-link" id="puntiLink" href="points.html">⭐ I Miei Punti</a>
@@ -97,8 +102,6 @@
                 <a class="register-link" id="registerLink" href="register.html" style="display:none;">📝 Registrati</a>
                 <a class="login-link" id="loginLink" href="login-cliente.html" style="display:none;">🔓 Login</a>
             </div>
-            <a href="sconti.html">🔥 Offerte</a>
-            <a href="login.html">⚙️ Area Manager</a>
         </div>
     </div>
 
@@ -477,5 +480,21 @@
         // ── Avvio ──────────────────────────────────────────────────────
         initializePage();
     </script>
+    <footer class="footer">
+        <div>
+            <div class="logo-mark">SinGo</div>
+            <p>Spesa fresca, offerte esclusive e consegna direttamente a casa tua.</p>
+        </div>
+        <div class="footer-links">
+            <a href="home.html">Home</a>
+            <a href="index.html">Shop</a>
+            <a href="sconti.html">Offerte</a>
+            <a href="terms.html">Termini e Condizioni</a>
+        </div>
+        <div>
+            <a href="mailto:supporto@singoshop.it">supporto@singoshop.it</a>
+            <p>+39 02 1234 5678</p>
+        </div>
+    </footer>
 </body>
 </html>

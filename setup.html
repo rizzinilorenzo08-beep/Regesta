@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Setup Database - SuperStore Premium</title>
+    <title>Setup Database - SinGo</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="db.js"></script>
     <style>
@@ -172,7 +172,7 @@
                 <div class="credentials">
                     <div class="credential-item">
                         <span class="credential-label">📧 Email:</span>
-                        <span class="credential-value" id="emailValue">test@superstore.it</span>
+                        <span class="credential-value" id="emailValue">test@singoshop.it</span>
                         <button class="copy-btn" onclick="copyToClipboard('emailValue')">Copia</button>
                     </div>
                     <div class="credential-item">
@@ -262,7 +262,7 @@ ON CONFLICT DO NOTHING;
 
 -- Inserisci utente di test
 INSERT INTO clienti (email, password, nome, punti_spesa)
-VALUES ('test@superstore.it', 'VGVzdDEyMyE=', 'Cliente Test', 0)
+VALUES ('test@singoshop.it', 'VGVzdDEyMyE=', 'Cliente Test', 0)
 ON CONFLICT (email) DO UPDATE SET
     password = 'VGVzdDEyMyE=',
     nome = 'Cliente Test';
@@ -302,7 +302,7 @@ ALTER TABLE configurazione DISABLE ROW LEVEL SECURITY;`;
             addLog('➕ Inserimento record di test...', 'info');
 
             try {
-                const emailTest = 'test@superstore.it';
+                const emailTest = 'test@singoshop.it';
                 const passwordTest = 'Test123!';
                 const passwordBase64 = btoa(passwordTest);
                 const nomeTest = 'Cliente Test';
@@ -359,5 +359,21 @@ ALTER TABLE configurazione DISABLE ROW LEVEL SECURITY;`;
         addLog('🎯 Pronto per il setup del database', 'success');
         addLog('💡 Clicca "Crea Tabella" per iniziare', 'info');
     </script>
+    <footer class="footer">
+        <div>
+            <div class="logo-mark">SinGo</div>
+            <p>Spesa fresca, offerte esclusive e consegna direttamente a casa tua.</p>
+        </div>
+        <div class="footer-links">
+            <a href="home.html">Home</a>
+            <a href="index.html">Shop</a>
+            <a href="sconti.html">Offerte</a>
+            <a href="terms.html">Termini e Condizioni</a>
+        </div>
+        <div>
+            <a href="mailto:supporto@singoshop.it">supporto@singoshop.it</a>
+            <p>+39 02 1234 5678</p>
+        </div>
+    </footer>
 </body>
 </html>
