@@ -576,50 +576,97 @@
     }
 
     // ── Finanze & Grafico ────────────────────────────────────────────
-    function aggiornaFinanze() {
-        const incasso = vendite.reduce((s, v) => s + v.totale, 0);
-        const spese   = expenses.reduce((s, e) => s + e.totale, 0);
+function aggiornaFinanze() {
+    // 1. Sommiamo forzando i valori a Float per evitare che vengano trattati come stringhe
+    const incasso = vendite.reduce((s, v) => s + parseFloat(v.totale || 0), 0);
+    const spese   = expenses.reduce((s, e) => s + parseFloat(e.totale || 0), 0);
 
-        document.getElementById('incasso-totale').innerText = `€ ${incasso.toFixed(2)}`;
-        document.getElementById('spese-totali').innerText   = `€ ${spese.toFixed(2)}`;
+    document.getElementById('incasso-totale').innerText = `€ ${incasso.toFixed(2)}`;
+    document.getElementById('spese-totali').innerText   = `€ ${spese.toFixed(2)}`;
 
-        // Aggrega per data
-        const perData = {};
-        vendite.forEach(v => {
-            if (!perData[v.data]) perData[v.data] = { e: 0, u: 0 };
-            perData[v.data].e += v.totale;
-        });
-        expenses.forEach(e => {
-            if (!perData[e.data]) perData[e.data] = { e: 0, u: 0 };
-            perData[e.data].u += e.totale;
-        });
+    // 2. Aggreghiamo per data in modo sicuro
+    const perData = {};
 
-        const labels  = Object.keys(perData).sort();
-        const entrate = labels.map(d => perData[d].e);
-        const uscite  = labels.map(d => perData[d].u);
+    // Ciclo Vendite
+    vendite.forEach(v => {
+        // Estrapola la data sia che si chiami 'data' sia 'created_at' (standard Supabase)
+        let d = "Oggi";
+        if (v.data) d = String(v.data).split('T')[0].split(' ')[0];
+        else if (v.created_at) d = String(v.created_at).split('T')[0].split(' ')[0];
 
-        if (labels.length === 0) { labels.push('—'); entrate.push(0); uscite.push(0); }
+        if (!perData[d]) perData[d] = { e: 0, u: 0 };
+        perData[d].e += parseFloat(v.totale || 0);
+    });
 
-        const ctx = document.getElementById('graficoVendite').getContext('2d');
-        if (chartInstance) chartInstance.destroy();
+    // Ciclo Spese Manager
+    expenses.forEach(e => {
+        let d = "Oggi";
+        if (e.data) d = String(e.data).split('T')[0].split(' ')[0];
+        else if (e.created_at) d = String(e.created_at).split('T')[0].split(' ')[0];
 
-        chartInstance = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels,
-                datasets: [
-                    { label: 'Entrate (€)', data: entrate, borderColor: '#27ae60', backgroundColor: 'rgba(39,174,96,0.15)', tension: 0.3, fill: true, borderWidth: 2, pointRadius: 4 },
-                    { label: 'Uscite (€)',  data: uscite,  borderColor: '#e74c3c', backgroundColor: 'rgba(231,76,60,0.12)',  tension: 0.3, fill: true, borderWidth: 2, pointRadius: 4 }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: { y: { beginAtZero: true } },
-                plugins: { legend: { position: 'top' } }
-            }
-        });
+        if (!perData[d]) perData[d] = { e: 0, u: 0 };
+        perData[d].u += parseFloat(e.totale || 0);
+    });
+
+    // 3. Prepariamo gli array puliti per Chart.js
+    const labels  = Object.keys(perData).sort();
+    const entrate = labels.map(d => perData[d].e);
+    const uscite  = labels.map(d => perData[d].u);
+
+    // Se non ci sono movimenti, mettiamo valori a zero per non spaccare il grafico
+    if (labels.length === 0) { 
+        labels.push('Nessun dato'); 
+        entrate.push(0); 
+        uscite.push(0); 
     }
+
+    const ctx = document.getElementById('graficoVendite').getContext('2d');
+    
+    // Distrugge l'istanza precedente se esiste (fondamentale per evitare sovrapposizioni)
+    if (chartInstance) chartInstance.destroy();
+
+    // 4. Genera il grafico
+    chartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [
+                { 
+                    label: 'Entrate Vendite (€)', 
+                    data: entrate, 
+                    borderColor: '#27ae60', 
+                    backgroundColor: 'rgba(39,174,96,0.15)', 
+                    tension: 0.3, 
+                    fill: true, 
+                    borderWidth: 2, 
+                    pointRadius: 4 
+                },
+                { 
+                    label: 'Uscite Acquisti (€)',  
+                    data: uscite,  
+                    borderColor: '#e74c3c', 
+                    backgroundColor: 'rgba(231,76,60,0.12)',  
+                    tension: 0.3, 
+                    fill: true, 
+                    borderWidth: 2, 
+                    pointRadius: 4 
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: { 
+                y: { 
+                    beginAtZero: true 
+                } 
+            },
+            plugins: { 
+                legend: { position: 'top' } 
+            }
+        }
+    });
+}
 
     // ── Avvio ────────────────────────────────────────────────────────
     caricaDati();
