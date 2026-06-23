@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Supermercato Premium - Shop Online</title>
+    <title>SinGo - Shop Online</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="db.js"></script>
@@ -88,7 +88,7 @@
 <body>
 
     <div class="navbar">
-        <h2>🛍️ SuperStore Premium</h2>
+        <h2>🛍️ SinGo</h2>
         <div style="display:flex; gap:12px; align-items:center;">
             <div class="user-section">
                 <span class="user-greeting" id="userGreeting"></span>
@@ -247,8 +247,8 @@
                 `;
             }
             const badgeHtml = esaurito 
-                ? `<span style="font-size:0.7rem; font-weight:bold; color:#dc2626; background:#fee2e2; padding:4px 8px; border-radius:4px;">ESAURITO</span>`
-                : `<span style="font-size:0.7rem; font-weight:bold; color:green;">DISPONIBILE</span>`;
+                ? `<span style="font-size:0.75rem; font-weight:bold; color:#dc2626; background:#fee2e2; padding:4px 8px; border-radius:4px;">ESAURITO</span>`
+                : `<span style="font-size:0.75rem; font-weight:bold; color:green;">DISPONIBILE</span>`;
             return `
                 <div class="price-row">
                     <span class="prezzo">€ ${p.prezzo.toFixed(2)}</span>
@@ -283,8 +283,8 @@
                         ${saleBadge}
                         <h3>${p.nome}</h3>
                         <p class="product-sub">${p.sub}</p>
-                        ${getPriceHtml(p)}
-                        <button class="btn-add" ${esaurito ? 'disabled' : ''} onclick="aggiungiAlCarrello(${p.id})">Aggiungi</button>
+                        ${getPriceHtml(p, esaurito)}
+                        <button class="btn-add" ${esaurito ? 'disabled style="background-color: #dc2626; color: white;"' : ''} onclick="aggiungiAlCarrello(${p.id})">${esaurito ? 'Esaurito' : 'Aggiungi'}</button>
                     </div>
                 `;
             }).join('');

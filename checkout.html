@@ -15,16 +15,11 @@
         .metodo.selezionato { border-color: #27ae60; background: #e8f5e9; }
         button { width: 100%; padding: 15px; background: #27ae60; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; margin-top: 20px; }
         button:disabled { opacity: 0.6; cursor: not-allowed; }
-        .btn-test { background: #3b82f6; margin-top: 10px; }
         .indirizzo-section { background:#f9fafb; padding:15px; border-radius:8px; border:1px solid #d1d5db; margin:15px 0; }
         .indirizzo-section h3 { margin-top:0; color:#1f2937; }
         .indirizzo-section label { display:block; margin:10px 0 4px; color:#374151; font-size:0.95rem; }
         .indirizzo-section input { width:100%; padding:10px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:1rem; }
         .indirizzo-section input:focus { outline:none; border-color:#3b82f6; box-shadow:0 0 0 3px rgba(59,130,246,0.15); }
-        .debug-box { background: #f1f5f9; padding: 10px; border-radius: 6px; font-size: 0.8rem; margin-top: 15px; max-height: 150px; overflow-y: auto; font-family: monospace; }
-        .debug-box.error { background: #fee2e2; color: #991b1b; }
-        .debug-box.success { background: #dcfce7; color: #166534; }
-        .debug-box.warning { background: #fef3c7; color: #92400e; }
         .punti-section { display:none; background:#e0f7e0; padding:15px; border-radius:6px; margin:15px 0; border:2px solid #27ae60; }
         .punti-section .title { font-weight:bold; color:#27ae60; margin-bottom:8px; }
         .punti-section .value { font-size:1.1rem; color:#27ae60; }
@@ -63,11 +58,7 @@
         
         <button id="btn-conferma" onclick="confermaOrdine()">Conferma Acquisto</button>
         
-        <button class="btn-test" onclick="testConnessione()">🔌 Test Connessione Supabase</button>
-        
         <a href="index.html" style="display:block; text-align:center; margin-top:15px; color:#777;">Torna indietro</a>
-        
-        <div id="debug-box" class="debug-box">In attesa di azioni...</div>
         
         <div id="checkout-toast" style="display:none; position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:rgba(45,55,72,0.95); color:white; padding:14px 20px; border-radius:12px; box-shadow:0 20px 40px rgba(0,0,0,0.2); z-index:1000; font-weight:700;"></div>
     </div>
@@ -86,15 +77,10 @@
             });
         })();
 
+        // Background debug silente
         function debugLog(message, type = 'info') {
-            const box = document.getElementById('debug-box');
-            if (!box) return;
             const time = new Date().toLocaleTimeString();
-            box.innerHTML = `<strong>[${time}]</strong> ${message}<br>` + box.innerHTML;
-            box.className = 'debug-box ' + type;
-            if (box.children.length > 20) {
-                box.lastChild?.remove();
-            }
+            console.log(`[${time}] [${type.toUpperCase()}] ${message}`);
         }
 
         debugLog('Pagina caricata correttamente e EmailJS configurato');
@@ -181,7 +167,7 @@
         }
 
         // ===========================================
-        // 6. TEST CONNESSIONE SUPABASE
+        // 6. TEST CONNESSIONE SUPABASE (IN BACKGROUND)
         // ===========================================
         async function testConnessione() {
             debugLog('🔍 Test connessione Supabase in corso...', 'info');
@@ -200,13 +186,11 @@
                 }
                 
                 debugLog('✅ Connessione OK! Trovati ' + (data?.length || 0) + ' prodotti.', 'success');
-                showCheckoutToast('✅ Connessione a Supabase funzionante!');
-                console.log('📦 Dati di test:', data);
+                console.log('📦 Dati di test (Background):', data);
                 
             } catch (error) {
                 debugLog('❌ ERRORE: ' + error.message, 'error');
-                showCheckoutToast('❌ Errore connessione: ' + error.message);
-                console.error('Errore di connessione:', error);
+                console.error('Errore di connessione (Background):', error);
             }
         }
 
@@ -402,7 +386,7 @@
             }
             
             setTimeout(() => {
-                debugLog('🔍 Eseguo test connessione automatico...', 'info');
+                debugLog('🔍 Eseguo test connessione automatico in background...', 'info');
                 testConnessione();
             }, 2000);
         });
