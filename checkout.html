@@ -17,6 +17,11 @@
         button { width: 100%; padding: 15px; background: #27ae60; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; margin-top: 20px; }
         button:disabled { opacity: 0.6; cursor: not-allowed; }
         .btn-test { background: #3b82f6; margin-top: 10px; }
+        .indirizzo-section { background:#f9fafb; padding:15px; border-radius:8px; border:1px solid #d1d5db; margin:15px 0; }
+        .indirizzo-section h3 { margin-top:0; color:#1f2937; }
+        .indirizzo-section label { display:block; margin:10px 0 4px; color:#374151; font-size:0.95rem; }
+        .indirizzo-section input { width:100%; padding:10px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:1rem; }
+        .indirizzo-section input:focus { outline:none; border-color:#3b82f6; box-shadow:0 0 0 3px rgba(59,130,246,0.15); }
         .debug-box { background: #f1f5f9; padding: 10px; border-radius: 6px; font-size: 0.8rem; margin-top: 15px; max-height: 150px; overflow-y: auto; font-family: monospace; }
         .debug-box.error { background: #fee2e2; color: #991b1b; }
         .debug-box.success { background: #dcfce7; color: #166534; }
@@ -32,6 +37,18 @@
             <div style="font-weight:bold; color:#27ae60; margin-bottom:8px;">⭐ Guadagnerai Punti Spesa!</div>
             <div style="font-size:1.1rem; color:#27ae60;" id="puntiGuadagnati"></div>
             <div style="font-size:0.85rem; color:#555; margin-top:8px;">Con questi punti potrai acquistare sconti esclusivi!</div>
+        </div>
+        
+        <div class="indirizzo-section">
+            <h3>Indirizzo di consegna</h3>
+            <label for="indirizzoVia">Via e numero civico</label>
+            <input type="text" id="indirizzoVia" placeholder="Es. Via Roma 10" />
+            <label for="indirizzoCitta">Città</label>
+            <input type="text" id="indirizzoCitta" placeholder="Es. Milano" />
+            <label for="indirizzoCap">CAP</label>
+            <input type="text" id="indirizzoCap" placeholder="Es. 20100" />
+            <label for="indirizzoProvincia">Provincia</label>
+            <input type="text" id="indirizzoProvincia" placeholder="Es. MI" />
         </div>
         
         <div class="metodo" data-metodo="PayPal" onclick="salvaMetodo('PayPal', this)">PayPal</div>
@@ -185,6 +202,24 @@
                 debugLog('❌ Carrello vuoto', 'error');
                 return;
             }
+
+            const indirizzoVia = document.getElementById('indirizzoVia').value.trim();
+            const indirizzoCitta = document.getElementById('indirizzoCitta').value.trim();
+            const indirizzoCap = document.getElementById('indirizzoCap').value.trim();
+            const indirizzoProvincia = document.getElementById('indirizzoProvincia').value.trim();
+
+            if (!indirizzoVia || !indirizzoCitta || !indirizzoCap || !indirizzoProvincia) {
+                showCheckoutToast("❌ Inserisci tutti i campi dell'indirizzo di consegna.");
+                debugLog('❌ Indirizzo di consegna incompleto', 'error');
+                return;
+            }
+
+            const indirizzoConsegna = {
+                via: indirizzoVia,
+                citta: indirizzoCitta,
+                cap: indirizzoCap,
+                provincia: indirizzoProvincia
+            };
 
             try {
                 isProcessing = true;
