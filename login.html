@@ -21,8 +21,8 @@
     <div class="login-card">
         <h2>Accesso Manager</h2>
         <form id="loginForm">
-            <input type="text" id="username" placeholder="Username" required>
-            <input type="password" id="password" placeholder="Password" required>
+            <input type="text" id="username" placeholder="Username (Inserisci: admin)" required>
+            <input type="password" id="password" placeholder="Password (Inserisci: admin)" required>
             <button type="submit">Accedi</button>
         </form>
         <div id="login-status" style="min-height:20px; margin-top:12px; color:#b91c1c; font-weight:600;"></div>
@@ -40,7 +40,7 @@
             } else {
                 const msg = document.getElementById('login-status');
                 if (msg) {
-                    msg.innerText = 'Credenziali errate!';
+                    msg.innerText = 'Credenziali errate! Usa admin / admin';
                     msg.style.color = '#b91c1c';
                 }
             }
