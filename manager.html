@@ -91,7 +91,7 @@
             <button class="category-btn sub-btn" onclick="filtraCategoria('Macchina', this)">Macchina</button>
         </div>
 
-        <a href="index.html" class="logout-btn">Esci alla Vista Cliente</a>
+        <button onclick="logoutManager()" class="logout-btn">Esci alla Vista Cliente</button>
     </div>
 
     <div class="main">
@@ -213,16 +213,26 @@
     <div id="toast" class="toast"></div>
 
     <script>
+        // ── CONTROLLO DI SICUREZZA DI SESSIONE ───────────────────────────
+        if (sessionStorage.getItem('manager_autenticato') !== 'true') {
+            window.location.replace('login.html');
+        }
+
+        function logoutManager() {
+            sessionStorage.removeItem('manager_autenticato');
+            window.location.href = 'index.html';
+        }
+
         // ── Stato globale ────────────────────────────────────────────────
-        let inventario    = [];
-        let vendite       = [];
-        let expenses      = [];
+        let inventario      = [];
+        let vendite         = [];
+        let expenses        = [];
         let budgetAziendale = 0;
         let categoriaAttuale = 'Tutte';
-        let chartInstance = null;
-        let managerCart   = [];
-        let modalCallback = null;
-        let isProcessing = false;
+        let chartInstance   = null;
+        let managerCart     = [];
+        let modalCallback   = null;
+        let isProcessing    = false;
         let promozioniAttive = [];
 
         // ── UI helpers ───────────────────────────────────────────────────
@@ -266,7 +276,6 @@
             setSpinner(true);
             try {
                 ensureDatabase();
-
                 inventario = await loadInventario();
 
                 if (inventario.length === 0) {
@@ -288,28 +297,23 @@
                     await saveInventario(inventario);
                 }
 
-                vendite      = await loadVendite();
-                
-                // --- MODIFICA: Recupero spese da Supabase con fallback locale ---
+                vendite = await loadVendite();
+
+                // Recupero spese da Supabase con fallback locale
                 try {
                     const { data: dbExpenses, error: expError } = await supabaseClient
                         .from('spese')
                         .select('*')
                         .order('data', { ascending: true });
-                    
-                    if (!expError && dbExpenses) {
-                        expenses = dbExpenses;
-                    } else {
-                        expenses = loadExpenses();
-                    }
+                    expenses = (!expError && dbExpenses) ? dbExpenses : loadExpenses();
                 } catch(e) {
                     expenses = loadExpenses();
                 }
-                
-                managerCart  = loadManagerCart();
+
+                managerCart     = loadManagerCart();
                 budgetAziendale = await loadBudget();
 
-                // ← Carica offerte flash attive da Supabase
+                // Carica offerte flash attive da Supabase
                 const { data: offerteDB, error: offerteErr } = await supabaseClient
                     .from('offerte_flash')
                     .select('*')
@@ -345,15 +349,11 @@
         function cambiaVista(vista, btn) {
             document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
             document.getElementById('vista-' + vista).classList.add('active');
-
             document.querySelectorAll('.sidebar > .category-btn').forEach(b => b.classList.remove('active'));
             if (btn) btn.classList.add('active');
-
             document.getElementById('menu-categorie').style.display = vista === 'magazzino' ? 'flex' : 'none';
-            
             const titoli = { magazzino: 'Gestione Magazzino', finanze: 'Report Finanziario', promozioni: 'Configurazione Offerte Flash' };
             document.getElementById('titolo-sezione').innerText = titoli[vista] || 'Pannello Manager';
-
             if (vista === 'finanze') aggiornaFinanze();
             if (vista === 'promozioni') renderPromozioni();
         }
@@ -431,8 +431,8 @@
         function modificaDesired(id, delta) {
             const input = document.getElementById(`desired-${id}`);
             if (!input) return;
-            const prod    = inventario.find(p => p.id === id);
-            const spazio  = prod ? Math.max(0, prod.maxQty - prod.qty) : 0;
+            const prod   = inventario.find(p => p.id === id);
+            const spazio = prod ? Math.max(0, prod.maxQty - prod.qty) : 0;
             let val = (parseInt(input.value, 10) || 1) + delta;
             input.value = Math.min(spazio, Math.max(1, val));
         }
@@ -516,19 +516,9 @@
                 showToast('⏳ Elaborazione in corso...', 'info');
                 return;
             }
-
             if (managerCart.length === 0) {
                 showToast('Carrello vuoto', 'error');
                 return;
-            }
-
-            for (const it of managerCart) {
-                const prod = inventario.find(p => p.id === it.id);
-                const spazio = prod ? Math.max(0, prod.maxQty - prod.qty) : 0;
-                if (!prod || spazio < it.qty) {
-                    showToast(`Quantità non disponibile per "${it.nome}"`, 'error');
-                    return;
-                }
             }
 
             const costoTotale = managerCart.reduce((s, i) => s + i.prezzo * i.qty * 0.55, 0);
@@ -553,23 +543,23 @@
                     try {
                         managerCart.forEach(it => {
                             const prod = inventario.find(p => p.id === it.id);
-                            if (prod) {
-                                prod.qty += it.qty;
-                                console.log(`📦 ${prod.nome}: +${it.qty} → ${prod.qty}`);
-                            }
+                            if (prod) prod.qty += it.qty;
                         });
-
                         await saveInventario(inventario);
 
                         const spesa = {
                             data: new Date().toISOString().split('T')[0],
                             totale: costoTotale
                         };
-                        
-                        // Registro in locale (backup)
-                        recordExpense(spesa);
 
-                        // --- MODIFICA: Inserimento diretto su Supabase ---
+                        // Salvataggio locale (backup)
+                        recordExpense(spesa);
+                        expenses.push(spesa);
+
+                        budgetAziendale -= costoTotale;
+                        await saveBudget(budgetAziendale);
+
+                        // Inserimento spesa su Supabase
                         const { error: insertExpError } = await supabaseClient
                             .from('spese')
                             .insert([{
@@ -582,11 +572,7 @@
                             throw new Error("Impossibile salvare la spesa sul database cloud.");
                         }
 
-                        expenses.push(spesa);
-
-                        budgetAziendale -= costoTotale;
-                        await saveBudget(budgetAziendale);
-
+                        // Svuota il carrello dopo il salvataggio confermato
                         managerCart = [];
                         clearManagerCart();
 
@@ -629,12 +615,12 @@
             } else {
                 lista.innerHTML = promozioniAttive.map(p => {
                     const prod = inventario.find(i => i.id === p.idProdotto);
-                    const prezzoScontato = prod ? (prod.prezzo * (1 - p.sconto / 100)) : 0;
+                    const prezzoScontato = prod ? (prod.prezzo * (1 - p.sconto / 100)).toFixed(2) : '—';
                     return `
                         <div style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc; padding:12px; border-radius:6px; border-left:4px solid #10b981; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
                             <div>
                                 <strong>${prod ? prod.nome : 'Prodotto'}</strong>: Sconto del <span style="color:#10b981; font-weight:bold;">${p.sconto}%</span>
-                                <span style="font-size:0.85rem; color:#666; display:block; margin-top:2px;">Prezzo Scontato: € ${prezzoScontato.toFixed(2)}</span>
+                                <span style="font-size:0.85rem; color:#666; display:block; margin-top:2px;">Prezzo Scontato: € ${prezzoScontato}</span>
                             </div>
                             <button onclick="rimuoviPromozione(${p.idProdotto})" style="background:#e74c3c; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; font-weight:bold; font-size:0.85rem;">Rimuovi</button>
                         </div>
@@ -646,19 +632,11 @@
         async function attivaPromozioneManuale(e) {
             e.preventDefault();
 
-            const idProdotto = parseInt(
-                document.getElementById('promo-prodotto-select').value
-            );
-
-            const sconto = parseInt(
-                document.getElementById('promo-sconto-pct').value
-            );
+            const idProdotto = parseInt(document.getElementById('promo-prodotto-select').value);
+            const sconto     = parseInt(document.getElementById('promo-sconto-pct').value);
 
             if (isNaN(sconto) || sconto < 5 || sconto > 90) {
-                showToast(
-                    '❌ Inserisci uno sconto valido tra il 5% e il 90%',
-                    'error'
-                );
+                showToast('❌ Inserisci uno sconto valido tra il 5% e il 90%', 'error');
                 return;
             }
 
@@ -671,53 +649,30 @@
                     .update({ attiva: false })
                     .eq('prodotto_id', idProdotto);
 
-                if (updateError) {
-                    throw updateError;
-                }
+                if (updateError) throw updateError;
 
                 // Inserisce la nuova offerta
                 const { data, error } = await supabaseClient
                     .from('offerte_flash')
-                    .insert([
-                        {
-                            prodotto_id: idProdotto,
-                            sconto: sconto,
-                            attiva: true
-                        }
-                    ])
+                    .insert([{ prodotto_id: idProdotto, sconto: sconto, attiva: true }])
                     .select();
 
-                if (error) {
-                    throw error;
-                }
+                if (error) throw error;
 
                 // Aggiorna la lista locale
-                promozioniAttive = promozioniAttive.filter(
-                    p => p.idProdotto !== idProdotto
-                );
+                promozioniAttive = promozioniAttive.filter(p => p.idProdotto !== idProdotto);
+                promozioniAttive.push({ idProdotto, sconto });
 
-                promozioniAttive.push({
-                    idProdotto,
-                    sconto
-        });
+                renderPromozioni();
+                showToast(`⚡ Offerta del ${sconto}% attivata con successo!`, 'success');
 
-        renderPromozioni();
-
-        showToast(
-            `⚡ Offerta del ${sconto}% attivata con successo!`,
-            'success'
-        );
-
-    } catch (err) {
-        console.error(err);
-        showToast(
-            '❌ Errore durante il salvataggio dell\'offerta',
-            'error'
-        );
-    } finally {
-        setSpinner(false);
-    }
-}
+            } catch (err) {
+                console.error(err);
+                showToast('❌ Errore durante il salvataggio dell\'offerta', 'error');
+            } finally {
+                setSpinner(false);
+            }
+        }
 
         async function rimuoviPromozione(idProdotto) {
             try {
@@ -773,38 +728,32 @@
             setSpinner(true);
             try {
                 await saveInventario(inventario);
-                showToast('Stock massimo aggiornato', 'success');
                 cambiaVista('magazzino', document.querySelector('.sidebar .category-btn'));
                 aggiornaTabella();
+                showToast('✅ Stock aggiornato!', 'success');
             } catch (err) {
-                showToast('Errore salvataggio: ' + err.message, 'error');
+                showToast('Errore nel salvataggio', 'error');
             } finally {
                 setSpinner(false);
             }
         }
 
-        // ── Finanze & Grafico ────────────────────────────────────────────
+        // ── Finanze ──────────────────────────────────────────────────────
         function aggiornaFinanze() {
             const incasso = vendite.reduce((s, v) => s + parseFloat(v.totale || 0), 0);
             const spese   = expenses.reduce((s, e) => s + parseFloat(e.totale || 0), 0);
 
-            document.getElementById('incasso-totale').innerHTML = `€ ${incasso.toFixed(2)}<br><small style="font-size:0.8rem;color:#999;">Totale vendite</small>`;
-            document.getElementById('spese-totali').innerHTML   = `€ ${spese.toFixed(2)}<br><small style="font-size:0.8rem;color:#999;">Totale acquisti</small>`;
+            document.getElementById('incasso-totale').innerHTML = `€ ${incasso.toFixed(2)}`;
+            document.getElementById('spese-totali').innerHTML   = `€ ${spese.toFixed(2)}`;
 
             const perData = {};
-
             vendite.forEach(v => {
-                let d = "Oggi";
-                if (v.data) d = String(v.data).split('T')[0].split(' ')[0];
-                else if (v.created_at) d = String(v.created_at).split('T')[0].split(' ')[0];
+                let d = v.data ? String(v.data).split('T')[0] : 'Oggi';
                 if (!perData[d]) perData[d] = { e: 0, u: 0 };
                 perData[d].e += parseFloat(v.totale || 0);
             });
-
             expenses.forEach(e => {
-                let d = "Oggi";
-                if (e.data) d = String(e.data).split('T')[0].split(' ')[0];
-                else if (e.created_at) d = String(e.created_at).split('T')[0].split(' ')[0];
+                let d = e.data ? String(e.data).split('T')[0] : 'Oggi';
                 if (!perData[d]) perData[d] = { e: 0, u: 0 };
                 perData[d].u += parseFloat(e.totale || 0);
             });
@@ -812,12 +761,6 @@
             const labels  = Object.keys(perData).sort();
             const entrate = labels.map(d => perData[d].e);
             const uscite  = labels.map(d => perData[d].u);
-
-            if (labels.length === 0) { 
-                labels.push('Nessun dato'); 
-                entrate.push(0); 
-                uscite.push(0); 
-            }
 
             const ctx = document.getElementById('graficoVendite').getContext('2d');
             if (chartInstance) chartInstance.destroy();
@@ -827,44 +770,14 @@
                 data: {
                     labels,
                     datasets: [
-                        { 
-                            label: 'Entrate Vendite (€)', 
-                            data: entrate, 
-                            borderColor: '#27ae60', 
-                            backgroundColor: 'rgba(39,174,96,0.15)', 
-                            tension: 0.3, 
-                            fill: true, 
-                            borderWidth: 2, 
-                            pointRadius: 4 
-                        },
-                        { 
-                            label: 'Uscite Acquisti (€)',  
-                            data: uscite,  
-                            borderColor: '#e74c3c', 
-                            backgroundColor: 'rgba(231,76,60,0.12)',  
-                            tension: 0.3, 
-                            fill: true, 
-                            borderWidth: 2, 
-                            pointRadius: 4 
-                        }
+                        { label: 'Entrate (€)', data: entrate, borderColor: '#27ae60', tension: 0.3 },
+                        { label: 'Uscite (€)',  data: uscite,  borderColor: '#e74c3c', tension: 0.3 }
                     ]
                 },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: { 
-                        y: { 
-                            beginAtZero: true 
-                        } 
-                    },
-                    plugins: { 
-                        legend: { position: 'top' } 
-                    }
-                }
+                options: { responsive: true, maintainAspectRatio: false }
             });
         }
 
-        // ── Avvio ────────────────────────────────────────────────────────
         caricaDati();
     </script>
 </body>
