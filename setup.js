@@ -50,7 +50,7 @@ CREATE TABLE IF NOT EXISTS clienti (
         console.log('➕ Inserimento record di test...\n');
         
         // Credenziali di test (password codificata in base64)
-        const emailTest = "test@singoshop.it";
+        const emailTest = "test@superstore.it";
         const passwordTest = "Test123!"; // Password originale
         const passwordBase64 = Buffer.from(passwordTest).toString('base64'); // dGVzdFRlc3QxMjMh
         const nomeTest = "Cliente Test";

@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SinGo - Offerte</title>
+    <title>SuperStore Premium - Offerte</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="db.js"></script>
     <style>
@@ -17,7 +16,10 @@
         }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Poppins', sans-serif; }
         body { background-color: var(--bg); color: var(--text); min-height: 100vh; }
-        /* Navbar styles moved to styles.css for site-wide consistency */
+        .navbar { background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: white; padding: 15px 40px; display: flex; justify-content: space-between; align-items: center; box-shadow: var(--shadow-md); position: sticky; top: 0; z-index: 100; }
+        .navbar h2 { font-weight: 700; font-size: 1.5rem; }
+        .navbar a { color: white; text-decoration: none; font-weight: 600; background: rgba(255,255,255,0.15); padding: 10px 20px; border-radius: 8px; transition: all 0.3s ease; font-size: 0.9rem; }
+        .navbar a:hover { background: rgba(255,255,255,0.25); }
         .promo-banner { background: linear-gradient(135deg, #16a34a, #10b981); color: white; padding: 16px 24px; border-radius: 16px; margin: 20px auto; max-width: 1200px; display: flex; justify-content: space-between; align-items: center; gap: 20px; box-shadow: 0 15px 35px rgba(16, 185, 129, 0.18); }
         .promo-banner p { margin: 0; font-weight: 600; }
         .promo-badge { background: rgba(255,255,255,.18); padding: 8px 14px; border-radius: 999px; font-size: 0.95rem; }
@@ -46,16 +48,10 @@
 </head>
 <body>
     <div class="navbar">
-        <h2>🛍️ SinGo</h2>
-        <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
-            <a href="home.html">🏠 Home</a>
-            <a href="index.html">🛒 Shop</a>
-            <a href="sconti.html">🔥 Offerte</a>
-            <a href="terms.html">📄 Termini</a>
+        <h2>🔥 Offerte - SuperStore Premium</h2>
+        <div style="display:flex; gap:12px; align-items:center;">
+            <a href="index.html">🏠 Torna allo Shop</a>
             <a href="login.html">⚙️ Area Manager</a>
-            <a href="register.html">📝 Registrati</a>
-            <a href="login-cliente.html">🔓 Login</a>
-            <a href="points.html">⭐ Punti</a>
         </div>
     </div>
 
@@ -244,21 +240,5 @@
 
         initializeSalePage();
     </script>
-    <footer class="footer">
-        <div>
-            <div class="logo-mark">SinGo</div>
-            <p>Spesa fresca, offerte esclusive e consegna direttamente a casa tua.</p>
-        </div>
-        <div class="footer-links">
-            <a href="home.html">Home</a>
-            <a href="index.html">Shop</a>
-            <a href="sconti.html">Offerte</a>
-            <a href="terms.html">Termini e Condizioni</a>
-        </div>
-        <div>
-            <a href="mailto:supporto@singoshop.it">supporto@singoshop.it</a>
-            <p>+39 02 1234 5678</p>
-        </div>
-    </footer>
 </body>
 </html>
