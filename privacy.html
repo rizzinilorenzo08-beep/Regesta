@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy Policy - SinGo</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .policy-container {
+            max-width: 1000px;
+            margin: 40px auto;
+            background: var(--card-bg);
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--border);
+        }
+        .policy-container h1 {
+            color: var(--primary);
+            margin-bottom: 20px;
+            font-size: 2rem;
+            border-bottom: 2px solid var(--secondary);
+            padding-bottom: 10px;
+        }
+        .policy-container h2 {
+            color: var(--primary-light);
+            margin-top: 25px;
+            margin-bottom: 10px;
+            font-size: 1.3rem;
+        }
+        .policy-container p {
+            color: var(--text);
+            line-height: 1.6;
+            margin-bottom: 15px;
+            font-size: 0.95rem;
+        }
+        .policy-container ul {
+            margin-left: 20px;
+            margin-bottom: 15px;
+            color: var(--text);
+        }
+        .policy-container li {
+            margin-bottom: 8px;
+            font-size: 0.95rem;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="navbar">
+        <div class="nav-left">
+            <a href="index.html" class="nav-logo">🛍️ SinGo</a>
+        </div>
+        <div class="nav-center">
+            <a href="index.html">🏠 Home</a>
+            <a href="sconti.html">🔥 Offerte</a>
+        </div>
+        <div class="nav-right">
+            <div class="user-section">
+                <span class="user-greeting" id="userGreeting"></span>
+                <a class="points-link" id="puntiLink" href="points.html">⭐ I Miei Punti</a>
+                <button class="btn-logout" id="logoutBtn" onclick="logoutUser()">Logout</button>
+                <a class="register-link" id="registerLink" href="register.html" style="display:none;">📝 Registrati</a>
+                <a class="login-link" id="loginLink" href="login-cliente.html" style="display:none;">🔓 Login</a>
+            </div>
+            <a href="login.html">⚙️ Area Manager</a>
+        </div>
+    </div>
+
+    <div class="policy-container">
+        <h1>Informativa sulla Privacy (Privacy Policy)</h1>
+        <p>Benvenuto su SinGo. La tua privacy è estremamente importante per noi. In questa pagina ti spieghiamo in modo trasparente come raccogliamo, utilizziamo e proteggiamo i tuoi dati personali in conformità al Regolamento Generale sulla Protezione dei Dati (GDPR).</p>
+        
+        <h2>1. Dati Raccolti</h2>
+        <p>Raccogliamo solo i dati strettamente necessari per fornirti i nostri servizi di e-commerce e fidelizzazione:</p>
+        <ul>
+            <li>Dati di registrazione (Nome, indirizzo email, password cifrata nel browser) per l'Area Clienti.</li>
+            <li>Dati di spedizione e recapito forniti spontaneamente al momento del pagamento.</li>
+            <li>Informazioni temporanee sui cookie di sessione per la memorizzazione del carrello della spesa.</li>
+        </ul>
+
+        <h2>2. Finalità del Trattamento</h2>
+        <p>I tuoi dati vengono trattati esclusivamente per i seguenti scopi:</p>
+        <ul>
+            <li>Elaborare, validare e spedire gli ordini d'acquisto inviati.</li>
+            <li>Calcolare l'assegnazione dei punti spesa nel sistema fedeltà.</li>
+            <li>Garantire la corretta autenticazione di sicurezza del tuo profilo personale.</li>
+        </ul>
+
+        <h2>3. Uso dei Cookie</h2>
+        <p>Utilizziamo cookie tecnici essenziali per consentire il funzionamento del carrello e, previo tuo esplicito consenso tramite il banner del sito, cookie analitici e di profilazione anonima per migliorare i nostri servizi commerciali.</p>
+
+        <h2>4. I Tuoi Diritti</h2>
+        <p>In quanto utente, hai il pieno diritto di richiedere l'accesso, la rettifica, la portabilità o la cancellazione permanente di tutti i dati registrati sui nostri database semplicemente effettuando il logout o contattando l'assistenza manageriale.</p>
+    </div>
+
+    <div class="footer">
+        <div class="footer-content">
+            <div class="footer-links">
+                <a href="privacy.html">Privacy Policy</a>
+                <a href="termini.html">Termini e Condizioni</a>
+            </div>
+            <div class="footer-copy">© 2026 SinGo - Shop Online. Tutti i diritti riservati.</div>
+        </div>
+    </div>
+
+    <div id="cookie-popup" class="cookie-popup hidden">
+        <div class="cookie-content">
+            <h3>🍪 Gestione dei Cookie</h3>
+            <p>Utilizziamo i cookie per migliorare la tua esperienza di acquisto, analizzare il traffico del sito e offrire promozioni personalizzate. Puoi accettare tutti i cookie o gestire le tue preferenze.</p>
+            <div class="cookie-preferences" id="cookie-preferences" style="display: none;">
+                <label><input type="checkbox" id="cookie-necessary" checked disabled> Necessari (Sempre attivi)</label>
+                <label><input type="checkbox" id="cookie-analytics" checked> Analitici (Statistiche d'uso)</label>
+                <label><input type="checkbox" id="cookie-marketing" checked> Marketing e Profilazione</label>
+            </div>
+            <div class="cookie-buttons">
+                <button class="btn-cookie-secondary" onclick="togglePreferences()">Personalizza</button>
+                <button class="btn-cookie-danger" onclick="saveCookies('rifiutati')">Rifiuta</button>
+                <button class="btn-cookie-primary" onclick="saveCookies('accettati')">Accetta Tutti</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container"><div id="index-toast" class="toast-message"></div></div>
+
+    <script src="db.js"></script>
+    <script>
+        function checkCookieConsent() {
+            const consent = localStorage.getItem('singoCookieConsent');
+            const popup = document.getElementById('cookie-popup');
+            if (!consent && popup) { popup.classList.remove('hidden'); }
+        }
+        function togglePreferences() {
+            const prefs = document.getElementById('cookie-preferences');
+            if (prefs) { prefs.style.display = prefs.style.display === 'none' ? 'flex' : 'none'; }
+        }
+        function saveCookies(type) {
+            const popup = document.getElementById('cookie-popup');
+            if (type === 'accettati') {
+                localStorage.setItem('singoCookieConsent', 'all');
+                localStorage.setItem('singoCookiePrefs', JSON.stringify({ analytics: true, marketing: true }));
+            } else if (type === 'rifiutati') {
+                localStorage.setItem('singoCookieConsent', 'necessary');
+                localStorage.setItem('singoCookiePrefs', JSON.stringify({ analytics: false, marketing: false }));
+            } else {
+                const analytics = document.getElementById('cookie-analytics').checked;
+                const marketing = document.getElementById('cookie-marketing').checked;
+                localStorage.setItem('singoCookieConsent', 'custom');
+                localStorage.setItem('singoCookiePrefs', JSON.stringify({ analytics, marketing }));
+            }
+            if (popup) popup.classList.add('hidden');
+            alert('Preferenze cookie salvate!');
+        }
+        function updateUserUI() {
+            if (typeof caricaClienteLoggato === 'function') {
+                const cliente = caricaClienteLoggato();
+                const userGreeting = document.getElementById('userGreeting');
+                const puntiLink = document.getElementById('puntiLink');
+                const logoutBtn = document.getElementById('logoutBtn');
+                const registerLink = document.getElementById('registerLink');
+                const loginLink = document.getElementById('loginLink');
+                if (cliente) {
+                    if (userGreeting) { userGreeting.style.display = 'inline-block'; userGreeting.textContent = `👤 Ciao ${cliente.nome}!`; }
+                    if (puntiLink) puntiLink.style.display = 'inline-block';
+                    if (logoutBtn) logoutBtn.style.display = 'inline-block';
+                    if (registerLink) registerLink.style.display = 'none';
+                    if (loginLink) loginLink.style.display = 'none';
+                }
+            }
+        }
+        window.onload = function() {
+            checkCookieConsent();
+            updateUserUI();
+        };
+    </script>
+</body>
+</html>

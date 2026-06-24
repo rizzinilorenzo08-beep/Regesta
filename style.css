@@ -1,0 +1,258 @@
+/* style.css - Stile Comune Globale per SinGo Shop */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
+
+:root { 
+    --primary: #1E293B; 
+    --primary-light: #334155; 
+    --secondary: #10B981; 
+    --secondary-hover: #059669; 
+    --accent: #F59E0B; 
+    --bg: #F8FAFC; 
+    --text: #0F172A; 
+    --text-muted: #64748B; 
+    --card-bg: #FFFFFF; 
+    --border: #E2E8F0;
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05); 
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1); 
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+}
+
+* { 
+    box-sizing: border-box; 
+    margin: 0; 
+    padding: 0; 
+    font-family: 'Poppins', sans-serif; 
+}
+
+body { 
+    background-color: var(--bg); 
+    color: var(--text); 
+    display: flex; 
+    flex-direction: column; 
+    min-height: 100vh; 
+}
+
+/* ── HEADER / NAVBAR COMPLETAMENTE AGGIORNATA ────────────────────────── */
+.navbar { 
+    background: linear-gradient(135deg, var(--primary), var(--primary-light)); 
+    color: white; 
+    padding: 15px 40px; 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    box-shadow: var(--shadow-md); 
+    position: sticky; 
+    top: 0; 
+    z-index: 100; 
+}
+
+.nav-left {
+    display: flex;
+    align-items: center;
+}
+
+.nav-logo {
+    font-weight: 700; 
+    font-size: 1.5rem; 
+    color: white;
+    text-decoration: none;
+    display: flex; 
+    align-items: center; 
+    gap: 10px;
+}
+
+.nav-center {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    flex: 1;
+}
+
+.nav-right {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+
+.navbar a, .navbar button { 
+    color: white; 
+    text-decoration: none; 
+    font-weight: 600; 
+    background: rgba(255,255,255,0.15); 
+    padding: 10px 20px; 
+    border-radius: 8px; 
+    transition: all 0.3s ease; 
+    font-size: 0.9rem; 
+    border: none;
+    cursor: pointer;
+}
+
+.navbar a:hover, .navbar button:hover { 
+    background: rgba(255,255,255,0.25); 
+}
+
+.user-section { 
+    display: flex; 
+    align-items: center; 
+    gap: 12px; 
+}
+
+.user-greeting { 
+    display: none; 
+    color: white; 
+    font-weight: 600; 
+    font-size: 0.95rem;
+}
+
+.btn-logout { 
+    display: none; 
+}
+
+.points-link { 
+    display: none; 
+    background: rgba(255,193,7,0.9) !important; 
+    color: white !important; 
+}
+
+.points-link:hover { 
+    background: rgba(255,193,7,1) !important; 
+    transform: translateY(-2px); 
+}
+
+/* ── FOOTER STILE AUTOMATICO ───────────────────────────────────────── */
+.footer {
+    background: linear-gradient(135deg, var(--primary), var(--primary-light)); 
+    color: white;
+    padding: 30px 40px;
+    margin-top: auto;
+    text-align: center;
+    box-shadow: 0 -4px 6px -1px rgb(0 0 0 / 0.05);
+    border-top: 1px solid var(--border);
+}
+
+.footer-content {
+    max-width: 1600px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    align-items: center;
+}
+
+.footer-links {
+    display: flex;
+    gap: 24px;
+}
+
+.footer-links a {
+    color: rgba(255, 255, 255, 0.85);
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 600;
+    transition: color 0.3s ease;
+}
+
+.footer-links a:hover {
+    color: var(--secondary);
+}
+
+.footer-copy {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+/* ── BANNER / POPUP DEI COOKIE ─────────────────────────────────────── */
+.cookie-popup {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    max-width: 420px;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    box-shadow: var(--shadow-lg);
+    padding: 24px;
+    z-index: 2000;
+}
+
+.cookie-popup.hidden {
+    display: none !important;
+}
+
+.cookie-content h3 {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 10px;
+    color: var(--primary);
+}
+
+.cookie-content p {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+    margin-bottom: 16px;
+}
+
+.cookie-preferences {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 16px;
+    padding: 12px;
+    background: var(--bg);
+    border-radius: 10px;
+    font-size: 0.85rem;
+}
+
+.cookie-preferences label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.cookie-buttons {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+.cookie-buttons button {
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s ease;
+}
+
+.btn-cookie-primary {
+    background-color: var(--secondary);
+    color: white;
+}
+.btn-cookie-primary:hover {
+    background-color: var(--secondary-hover);
+}
+
+.btn-cookie-danger {
+    background-color: #EF4444;
+    color: white;
+}
+.btn-cookie-danger:hover {
+    background-color: #DC2626;
+}
+
+.btn-cookie-secondary {
+    background-color: #E2E8F0;
+    color: var(--text-muted);
+}
+.btn-cookie-secondary:hover {
+    background-color: #CBD5E1;
+}
+
+/* ── APPLICAZIONI GENERALI UTILI ───────────────────────────────────── */
+.toast-container { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 1000; }
+.toast-message { display: none; background: rgba(45,55,72,0.95); color: white; padding: 14px 20px; border-radius: 14px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); font-weight: 700; }

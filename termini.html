@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Termini e Condizioni - SinGo</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .policy-container {
+            max-width: 1000px;
+            margin: 40px auto;
+            background: var(--card-bg);
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--border);
+        }
+        .policy-container h1 {
+            color: var(--primary);
+            margin-bottom: 20px;
+            font-size: 2rem;
+            border-bottom: 2px solid var(--secondary);
+            padding-bottom: 10px;
+        }
+        .policy-container h2 {
+            color: var(--primary-light);
+            margin-top: 25px;
+            margin-bottom: 10px;
+            font-size: 1.3rem;
+        }
+        .policy-container p {
+            color: var(--text);
+            line-height: 1.6;
+            margin-bottom: 15px;
+            font-size: 0.95rem;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="navbar">
+        <div class="nav-left">
+            <a href="index.html" class="nav-logo">🛍️ SinGo</a>
+        </div>
+        <div class="nav-center">
+            <a href="index.html">🏠 Home</a>
+            <a href="sconti.html">🔥 Offerte</a>
+        </div>
+        <div class="nav-right">
+            <div class="user-section">
+                <span class="user-greeting" id="userGreeting"></span>
+                <a class="points-link" id="puntiLink" href="points.html">⭐ I Miei Punti</a>
+                <button class="btn-logout" id="logoutBtn" onclick="logoutUser()">Logout</button>
+                <a class="register-link" id="registerLink" href="register.html" style="display:none;">📝 Registrati</a>
+                <a class="login-link" id="loginLink" href="login-cliente.html" style="display:none;">🔓 Login</a>
+            </div>
+            <a href="login.html">⚙️ Area Manager</a>
+        </div>
+    </div>
+
+    <div class="policy-container">
+        <h1>Termini e Condizioni di Servizio</h1>
+        <p>I presenti Termini e Condizioni regolano l'accesso e l'utilizzo della piattaforma e-commerce SinGo. Navigando sul sito ed completando acquisti, l'utente accetta implicitamente i regolamenti qui esposti.</p>
+        
+        <h2>1. Politica dei Prezzi e Disponibilità</h2>
+        <p>Tutti i prezzi dei prodotti mostrati sul catalogo digitale sono espressi in Euro (€) e includono le imposte di legge (IVA). SinGo si riserva il diritto di variare i prezzi promozionali o correggere anomalie inventariali in tempo reale senza preavviso.</p>
+
+        <h2>2. Regolamento Raccolta Punti Fedeltà</h2>
+        <p>Gli utenti registrati regolarmente nell'Area Clienti guadagnano automaticamente 1 punto spesa ogni 15€ spesi complessivamente in un unico pagamento. I punti accumulati possono essere convertiti in sconti diretti al momento del checkout secondo i tassi attivi visibili nel proprio profilo. I punti non sono convertibili in valuta reale.</p>
+
+        <h2>3. Limitazione di Responsabilità</h2>
+        <p>SinGo opera per mantenere la stabilità tecnica dell'inventario e del portale. Tuttavia, non sarà ritenuta responsabile per eventuali disservizi di rete locali, temporanei malfunzionamenti del sistema di pagamento di terze parti o ritardi logistici indipendenti dalla gestione diretta del negozio.</p>
+    </div>
+
+    <div class="footer">
+        <div class="footer-content">
+            <div class="footer-links">
+                <a href="privacy.html">Privacy Policy</a>
+                <a href="termini.html">Termini e Condizioni</a>
+            </div>
+            <div class="footer-copy">© 2026 SinGo - Shop Online. Tutti i diritti riservati.</div>
+        </div>
+    </div>
+
+    <div id="cookie-popup" class="cookie-popup hidden">
+        <div class="cookie-content">
+            <h3>🍪 Gestione dei Cookie</h3>
+            <p>Utilizziamo i cookie per migliorare la tua esperienza di acquisto, analizzare il traffico del sito e offrire promozioni personalizzate. Puoi accettare tutti i cookie o gestire le tue preferenze.</p>
+            <div class="cookie-preferences" id="cookie-preferences" style="display: none;">
+                <label><input type="checkbox" id="cookie-necessary" checked disabled> Necessari (Sempre attivi)</label>
+                <label><input type="checkbox" id="cookie-analytics" checked> Analitici (Statistiche d'uso)</label>
+                <label><input type="checkbox" id="cookie-marketing" checked> Marketing e Profilazione</label>
+            </div>
+            <div class="cookie-buttons">
+                <button class="btn-cookie-secondary" onclick="togglePreferences()">Personalizza</button>
+                <button class="btn-cookie-danger" onclick="saveCookies('rifiutati')">Rifiuta</button>
+                <button class="btn-cookie-primary" onclick="saveCookies('accettati')">Accetta Tutti</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="db.js"></script>
+    <script>
+        function checkCookieConsent() {
+            const consent = localStorage.getItem('singoCookieConsent');
+            const popup = document.getElementById('cookie-popup');
+            if (!consent && popup) { popup.classList.remove('hidden'); }
+        }
+        function togglePreferences() {
+            const prefs = document.getElementById('cookie-preferences');
+            if (prefs) { prefs.style.display = prefs.style.display === 'none' ? 'flex' : 'none'; }
+        }
+        function saveCookies(type) {
+            const popup = document.getElementById('cookie-popup');
+            if (type === 'accettati') {
+                localStorage.setItem('singoCookieConsent', 'all');
+                localStorage.setItem('singoCookiePrefs', JSON.stringify({ analytics: true, marketing: true }));
+            } else if (type === 'rifiutati') {
+                localStorage.setItem('singoCookieConsent', 'necessary');
+                localStorage.setItem('singoCookiePrefs', JSON.stringify({ analytics: false, marketing: false }));
+            } else {
+                const analytics = document.getElementById('cookie-analytics').checked;
+                const marketing = document.getElementById('cookie-marketing').checked;
+                localStorage.setItem('singoCookieConsent', 'custom');
+                localStorage.setItem('singoCookiePrefs', JSON.stringify({ analytics, marketing }));
+            }
+            if (popup) popup.classList.add('hidden');
+            alert('Preferenze cookie salvate!');
+        }
+        function updateUserUI() {
+            if (typeof caricaClienteLoggato === 'function') {
+                const cliente = caricaClienteLoggato();
+                const userGreeting = document.getElementById('userGreeting');
+                if (cliente && userGreeting) {
+                    userGreeting.style.display = 'inline-block';
+                    userGreeting.textContent = `👤 Ciao ${cliente.nome}!`;
+                }
+            }
+        }
+        window.onload = function() {
+            checkCookieConsent();
+            updateUserUI();
+        };
+    </script>
+</body>
+</html>
