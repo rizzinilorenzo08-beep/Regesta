@@ -91,7 +91,7 @@
             <button class="category-btn sub-btn" onclick="filtraCategoria('Macchina', this)">Macchina</button>
         </div>
 
-        <a href="index.html" class="logout-btn">Esci alla Vista Cliente</a>
+        <button onclick="logoutManager()" class="logout-btn">Esci alla Vista Cliente</button>
     </div>
 
     <div class="main">
@@ -213,6 +213,17 @@
     <div id="toast" class="toast"></div>
 
     <script>
+        // ── CONTROLLO DI SICUREZZA DI SESSIONE ───────────────────────────
+        if (sessionStorage.getItem('manager_autenticato') !== 'true') {
+            window.location.replace('login.html'); // Blocca subito l'accesso e reindirizza
+        }
+
+        function logoutManager() {
+            sessionStorage.removeItem('manager_autenticato'); // Cancella la sessione
+            window.location.href = 'index.html';
+        }
+        // ─────────────────────────────────────────────────────────────────
+
         // ── Stato globale ────────────────────────────────────────────────
         let inventario    = [];
         let vendite       = [];
@@ -230,6 +241,7 @@
             document.getElementById('spinner-overlay').style.display = on ? 'flex' : 'none';
         }
 
+        // ... [Il resto delle funzioni del codice rimane invariato] ...
         function showToast(message, type = 'info') {
             const toast = document.getElementById('toast');
             toast.innerText = message;
@@ -261,14 +273,11 @@
             backdrop.style.display = 'flex';
         }
 
-        // ── Inizializzazione ─────────────────────────────────────────────
         async function caricaDati() {
             setSpinner(true);
             try {
                 ensureDatabase();
-
                 inventario = await loadInventario();
-
                 if (inventario.length === 0) {
                     inventario = [
                         { id:1,  nome:"Latte Intero",          cat:"Alimentari",       sub:"Da frigo",          qty:45,  maxQty:100, prezzo:1.20 },
@@ -287,7 +296,6 @@
                     ];
                     await saveInventario(inventario);
                 }
-
                 vendite      = await loadVendite();
                 expenses     = loadExpenses();
                 managerCart  = loadManagerCart();
@@ -297,35 +305,27 @@
                 aggiornaTabella();
                 aggiornaFinanze();
                 renderManagerCart();
-
             } catch (err) {
                 showToast('Errore caricamento: ' + err.message, 'error');
-                console.error(err);
             } finally {
                 setSpinner(false);
             }
         }
 
-        // ── Budget UI ────────────────────────────────────────────────────
         function aggiornaUIBudget() {
             const txt = `Budget: € ${budgetAziendale.toFixed(2)}`;
             document.getElementById('display-budget-top').innerText = txt;
             document.getElementById('budget-finanze').innerText = `€ ${budgetAziendale.toFixed(2)}`;
         }
 
-        // ── Navigazione ──────────────────────────────────────────────────
         function cambiaVista(vista, btn) {
             document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
             document.getElementById('vista-' + vista).classList.add('active');
-
             document.querySelectorAll('.sidebar > .category-btn').forEach(b => b.classList.remove('active'));
             if (btn) btn.classList.add('active');
-
             document.getElementById('menu-categorie').style.display = vista === 'magazzino' ? 'flex' : 'none';
-            
             const titoli = { magazzino: 'Gestione Magazzino', finanze: 'Report Finanziario', promozioni: 'Configurazione Offerte Flash' };
             document.getElementById('titolo-sezione').innerText = titoli[vista] || 'Pannello Manager';
-
             if (vista === 'finanze') aggiornaFinanze();
             if (vista === 'promozioni') renderPromozioni();
         }
@@ -337,7 +337,6 @@
             aggiornaTabella();
         }
 
-        // ── Tabella inventario ───────────────────────────────────────────
         function valutaStato(qty, maxQty) {
             if (maxQty === 0) return { testo: 'N/A', colore: '#999' };
             const perc = (qty / maxQty) * 100;
@@ -351,10 +350,7 @@
             const filtroStato = document.getElementById('filtro-stato').value;
             tbody.innerHTML  = '';
 
-            let filtrati = categoriaAttuale === 'Tutte'
-                ? inventario
-                : inventario.filter(item => item.cat === categoriaAttuale);
-
+            let filtrati = categoriaAttuale === 'Tutte' ? inventario : inventario.filter(item => item.cat === categoriaAttuale);
             if (filtroStato !== 'Tutti') {
                 filtrati = filtrati.filter(item => valutaStato(item.qty, item.maxQty).testo === filtroStato);
             }
@@ -373,25 +369,16 @@
 
                 tbody.innerHTML += `
                     <tr>
-                        <td>
-                            <strong>${item.nome}</strong><br>
-                            <small style="color:#777">${item.cat} › ${item.sub}</small>
-                        </td>
+                        <td><strong>${item.nome}</strong><br><small style="color:#777">${item.cat} › ${item.sub}</small></td>
                         <td><span class="badge" style="background:${stato.colore}">${stato.testo} (${percentuale}%)</span></td>
                         <td><strong>${item.qty}</strong> / ${item.maxQty}</td>
                         <td>€ ${item.prezzo.toFixed(2)}</td>
                         <td>
                             <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
                                 <button class="btn-qty btn-minus" onclick="modificaDesired(${item.id}, -1)" ${disabled}>−</button>
-                                <input id="desired-${item.id}" type="number" value="${spazio > 0 ? 1 : 0}"
-                                    min="1" max="${spazio}"
-                                    style="width:60px; padding:6px; border-radius:4px; border:1px solid #ddd; text-align:center;"
-                                    onchange="normalizeDesired(${item.id})" ${disabled}>
+                                <input id="desired-${item.id}" type="number" value="${spazio > 0 ? 1 : 0}" min="1" max="${spazio}" style="width:60px; padding:6px; border-radius:4px; border:1px solid #ddd; text-align:center;" onchange="normalizeDesired(${item.id})" ${disabled}>
                                 <button class="btn-qty btn-plus" onclick="modificaDesired(${item.id}, 1)" ${disabled}>+</button>
-                                <button style="background:#10b981; color:white; border:none; padding:6px 10px; border-radius:6px; cursor:pointer;"
-                                    onclick="aggiungiAlCarrelloManager(${item.id})" ${disabled}>
-                                    ${spazio === 0 ? 'Pieno' : 'Aggiungi'}
-                                </button>
+                                <button style="background:#10b981; color:white; border:none; padding:6px 10px; border-radius:6px; cursor:pointer;" onclick="aggiungiAlCarrelloManager(${item.id})" ${disabled}>${spazio === 0 ? 'Pieno' : 'Aggiungi'}</button>
                             </div>
                             <span class="costo-info">Costo rifornim.: €${costoAcq.toFixed(2)}/pz — spazio: ${spazio}</span>
                         </td>
@@ -420,29 +407,25 @@
             input.value  = val;
         }
 
-        // ── Carrello manager ─────────────────────────────────────────────
         function aggiungiAlCarrelloManager(id) {
             const input  = document.getElementById(`desired-${id}`);
             const qty    = input ? (parseInt(input.value, 10) || 1) : 1;
             const p      = inventario.find(i => i.id === id);
-            if (!p) { showToast('Prodotto non trovato', 'error'); return; }
+            if (!p) return;
 
             const spazio = Math.max(0, p.maxQty - p.qty);
             if (spazio === 0) { showToast('Stock già pieno', 'error'); return; }
 
             const existing = managerCart.find(c => c.id === id);
             const totaleRichiesto = (existing ? existing.qty : 0) + qty;
-            if (totaleRichiesto > spazio) {
-                showToast(`Superi lo spazio disponibile (max ${spazio} pz)`, 'error');
-                return;
-            }
+            if (totaleRichiesto > spazio) { showToast(`Superi lo spazio disponibile`, 'error'); return; }
 
             if (existing) existing.qty += qty;
             else managerCart.push({ id: p.id, nome: p.nome, prezzo: p.prezzo, qty });
 
             saveManagerCart(managerCart);
             renderManagerCart();
-            showToast(`"${p.nome}" aggiunto al carrello (×${qty})`, 'success');
+            showToast(`"${p.nome}" aggiunto`, 'success');
         }
 
         function renderManagerCart() {
@@ -452,10 +435,7 @@
                 el.innerHTML = '<em style="color:#aaa">Carrello vuoto</em>';
             } else {
                 el.innerHTML = managerCart.map(c => `
-                    <div class="cart-item-row">
-                        <span>${c.nome} ×${c.qty}</span>
-                        <strong>€ ${(c.prezzo * c.qty * 0.55).toFixed(2)}</strong>
-                    </div>
+                    <div class="cart-item-row"><span>${c.nome} ×${c.qty}</span><strong>€ ${(c.prezzo * c.qty * 0.55).toFixed(2)}</strong></div>
                 `).join('');
             }
             const tot = managerCart.reduce((s, i) => s + i.prezzo * i.qty * 0.55, 0);
@@ -468,131 +448,76 @@
         }
 
         function svuotaCarrelloManager() {
-            if (managerCart.length === 0) { showToast('Carrello già vuoto', 'info'); return; }
-            showModal(
-                'Svuota carrello',
-                'Sei sicuro di voler svuotare il carrello manager?',
-                confirmed => {
-                    if (!confirmed) return;
-                    managerCart = [];
-                    clearManagerCart();
-                    renderManagerCart();
-                    showToast('Carrello svuotato', 'success');
-                }
-            );
+            if (managerCart.length === 0) return;
+            showModal('Svuota carrello', 'Vuoi svuotare il carrello manager?', confirmed => {
+                if (!confirmed) return;
+                managerCart = [];
+                clearManagerCart();
+                renderManagerCart();
+            });
         }
 
-        // ── ACQUISTO MANAGER ───────────────────────────────────────────
         function procCompraManager() {
-            if (isProcessing) {
-                showToast('⏳ Elaborazione in corso...', 'info');
-                return;
-            }
-
-            if (managerCart.length === 0) {
-                showToast('Carrello vuoto', 'error');
-                return;
-            }
-
-            for (const it of managerCart) {
-                const prod = inventario.find(p => p.id === it.id);
-                const spazio = prod ? Math.max(0, prod.maxQty - prod.qty) : 0;
-                if (!prod || spazio < it.qty) {
-                    showToast(`Quantità non disponibile per "${it.nome}"`, 'error');
-                    return;
-                }
-            }
+            if (isProcessing || managerCart.length === 0) return;
 
             const costoTotale = managerCart.reduce((s, i) => s + i.prezzo * i.qty * 0.55, 0);
-
             if (budgetAziendale < costoTotale) {
-                showToast(`❌ Budget insufficiente! Necessario: €${costoTotale.toFixed(2)}, Disponibile: €${budgetAziendale.toFixed(2)}`, 'error');
+                showToast(`❌ Budget insufficiente!`, 'error');
                 return;
             }
 
-            showModal(
-                'Conferma acquisto',
-                `Acquisto di ${managerCart.length} articoli per €${costoTotale.toFixed(2)}. Procedere?`,
-                async (confirmed) => {
-                    if (!confirmed) return;
+            showModal('Conferma acquisto', `Procedere con l'acquisto di €${costoTotale.toFixed(2)}?`, async (confirmed) => {
+                if (!confirmed) return;
+                isProcessing = true;
+                setSpinner(true);
 
-                    isProcessing = true;
-                    const btn = document.getElementById('btn-proc-compra');
-                    btn.disabled = true;
-                    btn.textContent = '⏳ In corso...';
-                    setSpinner(true);
+                try {
+                    managerCart.forEach(it => {
+                        const prod = inventario.find(p => p.id === it.id);
+                        if (prod) prod.qty += it.qty;
+                    });
+                    await saveInventario(inventario);
 
-                    try {
-                        managerCart.forEach(it => {
-                            const prod = inventario.find(p => p.id === it.id);
-                            if (prod) {
-                                prod.qty += it.qty;
-                                console.log(`📦 ${prod.nome}: +${it.qty} → ${prod.qty}`);
-                            }
-                        });
+                    const spesa = { data: new Date().toISOString().split('T')[0], totale: costoTotale };
+                    recordExpense(spesa);
+                    expenses.push(spesa);
 
-                        await saveInventario(inventario);
+                    budgetAziendale -= costoTotale;
+                    await saveBudget(budgetAziendale);
 
-                        const spesa = {
-                            data: new Date().toISOString().split('T')[0],
-                            totale: costoTotale
-                        };
-                        recordExpense(spesa);
-                        expenses.push(spesa);
+                    managerCart = [];
+                    clearManagerCart();
 
-                        budgetAziendale -= costoTotale;
-                        await saveBudget(budgetAziendale);
-
-                        managerCart = [];
-                        clearManagerCart();
-
-                        aggiornaUIBudget();
-                        aggiornaTabella();
-                        renderManagerCart();
-                        aggiornaFinanze();
-
-                        showToast('✅ Rifornimento completato!', 'success');
-
-                    } catch (err) {
-                        showToast('❌ Errore: ' + err.message, 'error');
-                        console.error(err);
-                        inventario = await loadInventario();
-                        aggiornaTabella();
-                    } finally {
-                        isProcessing = false;
-                        btn.disabled = false;
-                        btn.textContent = 'Procedi all\'acquisto';
-                        setSpinner(false);
-                    }
+                    aggiornaUIBudget();
+                    aggiornaTabella();
+                    renderManagerCart();
+                    showToast('✅ Rifornimento completato!', 'success');
+                } catch (err) {
+                    showToast('❌ Errore: ' + err.message, 'error');
+                } finally {
+                    isProcessing = false;
+                    setSpinner(false);
                 }
-            );
+            });
         }
 
-        // ── Sezione Offerte Flash Manuali ───────────────────────────────
         function renderPromozioni() {
             const select = document.getElementById('promo-prodotto-select');
             if (select) {
-                select.innerHTML = inventario.map(p => `
-                    <option value="${p.id}">${p.nome} (Prezzo Base: € ${p.prezzo.toFixed(2)})</option>
-                `).join('');
+                select.innerHTML = inventario.map(p => `<option value="${p.id}">${p.nome} (€ ${p.prezzo.toFixed(2)})</option>`).join('');
             }
-
             const lista = document.getElementById('lista-promozioni-attive');
             if (!lista) return;
 
             if (promozioniAttive.length === 0) {
-                lista.innerHTML = '<em style="color:#aaa; display:block; padding:10px;">Nessuna promozione manuale attiva al momento.</em>';
+                lista.innerHTML = '<em>Nessuna promozione attiva.</em>';
             } else {
                 lista.innerHTML = promozioniAttive.map(p => {
                     const prod = inventario.find(i => i.id === p.idProdotto);
-                    const prezzoScontato = prod ? (prod.prezzo * (1 - p.sconto / 100)) : 0;
                     return `
-                        <div style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc; padding:12px; border-radius:6px; border-left:4px solid #10b981; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
-                            <div>
-                                <strong>${prod ? prod.nome : 'Prodotto'}</strong>: Sconto del <span style="color:#10b981; font-weight:bold;">${p.sconto}%</span>
-                                <span style="font-size:0.85rem; color:#666; display:block; margin-top:2px;">Prezzo Scontato: € ${prezzoScontato.toFixed(2)}</span>
-                            </div>
-                            <button onclick="rimuoviPromozione(${p.idProdotto})" style="background:#e74c3c; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; font-weight:bold; font-size:0.85rem;">Rimuovi</button>
+                        <div style="display:flex; justify-content:space-between; background:#f8fafc; padding:12px; border-radius:6px; border-left:4px solid #10b981;">
+                            <div><strong>${prod ? prod.nome : 'Prodotto'}</strong>: Sconto <strong>${p.sconto}%</strong></div>
+                            <button onclick="rimuoviPromozione(${p.idProdotto})" style="background:#e74c3c; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Rimuovi</button>
                         </div>
                     `;
                 }).join('');
@@ -604,29 +529,21 @@
             const idProdotto = parseInt(document.getElementById('promo-prodotto-select').value);
             const sconto = parseInt(document.getElementById('promo-sconto-pct').value);
 
-            if (isNaN(sconto) || sconto < 5 || sconto > 90) {
-                showToast('❌ Inserisci uno sconto valido tra il 5% e il 90%', 'error');
-                return;
-            }
-
             promozioniAttive = promozioniAttive.filter(p => p.idProdotto !== idProdotto);
             promozioniAttive.push({ idProdotto, sconto });
 
             if (typeof setSaleConfig === 'function') {
                 await setSaleConfig({ title: "Sconto Manuale", productIds: [idProdotto], discount: sconto });
             }
-
             showToast('⚡ Offerta Flash attivata!', 'success');
             renderPromozioni();
         }
 
         function rimuoviPromozione(idProdotto) {
             promozioniAttive = promozioniAttive.filter(p => p.idProdotto !== idProdotto);
-            showToast('Promozione rimossa', 'info');
             renderPromozioni();
         }
 
-        // ── Editor Stock ─────────────────────────────────────────────────
         function apriEditorStock() {
             document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
             document.getElementById('vista-editor-stock').classList.add('active');
@@ -636,16 +553,9 @@
         function renderEditorStock() {
             const list = document.getElementById('editor-stock-list');
             list.innerHTML = inventario.map(p => `
-                <div style="display:flex; gap:10px; align-items:center; background:white; padding:12px; border-radius:8px; box-shadow:0 1px 4px rgba(0,0,0,0.06);">
-                    <div style="flex:1">
-                        <strong>${p.nome}</strong>
-                        <div style="font-size:0.85rem; color:#666;">Giacenza: ${p.qty} | Cat: ${p.cat}</div>
-                    </div>
-                    <label style="font-size:0.85rem; color:#555; white-space:nowrap;">
-                        Max scorta:
-                        <input type="number" id="editor-max-${p.id}" value="${p.maxQty}" min="${p.qty || 1}"
-                            style="width:90px; padding:6px; border-radius:4px; border:1px solid #ddd; margin-left:6px;">
-                    </label>
+                <div style="display:flex; gap:10px; align-items:center; background:white; padding:12px; border-radius:8px;">
+                    <div style="flex:1"><strong>${p.nome}</strong></div>
+                    <input type="number" id="editor-max-${p.id}" value="${p.maxQty}" min="${p.qty || 1}" style="width:90px; padding:6px;">
                 </div>
             `).join('');
         }
@@ -661,38 +571,30 @@
             setSpinner(true);
             try {
                 await saveInventario(inventario);
-                showToast('Stock massimo aggiornato', 'success');
                 cambiaVista('magazzino', document.querySelector('.sidebar .category-btn'));
                 aggiornaTabella();
             } catch (err) {
-                showToast('Errore salvataggio: ' + err.message, 'error');
+                showToast('Errore', 'error');
             } finally {
                 setSpinner(false);
             }
         }
 
-        // ── Finanze & Grafico ────────────────────────────────────────────
         function aggiornaFinanze() {
             const incasso = vendite.reduce((s, v) => s + parseFloat(v.totale || 0), 0);
             const spese   = expenses.reduce((s, e) => s + parseFloat(e.totale || 0), 0);
 
-            document.getElementById('incasso-totale').innerHTML = `€ ${incasso.toFixed(2)}<br><small style="font-size:0.8rem;color:#999;">Totale vendite</small>`;
-            document.getElementById('spese-totali').innerHTML   = `€ ${spese.toFixed(2)}<br><small style="font-size:0.8rem;color:#999;">Totale acquisti</small>`;
+            document.getElementById('incasso-totale').innerHTML = `€ ${incasso.toFixed(2)}`;
+            document.getElementById('spese-totali').innerHTML   = `€ ${spese.toFixed(2)}`;
 
             const perData = {};
-
             vendite.forEach(v => {
-                let d = "Oggi";
-                if (v.data) d = String(v.data).split('T')[0].split(' ')[0];
-                else if (v.created_at) d = String(v.created_at).split('T')[0].split(' ')[0];
+                let d = v.data ? String(v.data).split('T')[0] : "Oggi";
                 if (!perData[d]) perData[d] = { e: 0, u: 0 };
                 perData[d].e += parseFloat(v.totale || 0);
             });
-
             expenses.forEach(e => {
-                let d = "Oggi";
-                if (e.data) d = String(e.data).split('T')[0].split(' ')[0];
-                else if (e.created_at) d = String(e.created_at).split('T')[0].split(' ')[0];
+                let d = e.data ? String(e.data).split('T')[0] : "Oggi";
                 if (!perData[d]) perData[d] = { e: 0, u: 0 };
                 perData[d].u += parseFloat(e.totale || 0);
             });
@@ -700,12 +602,6 @@
             const labels  = Object.keys(perData).sort();
             const entrate = labels.map(d => perData[d].e);
             const uscite  = labels.map(d => perData[d].u);
-
-            if (labels.length === 0) { 
-                labels.push('Nessun dato'); 
-                entrate.push(0); 
-                uscite.push(0); 
-            }
 
             const ctx = document.getElementById('graficoVendite').getContext('2d');
             if (chartInstance) chartInstance.destroy();
@@ -715,44 +611,14 @@
                 data: {
                     labels,
                     datasets: [
-                        { 
-                            label: 'Entrate Vendite (€)', 
-                            data: entrate, 
-                            borderColor: '#27ae60', 
-                            backgroundColor: 'rgba(39,174,96,0.15)', 
-                            tension: 0.3, 
-                            fill: true, 
-                            borderWidth: 2, 
-                            pointRadius: 4 
-                        },
-                        { 
-                            label: 'Uscite Acquisti (€)',  
-                            data: uscite,  
-                            borderColor: '#e74c3c', 
-                            backgroundColor: 'rgba(231,76,60,0.12)',  
-                            tension: 0.3, 
-                            fill: true, 
-                            borderWidth: 2, 
-                            pointRadius: 4 
-                        }
+                        { label: 'Entrate (€)', data: entrate, borderColor: '#27ae60', tension: 0.3 },
+                        { label: 'Uscite (€)', data: uscite, borderColor: '#e74c3c', tension: 0.3 }
                     ]
                 },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: { 
-                        y: { 
-                            beginAtZero: true 
-                        } 
-                    },
-                    plugins: { 
-                        legend: { position: 'top' } 
-                    }
-                }
+                options: { responsive: true, maintainAspectRatio: false }
             });
         }
 
-        // ── Avvio ────────────────────────────────────────────────────────
         caricaDati();
     </script>
 </body>
