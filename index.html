@@ -170,6 +170,7 @@
         async function initializePage() {
             ensureDatabase();
             await ensureSaleSchedule();
+            await syncOfferteFlash();           // ← carica offerte manuali da Supabase
             inventario = await loadInventario();
             inventario = inventario.map(p => ({ ...p, icona: p.icona || '📦' }));
             renderPromoBanner();
@@ -182,6 +183,13 @@
             updateSaleTimer();
             clearInterval(saleTimer);
             saleTimer = setInterval(updateSaleTimer, 1000);
+
+            // Aggiorna le offerte Supabase ogni 60 secondi
+            setInterval(async () => {
+                await syncOfferteFlash();
+                renderProducts();
+                renderPromoBanner();
+            }, 60000);
         }
 
         // ── Cookie Management Logic ──────────────────────────────────────
@@ -274,10 +282,6 @@
                 flashPromoBanner('Nuova offerta attiva!');
             }
             saleActivePrev = active;
-        }
-
-        function isProductOnSale(item) {
-            return isSaleActive() && Array.isArray(getSaleInfo().productIds) && getSaleInfo().productIds.includes(item.id);
         }
 
         function getPriceHtml(p, esaurito = false) {

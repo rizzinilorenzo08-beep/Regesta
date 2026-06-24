@@ -289,9 +289,37 @@
                 }
 
                 vendite      = await loadVendite();
-                expenses     = loadExpenses();
+                
+                // --- MODIFICA: Recupero spese da Supabase con fallback locale ---
+                try {
+                    const { data: dbExpenses, error: expError } = await supabaseClient
+                        .from('spese')
+                        .select('*')
+                        .order('data', { ascending: true });
+                    
+                    if (!expError && dbExpenses) {
+                        expenses = dbExpenses;
+                    } else {
+                        expenses = loadExpenses();
+                    }
+                } catch(e) {
+                    expenses = loadExpenses();
+                }
+                
                 managerCart  = loadManagerCart();
                 budgetAziendale = await loadBudget();
+
+                // ← Carica offerte flash attive da Supabase
+                const { data: offerteDB, error: offerteErr } = await supabaseClient
+                    .from('offerte_flash')
+                    .select('*')
+                    .eq('attiva', true);
+                if (!offerteErr && offerteDB) {
+                    promozioniAttive = offerteDB.map(o => ({
+                        idProdotto: o.prodotto_id,
+                        sconto: o.sconto
+                    }));
+                }
 
                 aggiornaUIBudget();
                 aggiornaTabella();
@@ -482,7 +510,7 @@
             );
         }
 
-        // ── ACQUISTO MANAGER ───────────────────────────────────────────
+        // ── ACQUISTO MANAGER (CON INTEGRAZIONE SUPABASE) ──────────────────
         function procCompraManager() {
             if (isProcessing) {
                 showToast('⏳ Elaborazione in corso...', 'info');
@@ -537,7 +565,23 @@
                             data: new Date().toISOString().split('T')[0],
                             totale: costoTotale
                         };
+                        
+                        // Registro in locale (backup)
                         recordExpense(spesa);
+
+                        // --- MODIFICA: Inserimento diretto su Supabase ---
+                        const { error: insertExpError } = await supabaseClient
+                            .from('spese')
+                            .insert([{
+                                totale: parseFloat(costoTotale),
+                                data: spesa.data
+                            }]);
+
+                        if (insertExpError) {
+                            console.error("Errore nell'inserimento della spesa su Supabase:", insertExpError);
+                            throw new Error("Impossibile salvare la spesa sul database cloud.");
+                        }
+
                         expenses.push(spesa);
 
                         budgetAziendale -= costoTotale;
@@ -601,29 +645,97 @@
 
         async function attivaPromozioneManuale(e) {
             e.preventDefault();
-            const idProdotto = parseInt(document.getElementById('promo-prodotto-select').value);
-            const sconto = parseInt(document.getElementById('promo-sconto-pct').value);
+
+            const idProdotto = parseInt(
+                document.getElementById('promo-prodotto-select').value
+            );
+
+            const sconto = parseInt(
+                document.getElementById('promo-sconto-pct').value
+            );
 
             if (isNaN(sconto) || sconto < 5 || sconto > 90) {
-                showToast('❌ Inserisci uno sconto valido tra il 5% e il 90%', 'error');
+                showToast(
+                    '❌ Inserisci uno sconto valido tra il 5% e il 90%',
+                    'error'
+                );
                 return;
             }
 
-            promozioniAttive = promozioniAttive.filter(p => p.idProdotto !== idProdotto);
-            promozioniAttive.push({ idProdotto, sconto });
+            try {
+                setSpinner(true);
 
-            if (typeof setSaleConfig === 'function') {
-                await setSaleConfig({ title: "Sconto Manuale", productIds: [idProdotto], discount: sconto });
+                // Disattiva eventuali offerte precedenti sullo stesso prodotto
+                const { error: updateError } = await supabaseClient
+                    .from('offerte_flash')
+                    .update({ attiva: false })
+                    .eq('prodotto_id', idProdotto);
+
+                if (updateError) {
+                    throw updateError;
+                }
+
+                // Inserisce la nuova offerta
+                const { data, error } = await supabaseClient
+                    .from('offerte_flash')
+                    .insert([
+                        {
+                            prodotto_id: idProdotto,
+                            sconto: sconto,
+                            attiva: true
+                        }
+                    ])
+                    .select();
+
+                if (error) {
+                    throw error;
+                }
+
+                // Aggiorna la lista locale
+                promozioniAttive = promozioniAttive.filter(
+                    p => p.idProdotto !== idProdotto
+                );
+
+                promozioniAttive.push({
+                    idProdotto,
+                    sconto
+        });
+
+        renderPromozioni();
+
+        showToast(
+            `⚡ Offerta del ${sconto}% attivata con successo!`,
+            'success'
+        );
+
+    } catch (err) {
+        console.error(err);
+        showToast(
+            '❌ Errore durante il salvataggio dell\'offerta',
+            'error'
+        );
+    } finally {
+        setSpinner(false);
+    }
+}
+
+        async function rimuoviPromozione(idProdotto) {
+            try {
+                setSpinner(true);
+                const { error } = await supabaseClient
+                    .from('offerte_flash')
+                    .update({ attiva: false })
+                    .eq('prodotto_id', idProdotto);
+                if (error) throw error;
+                promozioniAttive = promozioniAttive.filter(p => p.idProdotto !== idProdotto);
+                showToast('Promozione rimossa', 'info');
+                renderPromozioni();
+            } catch (err) {
+                console.error(err);
+                showToast('❌ Errore nella rimozione dell\'offerta', 'error');
+            } finally {
+                setSpinner(false);
             }
-
-            showToast('⚡ Offerta Flash attivata!', 'success');
-            renderPromozioni();
-        }
-
-        function rimuoviPromozione(idProdotto) {
-            promozioniAttive = promozioniAttive.filter(p => p.idProdotto !== idProdotto);
-            showToast('Promozione rimossa', 'info');
-            renderPromozioni();
         }
 
         // ── Editor Stock ─────────────────────────────────────────────────

@@ -138,6 +138,22 @@ const STORAGE_KEYS = {
     saleInfo: 'saleInfo'
 };
 
+// Offerte manuali del manager caricate da Supabase (usate in entrambe le viste)
+let _offerteFlashDB = [];
+
+async function syncOfferteFlash() {
+    try {
+        const { data, error } = await supabaseClient
+            .from('offerte_flash')
+            .select('*')
+            .eq('attiva', true);
+        _offerteFlashDB = (!error && data) ? data : [];
+    } catch (e) {
+        console.warn('syncOfferteFlash: impossibile caricare da Supabase', e);
+        _offerteFlashDB = [];
+    }
+}
+
 const SALE_DURATION_MS = 1000 * 60 * 30; // 30 minuti
 const NEXT_SALE_DELAY_MS = 1000 * 60 * 5; // 5 minuti
 const SALE_PRODUCTS_COUNT = 10;
@@ -235,6 +251,11 @@ async function ensureSaleSchedule() {
 }
 
 function getSaleDiscountPercent(item) {
+    // 1. Controlla prima le offerte manuali del manager (Supabase)
+    const offertaDB = _offerteFlashDB.find(o => o.prodotto_id === item.id);
+    if (offertaDB) return offertaDB.sconto;
+
+    // 2. Fallback: sistema automatico da localStorage
     const info = getSaleInfo();
     if (!info || !info.active) return 0;
     if (info.productDiscounts && info.productDiscounts[item.id] != null) {
@@ -323,6 +344,9 @@ function getSaleRemainingSeconds() {
     return Math.max(0, Math.floor((new Date(info.expiresAt) - new Date()) / 1000));
 }
 function isProductOnSale(item) {
+    // Offerte manuali Supabase hanno priorità
+    if (_offerteFlashDB.some(o => o.prodotto_id === item.id)) return true;
+    // Sistema automatico localStorage
     const info = getSaleInfo();
     return info && info.active && Array.isArray(info.productIds) && info.productIds.includes(item.id);
 }
