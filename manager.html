@@ -80,6 +80,7 @@
         <div class="menu-label">Viste</div>
         <button class="category-btn active" onclick="cambiaVista('magazzino', this)">📦 Magazzino</button>
         <button class="category-btn" onclick="cambiaVista('finanze', this)">📈 Finanze e Grafici</button>
+        <button class="category-btn" onclick="cambiaVista('promozioni', this)">⚡ Offerte Flash</button>
 
         <div id="menu-categorie" style="display: flex; flex-direction: column; gap: 5px;">
             <div class="menu-label">Filtra Categorie</div>
@@ -161,6 +162,29 @@
             </div>
         </div>
 
+        <div id="vista-promozioni" class="section">
+            <div class="stats-cards" style="flex-direction: column; gap: 20px;">
+                <div class="card" style="text-align: left; border-bottom: 4px solid #3b82f6;">
+                    <h3>⚡ Attiva Nuova Offerta Flash</h3>
+                    <form id="form-promozione" onsubmit="attivaPromozioneManuale(event)" style="display: flex; flex-direction: column; gap: 15px; margin-top: 15px;">
+                        <div>
+                            <label style="display:block; font-weight:bold; margin-bottom:6px; color:#475569;">Seleziona Prodotto da Scontare</label>
+                            <select id="promo-prodotto-select" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1;" required></select>
+                        </div>
+                        <div>
+                            <label style="display:block; font-weight:bold; margin-bottom:6px; color:#475569;">Percentuale Sconto (%)</label>
+                            <input type="number" id="promo-sconto-pct" min="5" max="90" value="20" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1;" required>
+                        </div>
+                        <button type="submit" style="background: #10b981; color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 1rem; margin-top: 5px;">⚡ Applica Sconto Flash</button>
+                    </form>
+                </div>
+                <div class="card" style="text-align: left;">
+                    <h3>📋 Offerte Flash Attive</h3>
+                    <div id="lista-promozioni-attive" style="margin-top: 15px; display: flex; flex-direction: column; gap: 10px;"></div>
+                </div>
+            </div>
+        </div>
+
         <div id="vista-editor-stock" class="section">
             <h2>Editor Stock Massimo</h2>
             <div id="editor-stock-list" style="margin-top:10px; display:flex; flex-direction:column; gap:10px;"></div>
@@ -199,6 +223,7 @@
         let managerCart   = [];
         let modalCallback = null;
         let isProcessing = false;
+        let promozioniAttive = [];
 
         // ── UI helpers ───────────────────────────────────────────────────
         function setSpinner(on) {
@@ -297,10 +322,12 @@
             if (btn) btn.classList.add('active');
 
             document.getElementById('menu-categorie').style.display = vista === 'magazzino' ? 'flex' : 'none';
-            document.getElementById('titolo-sezione').innerText =
-                vista === 'magazzino' ? 'Gestione Magazzino' : 'Report Finanziario';
+            
+            const titoli = { magazzino: 'Gestione Magazzino', finanze: 'Report Finanziario', promozioni: 'Configurazione Offerte Flash' };
+            document.getElementById('titolo-sezione').innerText = titoli[vista] || 'Pannello Manager';
 
             if (vista === 'finanze') aggiornaFinanze();
+            if (vista === 'promozioni') renderPromozioni();
         }
 
         function filtraCategoria(categoria, btn) {
@@ -455,7 +482,7 @@
             );
         }
 
-        // ── ACQUISTO MANAGER (FIXATO) ───────────────────────────────────
+        // ── ACQUISTO MANAGER ───────────────────────────────────────────
         function procCompraManager() {
             if (isProcessing) {
                 showToast('⏳ Elaborazione in corso...', 'info');
@@ -467,7 +494,6 @@
                 return;
             }
 
-            // Validazione
             for (const it of managerCart) {
                 const prod = inventario.find(p => p.id === it.id);
                 const spazio = prod ? Math.max(0, prod.maxQty - prod.qty) : 0;
@@ -479,7 +505,6 @@
 
             const costoTotale = managerCart.reduce((s, i) => s + i.prezzo * i.qty * 0.55, 0);
 
-            // Verifica budget
             if (budgetAziendale < costoTotale) {
                 showToast(`❌ Budget insufficiente! Necessario: €${costoTotale.toFixed(2)}, Disponibile: €${budgetAziendale.toFixed(2)}`, 'error');
                 return;
@@ -498,7 +523,6 @@
                     setSpinner(true);
 
                     try {
-                        // Aggiorna inventario locale
                         managerCart.forEach(it => {
                             const prod = inventario.find(p => p.id === it.id);
                             if (prod) {
@@ -507,10 +531,8 @@
                             }
                         });
 
-                        // Salva su Supabase
                         await saveInventario(inventario);
 
-                        // Registra spesa
                         const spesa = {
                             data: new Date().toISOString().split('T')[0],
                             totale: costoTotale
@@ -518,15 +540,12 @@
                         recordExpense(spesa);
                         expenses.push(spesa);
 
-                        // Aggiorna budget
                         budgetAziendale -= costoTotale;
                         await saveBudget(budgetAziendale);
 
-                        // Svuota carrello
                         managerCart = [];
                         clearManagerCart();
 
-                        // Aggiorna UI
                         aggiornaUIBudget();
                         aggiornaTabella();
                         renderManagerCart();
@@ -537,7 +556,6 @@
                     } catch (err) {
                         showToast('❌ Errore: ' + err.message, 'error');
                         console.error(err);
-                        // Ricarica inventario dal cloud per sicurezza
                         inventario = await loadInventario();
                         aggiornaTabella();
                     } finally {
@@ -548,6 +566,64 @@
                     }
                 }
             );
+        }
+
+        // ── Sezione Offerte Flash Manuali ───────────────────────────────
+        function renderPromozioni() {
+            const select = document.getElementById('promo-prodotto-select');
+            if (select) {
+                select.innerHTML = inventario.map(p => `
+                    <option value="${p.id}">${p.nome} (Prezzo Base: € ${p.prezzo.toFixed(2)})</option>
+                `).join('');
+            }
+
+            const lista = document.getElementById('lista-promozioni-attive');
+            if (!lista) return;
+
+            if (promozioniAttive.length === 0) {
+                lista.innerHTML = '<em style="color:#aaa; display:block; padding:10px;">Nessuna promozione manuale attiva al momento.</em>';
+            } else {
+                lista.innerHTML = promozioniAttive.map(p => {
+                    const prod = inventario.find(i => i.id === p.idProdotto);
+                    const prezzoScontato = prod ? (prod.prezzo * (1 - p.sconto / 100)) : 0;
+                    return `
+                        <div style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc; padding:12px; border-radius:6px; border-left:4px solid #10b981; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+                            <div>
+                                <strong>${prod ? prod.nome : 'Prodotto'}</strong>: Sconto del <span style="color:#10b981; font-weight:bold;">${p.sconto}%</span>
+                                <span style="font-size:0.85rem; color:#666; display:block; margin-top:2px;">Prezzo Scontato: € ${prezzoScontato.toFixed(2)}</span>
+                            </div>
+                            <button onclick="rimuoviPromozione(${p.idProdotto})" style="background:#e74c3c; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; font-weight:bold; font-size:0.85rem;">Rimuovi</button>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+
+        async function attivaPromozioneManuale(e) {
+            e.preventDefault();
+            const idProdotto = parseInt(document.getElementById('promo-prodotto-select').value);
+            const sconto = parseInt(document.getElementById('promo-sconto-pct').value);
+
+            if (isNaN(sconto) || sconto < 5 || sconto > 90) {
+                showToast('❌ Inserisci uno sconto valido tra il 5% e il 90%', 'error');
+                return;
+            }
+
+            promozioniAttive = promozioniAttive.filter(p => p.idProdotto !== idProdotto);
+            promozioniAttive.push({ idProdotto, sconto });
+
+            if (typeof setSaleConfig === 'function') {
+                await setSaleConfig({ title: "Sconto Manuale", productIds: [idProdotto], discount: sconto });
+            }
+
+            showToast('⚡ Offerta Flash attivata!', 'success');
+            renderPromozioni();
+        }
+
+        function rimuoviPromozione(idProdotto) {
+            promozioniAttive = promozioniAttive.filter(p => p.idProdotto !== idProdotto);
+            showToast('Promozione rimossa', 'info');
+            renderPromozioni();
         }
 
         // ── Editor Stock ─────────────────────────────────────────────────
