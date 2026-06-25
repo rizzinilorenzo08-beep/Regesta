@@ -6,6 +6,7 @@
     <title>Login Cliente - SinGo</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
     <script src="db.js"></script>
     <style>
         :root {
@@ -20,160 +21,28 @@
             --error: #ef4444;
         }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Poppins', sans-serif;
-        }
-
-        body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            padding: 20px;
-        }
-
-        .login-container {
-            background: var(--card-bg);
-            padding: 40px;
-            border-radius: 16px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            width: 100%;
-            max-width: 420px;
-            animation: slideIn 0.5s ease;
-        }
-
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .login-header {
-            text-align: center;
-            margin-bottom: 35px;
-        }
-
-        .login-header h1 {
-            color: var(--primary);
-            font-size: 1.8rem;
-            margin-bottom: 8px;
-        }
-
-        .login-header p {
-            color: var(--text-muted);
-            font-size: 0.95rem;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        label {
-            display: block;
-            color: var(--text);
-            font-weight: 600;
-            margin-bottom: 8px;
-            font-size: 0.95rem;
-        }
-
-        input {
-            width: 100%;
-            padding: 12px 15px;
-            border: 2px solid var(--border);
-            border-radius: 10px;
-            font-size: 1rem;
-            font-family: 'Poppins', sans-serif;
-            transition: all 0.3s ease;
-        }
-
-        input:focus {
-            outline: none;
-            border-color: var(--secondary);
-            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
-        }
-
-        .btn-login {
-            width: 100%;
-            padding: 14px;
-            background: linear-gradient(135deg, var(--secondary), var(--secondary-hover));
-            color: white;
-            border: none;
-            border-radius: 10px;
-            font-weight: 700;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            margin-top: 10px;
-        }
-
-        .btn-login:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(16, 185, 129, 0.3);
-        }
-
-        .btn-login:disabled {
-            background: #cbd5e1;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .form-links {
-            text-align: center;
-            margin-top: 25px;
-            padding-top: 20px;
-            border-top: 1px solid var(--border);
-        }
-
-        .form-links p {
-            color: var(--text-muted);
-            font-size: 0.95rem;
-            margin-bottom: 8px;
-        }
-
-        .form-links a {
-            color: var(--secondary);
-            text-decoration: none;
-            font-weight: 600;
-            transition: color 0.3s ease;
-        }
-
-        .form-links a:hover {
-            color: var(--secondary-hover);
-        }
-
-        .message {
-            padding: 12px 15px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            font-weight: 600;
-            display: none;
-            animation: slideIn 0.3s ease;
-        }
-
-        .message.error {
-            background-color: #fee2e2;
-            color: #991b1b;
-            border: 1px solid #fecaca;
-        }
-
-        .message.success {
-            background-color: #dcfce7;
-            color: #166534;
-            border: 1px solid #86efac;
-        }
-
-        .message.show {
-            display: block;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Poppins', sans-serif; }
+        body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
+        .login-container { background: var(--card-bg); padding: 40px; border-radius: 16px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3); width: 100%; max-width: 420px; }
+        .login-header { text-align: center; margin-bottom: 35px; }
+        .login-header h1 { color: var(--primary); font-size: 1.8rem; margin-bottom: 8px; }
+        .login-header p { color: var(--text-muted); font-size: 0.95rem; }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; color: var(--text); font-weight: 600; margin-bottom: 8px; font-size: 0.95rem; }
+        input { width: 100%; padding: 12px 15px; border: 2px solid var(--border); border-radius: 10px; font-size: 1rem; }
+        input:focus { outline: none; border-color: var(--secondary); }
+        .btn-login { width: 100%; padding: 14px; background: linear-gradient(135deg, var(--secondary), var(--secondary-hover)); color: white; border: none; border-radius: 10px; font-weight: 700; font-size: 1rem; cursor: pointer; margin-top: 10px; }
+        .btn-login:disabled { background: #cbd5e1; cursor: not-allowed; }
+        .form-links { text-align: center; margin-top: 25px; padding-top: 20px; border-top: 1px solid var(--border); }
+        .form-links p { color: var(--text-muted); font-size: 0.95rem; margin-bottom: 8px; }
+        .form-links a { color: var(--secondary); text-decoration: none; font-weight: 600; }
+        .message { padding: 12px 15px; border-radius: 10px; margin-bottom: 20px; font-weight: 600; display: none; }
+        .message.error { background-color: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+        .message.success { background-color: #dcfce7; color: #166534; border: 1px solid #86efac; }
+        .message.show { display: block; }
+        .forgot-password-link { text-align: right; margin-top: 6px; }
+        .forgot-password-link a { color: var(--secondary); font-size: 0.85rem; text-decoration: none; font-weight: 600; }
+        .forgot-password-link a:hover { text-decoration: underline; }
     </style>
 </head>
 <body>
@@ -191,9 +60,12 @@
                 <input type="email" id="email" placeholder="tua.email@example.com" required>
             </div>
 
-            <div class="form-group">
+            <div class="form-group" style="margin-bottom: 10px;">
                 <label for="password">Password</label>
                 <input type="password" id="password" placeholder="Inserisci la tua password" required>
+                <div class="forgot-password-link">
+                    <a href="#" id="btnRecupero">Password dimenticata?</a>
+                </div>
             </div>
 
             <button type="submit" class="btn-login">Accedi</button>
@@ -209,12 +81,17 @@
     </div>
 
     <script>
+        // =========================================================================
+        // 🛑 CONFIGURAZIONE EMAILJS: INSERISCI QUI LA TUA PUBLIC KEY 🛑
+        // =========================================================================
+        emailjs.init("LA_TUA_PUBLIC_KEY_DI_EMAILJS");
+
         const form = document.getElementById('loginForm');
         const messageBox = document.getElementById('messageBox');
+        const btnRecupero = document.getElementById('btnRecupero');
 
         form.addEventListener('submit', async function (e) {
             e.preventDefault();
-
             const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
 
@@ -229,33 +106,67 @@
 
             try {
                 const result = await DB_CLIENTI.loginCliente(email, password);
-
                 if (result.success) {
                     mostraMessaggio('✓ Login riuscito! Reindirizzamento...', 'success');
                     salvaClienteLoggato(result.cliente);
-                    
-                    setTimeout(() => {
-                        window.location.href = 'index.html';
-                    }, 1500);
+                    setTimeout(() => { window.location.href = 'index.html'; }, 1500);
                 } else {
                     mostraMessaggio(result.error, 'error');
                     btn.disabled = false;
                     btn.textContent = 'Accedi';
                 }
             } catch (error) {
-                console.error('Errore durante il login:', error);
-                mostraMessaggio('Errore durante il login. Riprova.', 'error');
+                console.error(error);
+                mostraMessaggio('Errore durante il login.', 'error');
                 btn.disabled = false;
                 btn.textContent = 'Accedi';
+            }
+        });
+
+        // Recupero Password con EmailJS
+        btnRecupero.addEventListener('click', async function(e) {
+            e.preventDefault();
+            const email = document.getElementById('email').value.trim();
+
+            if (!email) {
+                mostraMessaggio('Inserisci la tua email nel campo sopra per recuperare la password.', 'error');
+                return;
+            }
+
+            mostraMessaggio('Verifica in corso...', 'success');
+
+            try {
+                // Generiamo il link sicuro per cambiare password inviando l'email come parametro
+                const linkReset = window.location.origin + "/nuova-password.html?email=" + encodeURIComponent(email);
+
+                // =========================================================================
+                // 🛑 CONFIGURAZIONE EMAILJS: INSERISCI I TUOI ID NEI CAMPI SOTTO 🛑
+                // =========================================================================
+                const SERVICE_ID = "IL_TUO_SERVICE_ID_EMAILJS";
+                const TEMPLATE_ID = "IL_TUO_TEMPLATE_ID_EMAILJS";
+
+                const templateParams = {
+                    to_email: email,
+                    reset_link: linkReset
+                };
+
+                const emailResponse = await emailjs.send(SERVICE_ID, TEMPLATE_ID, templateParams);
+                
+                if(emailResponse.status === 200) {
+                    mostraMessaggio('✓ Mail di recupero inviata con EmailJS! Controlla la tua casella postale.', 'success');
+                } else {
+                    mostraMessaggio('Errore nell\'invio della mail tramite EmailJS.', 'error');
+                }
+            } catch (error) {
+                console.error('Errore recupero password:', error);
+                mostraMessaggio('Impossibile completare l\'operazione di recupero.', 'error');
             }
         });
 
         function mostraMessaggio(testo, tipo) {
             messageBox.textContent = testo;
             messageBox.className = `message ${tipo} show`;
-            setTimeout(() => {
-                messageBox.classList.remove('show');
-            }, 4000);
+            setTimeout(() => { messageBox.classList.remove('show'); }, 5000);
         }
     </script>
 </body>

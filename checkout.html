@@ -139,9 +139,9 @@
         }
 
         // ===========================================
-        // 5. EMAILJS SETUP (AGGIORNATO CON NUOVI ID)
+        // 5. EMAILJS SETUP (AGGIORNATO)
         // ===========================================
-        async function sendReceiptEmail({ toEmail, customerName, orderTotal, orderDate, paymentMethod, address, itemsHtml, itemsText }) {
+        async function sendReceiptEmail({ toEmail, customerName, orderTotal, orderDate, paymentMethod, address, itemsText }) {
             if (typeof emailjs === 'undefined') {
                 debugLog('❌ EmailJS non caricato', 'error');
                 return { success: false, error: 'EmailJS non caricato' };
@@ -149,14 +149,16 @@
 
             const templateParams = {
                 to_email: toEmail,
+                customer_name: customerName,
                 total_amount: orderTotal,
+                order_date: orderDate,
                 payment_method: paymentMethod,
+                delivery_address: address,
                 items_list: itemsText
             };
 
             try {
-                // Sostituiti con service_oziu4ou e template_ckwo9wt
-                const response = await emailjs.send('service_oziu4ou', 'template_ckwo9wt', templateParams);
+                const response = await emailjs.send('service_70i2s1t', 'template_8aj4c65', templateParams);
                 debugLog('✅ Scontrino inviato via EmailJS', 'success');
                 return { success: true, response };
             } catch (error) {
@@ -305,14 +307,9 @@
                 }
 
                 // Generazione testo prodotti per lo scontrino EmailJS
-                const itemsHtml = cartToUse.map(item => {
-                    const unitPrice = isProductOnSale(item) ? getDiscountedPrice(item.prezzo, item) : item.prezzo;
-                    return `<li>${item.nome} x${item.qty} - € ${ (unitPrice * item.qty).toFixed(2) }</li>`;
-                }).join('');
-
                 const itemsText = cartToUse.map(item => {
                     const unitPrice = isProductOnSale(item) ? getDiscountedPrice(item.prezzo, item) : item.prezzo;
-                    return `${item.nome} x${item.qty} - € ${ (unitPrice * item.qty).toFixed(2) }`;
+                    return `${item.nome} x${item.qty} - € ${(unitPrice * item.qty).toFixed(2)}`;
                 }).join('\n');
 
                 const orderDate = new Date().toLocaleDateString('it-IT');
@@ -327,7 +324,6 @@
                     orderDate,
                     paymentMethod: metodoSelezionato,
                     address: deliveryAddress,
-                    itemsHtml: `<ul>${itemsHtml}</ul>`,
                     itemsText
                 });
 
