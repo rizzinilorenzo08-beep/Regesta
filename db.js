@@ -115,12 +115,11 @@ async function saveBudget(budget) {
     await DB.updateBudget(budget);
 }
 
-// VENDITE - VERSIONE CORRETTA CON INSERT
+// VENDITE
 async function loadVendite() {
     return await DB.getVendite();
 }
 
-// ❌ RIMOSSA saveVendite() - usa invece registraVendita()
 async function registraVendita(totale) {
     return await DB.registraVendita(totale);
 }
@@ -138,7 +137,7 @@ const STORAGE_KEYS = {
     saleInfo: 'saleInfo'
 };
 
-// Offerte manuali del manager caricate da Supabase (usate in entrambe le viste)
+// Offerte manuali del manager caricate da Supabase
 let _offerteFlashDB = [];
 
 async function syncOfferteFlash() {
@@ -154,8 +153,8 @@ async function syncOfferteFlash() {
     }
 }
 
-const SALE_DURATION_MS = 1000 * 60 * 30; // 30 minuti
-const NEXT_SALE_DELAY_MS = 1000 * 60 * 5; // 5 minuti
+const SALE_DURATION_MS = 1000 * 60 * 30;
+const NEXT_SALE_DELAY_MS = 1000 * 60 * 5;
 const SALE_PRODUCTS_COUNT = 10;
 const SALE_DISCOUNT_MIN = 10;
 const SALE_DISCOUNT_MAX = 30;
@@ -251,11 +250,9 @@ async function ensureSaleSchedule() {
 }
 
 function getSaleDiscountPercent(item) {
-    // 1. Controlla prima le offerte manuali del manager (Supabase)
     const offertaDB = _offerteFlashDB.find(o => o.prodotto_id === item.id);
     if (offertaDB) return offertaDB.sconto;
 
-    // 2. Fallback: sistema automatico da localStorage
     const info = getSaleInfo();
     if (!info || !info.active) return 0;
     if (info.productDiscounts && info.productDiscounts[item.id] != null) {
@@ -344,9 +341,7 @@ function getSaleRemainingSeconds() {
     return Math.max(0, Math.floor((new Date(info.expiresAt) - new Date()) / 1000));
 }
 function isProductOnSale(item) {
-    // Offerte manuali Supabase hanno priorità
     if (_offerteFlashDB.some(o => o.prodotto_id === item.id)) return true;
-    // Sistema automatico localStorage
     const info = getSaleInfo();
     return info && info.active && Array.isArray(info.productIds) && info.productIds.includes(item.id);
 }
@@ -534,7 +529,6 @@ function formatCurrency(value) {
 // ==========================================
 
 const DB_UTENTI = {
-    // Login utente manager
     async loginUtente(email, password) {
         const { data, error } = await supabaseClient
             .from('utenti')
@@ -550,25 +544,21 @@ const DB_UTENTI = {
             return { success: false, error: 'Account disattivato. Contatta l\'amministratore.' };
         }
 
-        // Decodifica password (salvata in base64)
         const decodedPassword = atob(data.password);
         if (decodedPassword !== password) {
             return { success: false, error: 'Password errata' };
         }
 
-        // Aggiorna ultimo accesso
         await supabaseClient
             .from('utenti')
             .update({ ultimo_accesso: new Date().toISOString() })
             .eq('id', data.id);
 
-        // Registra log di accesso
         await this.registraLog(data.id, 'login', { email: data.email });
 
         return { success: true, utente: data };
     },
 
-    // Registra log di sistema
     async registraLog(utenteId, azione, dettagli = {}) {
         const { error } = await supabaseClient
             .from('log_sistema')
@@ -582,7 +572,6 @@ const DB_UTENTI = {
         if (error) console.error("Errore registrazione log:", error);
     },
 
-    // Ottieni tutti gli utenti (solo Super Admin)
     async getUtenti() {
         const { data, error } = await supabaseClient
             .from('utenti')
@@ -597,7 +586,6 @@ const DB_UTENTI = {
         return data;
     },
 
-    // Ottieni un utente per ID
     async getUtente(id) {
         const { data, error } = await supabaseClient
             .from('utenti')
@@ -613,9 +601,7 @@ const DB_UTENTI = {
         return data;
     },
 
-    // Crea un nuovo utente (solo Super Admin)
     async creaUtente(email, password, nome, ruolo, negozioId = null) {
-        // Verifica se l'email esiste già
         const { data: existing, error: checkError } = await supabaseClient
             .from('utenti')
             .select('email')
@@ -647,14 +633,11 @@ const DB_UTENTI = {
         return { success: true, utente: data[0] };
     },
 
-    // Aggiorna un utente
     async aggiornaUtente(id, updates) {
-        // Rimuovi campi che non devono essere aggiornati
         delete updates.data_registrazione;
         delete updates.id;
         delete updates.ultimo_accesso;
 
-        // Se password è presente, codificala
         if (updates.password) {
             updates.password = btoa(updates.password);
         }
@@ -673,7 +656,6 @@ const DB_UTENTI = {
         return { success: true, utente: data[0] };
     },
 
-    // Disattiva/attiva un utente
     async toggleAttivo(id, attivo) {
         const { error } = await supabaseClient
             .from('utenti')
@@ -689,7 +671,6 @@ const DB_UTENTI = {
         return { success: true };
     },
 
-    // Elimina un utente (solo Super Admin)
     async eliminaUtente(id) {
         const { error } = await supabaseClient
             .from('utenti')
@@ -704,7 +685,6 @@ const DB_UTENTI = {
         return { success: true };
     },
 
-    // Ottieni log di sistema
     async getLogs(limite = 100) {
         const { data, error } = await supabaseClient
             .from('log_sistema')
@@ -740,10 +720,9 @@ function logoutUtente() {
     }
     sessionStorage.removeItem('utente_loggato');
     sessionStorage.removeItem('manager_autenticato');
-    window.location.href = 'login-manager.html';
+    window.location.href = 'home.html';
 }
 
-// Verifica se l'utente ha un permesso specifico
 function haPermesso(permesso) {
     const utente = caricaUtenteLoggato();
     if (!utente) return false;
@@ -775,14 +754,12 @@ function haPermesso(permesso) {
 // ==========================================
 
 const PERMESSI = {
-    // Super Admin - Accesso totale
     GESTIONE_UTENTI: 'gestione_utenti',
     GESTIONE_RUOLI: 'gestione_ruoli',
     CONFIGURAZIONE_SISTEMA: 'configurazione_sistema',
     LOG_SISTEMA: 'log_sistema',
     ACCESSO_TUTTO: 'accesso_tutto',
     
-    // Admin Negozio
     GESTIONE_PRODOTTI: 'gestione_prodotti',
     GESTIONE_PREZZI: 'gestione_prezzi',
     GESTIONE_PROMOZIONI: 'gestione_promozioni',
@@ -792,18 +769,15 @@ const PERMESSI = {
     REPORT_VENDITE: 'report_vendite',
     SEGNALAZIONE_ESURIMENTO: 'segnalazione_esaurimento',
     
-    // Responsabile Acquisti
     CREAZIONE_ORDINI_ACQUISTO: 'creazione_ordini_acquisto',
     GESTIONE_FORNITORI_ACQUISTI: 'gestione_fornitori_acquisti',
     ACCESSO_PREZZI_ACQUISTO: 'accesso_prezzi_acquisto',
     
-    // Analista
     ACCESSO_REPORT: 'accesso_report',
     ACCESSO_KPI: 'accesso_kpi',
     ESPORTAZIONE_DATI: 'esportazione_dati'
 };
 
-// Mappa ruoli -> permessi
 const RUOLI_PERMESSI = {
     'super_admin': Object.values(PERMESSI),
     'admin_negozio': [
@@ -828,7 +802,6 @@ const RUOLI_PERMESSI = {
     ]
 };
 
-// Verifica se un utente ha un permesso specifico
 function haPermesso(permesso) {
     const utente = caricaUtenteLoggato();
     if (!utente) return false;
@@ -837,12 +810,10 @@ function haPermesso(permesso) {
     return permessiUtente.includes(permesso) || permessiUtente.includes(PERMESSI.ACCESSO_TUTTO);
 }
 
-// Verifica se un utente ha almeno uno dei permessi specificati
 function haAlmenoUno(permessi) {
     return permessi.some(p => haPermesso(p));
 }
 
-// Verifica il ruolo dell'utente
 function getRuolo() {
     const utente = caricaUtenteLoggato();
     return utente ? utente.ruolo : null;
@@ -863,3 +834,157 @@ function isResponsabileAcquisti() {
 function isAnalista() {
     return getRuolo() === 'analista';
 }
+
+// ==========================================
+// 9. GESTIONE PREMI (CATALOGO PREMI)
+// ==========================================
+
+const DB_PREMI = {
+    // Ottieni tutti i premi dal catalogo
+    async getPremi() {
+        const { data, error } = await supabaseClient
+            .from('catalogo_premi')
+            .select('*')
+            .order('punti_richiesti', { ascending: true });
+
+        if (error) {
+            console.error("Errore caricamento catalogo premi:", error);
+            return [];
+        }
+        return data || [];
+    },
+
+    // Crea un nuovo premio
+    async creaPremio(nome, descrizione, puntiRichiesti, prezzoAggiuntivo, icona = '🎁') {
+        const { data, error } = await supabaseClient
+            .from('catalogo_premi')
+            .insert([{
+                nome,
+                descrizione,
+                punti_richiesti: puntiRichiesti,
+                prezzo_aggiuntivo: prezzoAggiuntivo || 0,
+                icona: icona || '🎁'
+            }])
+            .select();
+
+        if (error) {
+            console.error("Errore creazione premio:", error);
+            return { success: false, error: error.message };
+        }
+        return { success: true, premio: data[0] };
+    },
+
+    // Aggiorna un premio
+    async aggiornaPremio(id, updates) {
+        const { data, error } = await supabaseClient
+            .from('catalogo_premi')
+            .update(updates)
+            .eq('id', id)
+            .select();
+
+        if (error) {
+            console.error("Errore aggiornamento premio:", error);
+            return { success: false, error: error.message };
+        }
+        return { success: true, premio: data[0] };
+    },
+
+    // Elimina un premio
+    async eliminaPremio(id) {
+        const { error } = await supabaseClient
+            .from('catalogo_premi')
+            .delete()
+            .eq('id', id);
+
+        if (error) {
+            console.error("Errore eliminazione premio:", error);
+            return { success: false, error: error.message };
+        }
+        return { success: true };
+    },
+
+    // Un cliente riscatta un premio con i punti
+    async riscattaPremio(clienteId, premioId) {
+        // 1. Ottieni il premio
+        const { data: premio, error: premioError } = await supabaseClient
+            .from('catalogo_premi')
+            .select('*')
+            .eq('id', premioId)
+            .single();
+
+        if (premioError || !premio) {
+            return { success: false, error: 'Premio non trovato' };
+        }
+
+        // 2. Ottieni il cliente
+        const { data: cliente, error: clienteError } = await supabaseClient
+            .from('clienti')
+            .select('punti_spesa')
+            .eq('id', clienteId)
+            .single();
+
+        if (clienteError || !cliente) {
+            return { success: false, error: 'Cliente non trovato' };
+        }
+
+        // 3. Verifica punti sufficienti
+        if (cliente.punti_spesa < premio.punti_richiesti) {
+            return { success: false, error: 'Punti insufficienti' };
+        }
+
+        // 4. Deduci punti
+        const nuoviPunti = cliente.punti_spesa - premio.punti_richiesti;
+        const { error: updateError } = await supabaseClient
+            .from('clienti')
+            .update({ punti_spesa: nuoviPunti })
+            .eq('id', clienteId);
+
+        if (updateError) {
+            return { success: false, error: updateError.message };
+        }
+
+        // 5. Registra il riscatto
+        const { error: insertError } = await supabaseClient
+            .from('premi_riscattati')
+            .insert([{
+                cliente_id: clienteId,
+                premio_id: premioId,
+                punti_utilizzati: premio.punti_richiesti,
+                data_riscatto: new Date().toISOString()
+            }]);
+
+        if (insertError) {
+            console.error("Errore registrazione riscatto premio:", insertError);
+            // Ripristina i punti
+            await supabaseClient
+                .from('clienti')
+                .update({ punti_spesa: cliente.punti_spesa })
+                .eq('id', clienteId);
+            return { success: false, error: insertError.message };
+        }
+
+        return { 
+            success: true, 
+            premio: premio,
+            puntiRimanenti: nuoviPunti 
+        };
+    },
+
+    // Ottieni i premi riscattati da un cliente
+    async getPremiRiscattati(clienteId) {
+        const { data, error } = await supabaseClient
+            .from('premi_riscattati')
+            .select(`
+                *,
+                premio:catalogo_premi(*)
+            `)
+            .eq('cliente_id', clienteId)
+            .order('data_riscatto', { ascending: false });
+
+        if (error) {
+            console.error("Errore caricamento premi riscattati:", error);
+            return [];
+        }
+        return data || [];
+    }
+};

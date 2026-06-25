@@ -120,6 +120,7 @@
         <button class="category-btn" id="btnPromozioni" style="display:none;" onclick="cambiaVista('promozioni', this)">⚡ Offerte</button>
         <button class="category-btn" id="btnUtenti" style="display:none;" onclick="cambiaVista('utenti', this)">👥 Gestione Utenti</button>
         <button class="category-btn" id="btnLogs" style="display:none;" onclick="cambiaVista('logs', this)">📋 Log di Sistema</button>
+        <button class="category-btn" id="btnPremi" style="display:none;" onclick="cambiaVista('premi', this)">🎁 Gestione Premi</button>
 
         <div id="menu-categorie" style="display: flex; flex-direction: column; gap: 5px;">
             <div class="menu-label">Filtra Categorie</div>
@@ -286,6 +287,45 @@
             </div>
         </div>
 
+        <!-- ========== VISTA GESTIONE PREMI ========== -->
+        <div id="vista-premi" class="section">
+            <h2>🎁 Gestione Premi (Catalogo)</h2>
+            
+            <!-- Form Creazione Premio -->
+            <div style="margin: 20px 0; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <h3>➕ Aggiungi Nuovo Premio</h3>
+                <form id="formCreaPremio" onsubmit="creaNuovoPremio(event)" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+                    <div>
+                        <label style="display:block; font-weight:bold; margin-bottom:5px; color:#475569;">Nome Premio</label>
+                        <input type="text" id="premioNome" required placeholder="Es. Penne Eleganti SinGo" style="width:100%; padding:10px; border-radius:6px; border:1px solid #cbd5e1;">
+                    </div>
+                    <div>
+                        <label style="display:block; font-weight:bold; margin-bottom:5px; color:#475569;">Icona (emoji)</label>
+                        <input type="text" id="premioIcona" placeholder="🎁" style="width:100%; padding:10px; border-radius:6px; border:1px solid #cbd5e1;">
+                    </div>
+                    <div style="grid-column: 1/-1;">
+                        <label style="display:block; font-weight:bold; margin-bottom:5px; color:#475569;">Descrizione</label>
+                        <input type="text" id="premioDescrizione" required placeholder="Es. Tratto morbido, inchiostro nero scorrevole" style="width:100%; padding:10px; border-radius:6px; border:1px solid #cbd5e1;">
+                    </div>
+                    <div>
+                        <label style="display:block; font-weight:bold; margin-bottom:5px; color:#475569;">Punti Richiesti</label>
+                        <input type="number" id="premioPunti" min="1" required placeholder="50" style="width:100%; padding:10px; border-radius:6px; border:1px solid #cbd5e1;">
+                    </div>
+                    <div>
+                        <label style="display:block; font-weight:bold; margin-bottom:5px; color:#475569;">Prezzo Aggiuntivo (€)</label>
+                        <input type="number" id="premioPrezzo" min="0" step="0.01" placeholder="0.50" style="width:100%; padding:10px; border-radius:6px; border:1px solid #cbd5e1;">
+                    </div>
+                    <button type="submit" style="grid-column: 1/-1; background: #10b981; color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-weight: bold;">➕ Aggiungi al Catalogo</button>
+                </form>
+            </div>
+
+            <!-- Lista Premi -->
+            <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <h3>📋 Catalogo Premi</h3>
+                <div id="listaPremi" style="margin-top: 15px;"></div>
+            </div>
+        </div>
+
         <!-- ========== VISTA EDITOR STOCK ========== -->
         <div id="vista-editor-stock" class="section">
             <h2>Editor Stock Massimo</h2>
@@ -327,7 +367,7 @@
         // 🛡️ CONTROLLO SICUREZZA
         // =============================================
         if (sessionStorage.getItem('manager_autenticato') !== 'true') {
-            window.location.replace('login.html');
+            window.location.replace('login-manager.html');
         }
 
         // =============================================
@@ -336,7 +376,7 @@
         function mostraInfoUtente() {
             const utente = caricaUtenteLoggato();
             if (!utente) {
-                window.location.href = 'login.html';
+                window.location.href = 'login-manager.html';
                 return;
             }
             document.getElementById('utenteNome').textContent = utente.nome;
@@ -357,6 +397,7 @@
             document.getElementById('btnPromozioni').style.display = (ruolo === 'super_admin' || ruolo === 'admin_negozio') ? 'block' : 'none';
             document.getElementById('btnUtenti').style.display = (ruolo === 'super_admin') ? 'block' : 'none';
             document.getElementById('btnLogs').style.display = (ruolo === 'super_admin') ? 'block' : 'none';
+            document.getElementById('btnPremi').style.display = (ruolo === 'super_admin' || ruolo === 'admin_negozio') ? 'block' : 'none';
             
             document.getElementById('btnEditorStock').style.display = (ruolo !== 'analista') ? 'inline-block' : 'none';
             document.getElementById('btnToggleCart').style.display = (ruolo === 'super_admin' || ruolo === 'admin_negozio') ? 'inline-block' : 'none';
@@ -380,7 +421,7 @@
             if (confirm('Sei sicuro di voler uscire?')) {
                 sessionStorage.removeItem('manager_autenticato');
                 sessionStorage.removeItem('utente_loggato');
-                window.location.href = 'login.html';
+                window.location.href = 'home.html';
             }
         }
 
@@ -499,6 +540,10 @@
                     caricaLogs();
                 }
 
+                if (isSuperAdmin() || isAdminNegozio()) {
+                    caricaPremi();
+                }
+
             } catch (err) {
                 showToast('Errore caricamento: ' + err.message, 'error');
                 console.error(err);
@@ -524,7 +569,8 @@
                 'finanze': ['super_admin', 'admin_negozio', 'responsabile_acquisti', 'analista'],
                 'promozioni': ['super_admin', 'admin_negozio'],
                 'utenti': ['super_admin'],
-                'logs': ['super_admin']
+                'logs': ['super_admin'],
+                'premi': ['super_admin', 'admin_negozio']
             };
             
             if (!vistePermesse[vista] || !vistePermesse[vista].includes(ruolo)) {
@@ -547,7 +593,8 @@
                 finanze: 'Report Finanziario',
                 promozioni: 'Gestione Offerte',
                 utenti: 'Gestione Utenti',
-                logs: 'Log di Sistema'
+                logs: 'Log di Sistema',
+                premi: 'Gestione Premi'
             };
             document.getElementById('titolo-sezione').innerText = titoli[vista] || 'Pannello Manager';
             
@@ -555,6 +602,7 @@
             if (vista === 'promozioni') renderPromozioni();
             if (vista === 'utenti' && isSuperAdmin()) caricaUtenti();
             if (vista === 'logs' && isSuperAdmin()) caricaLogs();
+            if (vista === 'premi' && (isSuperAdmin() || isAdminNegozio())) caricaPremi();
         }
 
         function filtraCategoria(categoria, btn) {
@@ -836,13 +884,11 @@
             const lista = document.getElementById('lista-promozioni-attive');
             if (!lista) return;
 
-            // Controlla scadenze
             const now = new Date();
             promozioniAttive = promozioniAttive.filter(p => {
                 if (p.scadenza) {
                     const scadenza = new Date(p.scadenza);
                     if (scadenza < now) {
-                        // Disattiva automaticamente
                         supabaseClient
                             .from('offerte_flash')
                             .update({ attiva: false })
@@ -1252,6 +1298,122 @@
                     </div>
                 </div>
             `).join('');
+        }
+
+        // ── Gestione Premi ───────────────────────────────────────────────
+        async function caricaPremi() {
+            if (!isSuperAdmin() && !isAdminNegozio()) return;
+            
+            const premi = await DB_PREMI.getPremi();
+            const container = document.getElementById('listaPremi');
+            
+            if (premi.length === 0) {
+                container.innerHTML = '<p style="color:#94a3b8;">Nessun premio nel catalogo.</p>';
+                return;
+            }
+            
+            container.innerHTML = `
+                <table style="width:100%; border-collapse:collapse;">
+                    <thead>
+                        <tr style="background:#f1f5f9;">
+                            <th style="padding:10px;text-align:left;">Icona</th>
+                            <th style="padding:10px;text-align:left;">Nome</th>
+                            <th style="padding:10px;text-align:left;">Descrizione</th>
+                            <th style="padding:10px;text-align:left;">Punti</th>
+                            <th style="padding:10px;text-align:left;">Prezzo</th>
+                            <th style="padding:10px;text-align:left;">Azioni</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${premi.map(p => `
+                            <tr style="border-bottom:1px solid #e2e8f0;">
+                                <td style="padding:10px;font-size:1.5rem;">${p.icona || '🎁'}</td>
+                                <td style="padding:10px;font-weight:600;">${p.nome}</td>
+                                <td style="padding:10px;font-size:0.9rem;color:#64748B;max-width:200px;">${p.descrizione}</td>
+                                <td style="padding:10px;">⭐ ${p.punti_richiesti}</td>
+                                <td style="padding:10px;">€ ${(p.prezzo_aggiuntivo || 0).toFixed(2)}</td>
+                                <td style="padding:10px;">
+                                    <button onclick="eliminaPremio(${p.id})" style="background:#ef4444; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; font-size:0.8rem;">
+                                        🗑️ Rimuovi
+                                    </button>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        async function creaNuovoPremio(e) {
+            e.preventDefault();
+            
+            if (!isSuperAdmin() && !isAdminNegozio()) {
+                showToast('❌ Non hai i permessi per questa azione', 'error');
+                return;
+            }
+            
+            const nome = document.getElementById('premioNome').value.trim();
+            const descrizione = document.getElementById('premioDescrizione').value.trim();
+            const punti = parseInt(document.getElementById('premioPunti').value);
+            const prezzo = parseFloat(document.getElementById('premioPrezzo').value) || 0;
+            const icona = document.getElementById('premioIcona').value.trim() || '🎁';
+
+            if (!nome || !descrizione || !punti) {
+                showToast('❌ Compila tutti i campi obbligatori', 'error');
+                return;
+            }
+
+            if (punti < 1) {
+                showToast('❌ I punti richiesti devono essere almeno 1', 'error');
+                return;
+            }
+
+            setSpinner(true);
+            try {
+                const result = await DB_PREMI.creaPremio(nome, descrizione, punti, prezzo, icona);
+                if (result.success) {
+                    showToast('✅ Premio aggiunto al catalogo!', 'success');
+                    document.getElementById('formCreaPremio').reset();
+                    document.getElementById('premioIcona').value = '🎁';
+                    caricaPremi();
+                } else {
+                    showToast('❌ ' + result.error, 'error');
+                }
+            } catch (err) {
+                showToast('❌ Errore: ' + err.message, 'error');
+            } finally {
+                setSpinner(false);
+            }
+        }
+
+        async function eliminaPremio(id) {
+            if (!isSuperAdmin() && !isAdminNegozio()) {
+                showToast('❌ Non hai i permessi per questa azione', 'error');
+                return;
+            }
+            
+            showModal(
+                '🗑️ Elimina Premio',
+                'Sei sicuro di voler eliminare questo premio dal catalogo? Questa operazione è irreversibile.',
+                async (confirmed) => {
+                    if (!confirmed) return;
+                    
+                    setSpinner(true);
+                    try {
+                        const result = await DB_PREMI.eliminaPremio(id);
+                        if (result.success) {
+                            showToast('✅ Premio eliminato dal catalogo', 'success');
+                            caricaPremi();
+                        } else {
+                            showToast('❌ ' + result.error, 'error');
+                        }
+                    } catch (err) {
+                        showToast('❌ Errore: ' + err.message, 'error');
+                    } finally {
+                        setSpinner(false);
+                    }
+                }
+            );
         }
 
         // ── Avvio ──────────────────────────────────────────────────────

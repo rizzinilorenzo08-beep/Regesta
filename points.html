@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestione Punti Spesa - SuperStore Premium</title>
+    <title>Gestione Punti Spesa - SinGo</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -26,7 +26,7 @@
     <div class="container">
         <div id="loginRequired" class="login-required" style="display: none;">
             <h2>🔐 Accedi per Gestire i Tuoi Punti</h2>
-            <p>Registrati o accedi per visualizzare i tuoi punti spesa e le offerte disponibili.</p>
+            <p>Registrati o accedi per visualizzare i tuoi punti spesa e i premi disponibili.</p>
             <div>
                 <a href="register.html">📝 Registrati</a>
                 <a href="login-cliente.html">🔓 Accedi</a>
@@ -36,7 +36,7 @@
         <div id="mainContent" style="display: none;">
             <div class="header">
                 <h1>✨ Il Tuo Programma Fedeltà</h1>
-                <p>Guadagna punti ad ogni acquisto e ottieni esclusivi vantaggi</p>
+                <p>Guadagna punti ad ogni acquisto e riscatta premi esclusivi</p>
             </div>
 
             <div class="points-card">
@@ -47,16 +47,17 @@
             <div id="messageBox" class="message"></div>
 
             <div>
-                <h2 class="section-title">🎟️ Tuoi Buoni Sbloccati</h2>
-                <p style="text-align: center; color: var(--text-muted); margin-bottom: 30px;">Questi sono gli sconti che hai sbloccato e che potrai usare al checkout</p>
-                <div id="buoniSbloccatiContainer" class="offerte-grid"></div>
+                <h2 class="section-title">🎁 Premi Disponibili</h2>
+                <p style="text-align: center; color: var(--text-muted); margin-bottom: 30px;">Usa i tuoi punti per riscattare questi premi esclusivi!</p>
+                <div id="offerteContainer" class="offerte-grid"></div>
             </div>
 
             <hr style="margin: 40px 0; border: none; border-top: 2px solid var(--border);">
 
             <div>
-                <h2 class="section-title">🎁 Offerte Disponibili</h2>
-                <div id="offerteContainer" class="offerte-grid"></div>
+                <h2 class="section-title">🏆 I Tuoi Premi Riscattati</h2>
+                <p style="text-align: center; color: var(--text-muted); margin-bottom: 30px;">Ecco i premi che hai già riscattato con i tuoi punti.</p>
+                <div id="premiRiscattatiContainer" class="offerte-grid"></div>
             </div>
         </div>
     </div>
@@ -67,8 +68,6 @@
 
     <script>
         let cliente = null;
-        let offerte = [];
-        let buoniSbloccati = [];
 
         async function initPage() {
             cliente = caricaClienteLoggato();
@@ -82,6 +81,7 @@
             document.getElementById('loginRequired').style.display = 'none';
             document.getElementById('mainContent').style.display = 'block';
 
+            // Aggiorna i dati del cliente
             const clienteAggiornato = await DB_CLIENTI.getCliente(cliente.id);
             if (clienteAggiornato) {
                 cliente = clienteAggiornato;
@@ -90,123 +90,151 @@
 
             document.getElementById('puntiValue').textContent = cliente.punti_spesa;
 
-            // Carica buoni sbloccati (che il cliente ha già acquistato con i punti)
-            caricaBuoniSbloccati();
+            // Carica i premi disponibili
+            renderPremi();
 
-            // Carica offerte disponibili (che il cliente può ancora acquistare)
-            offerte = await DB_CLIENTI.getOfferteSpesa();
-            renderOfferte();
+            // Carica i premi già riscattati
+            caricaPremiRiscattati();
         }
 
-        async function caricaBuoniSbloccati() {
-            try {
-                buoniSbloccati = await DB_CLIENTI.getOffertePuntiSpesa(cliente.id);
-                renderBuoniSbloccati();
-            } catch (err) {
-                console.error('Errore caricamento buoni sbloccati:', err);
-                document.getElementById('buoniSbloccatiContainer').innerHTML = `
-                    <div style="grid-column: 1 / -1; text-align: center; padding: 30px; color: var(--text-muted);">
-                        <p>Nessun buono sbloccato al momento</p>
-                    </div>
-                `;
-            }
-        }
-
-        function renderBuoniSbloccati() {
-            const container = document.getElementById('buoniSbloccatiContainer');
-
-            if (!buoniSbloccati || buoniSbloccati.length === 0) {
-                container.innerHTML = `
-                    <div style="grid-column: 1 / -1;">
-                        <div class="empty-state">
-                            <div class="empty-state-icon">🎁</div>
-                            <p>Non hai ancora sbloccato nessun buono. Accumula punti e acquistane uno!</p>
-                        </div>
-                    </div>
-                `;
-                return;
-            }
-
-            container.innerHTML = buoniSbloccati.map(buono => {
-                const sconto = buono.sconto_percentuale || 0;
-                return `
-                    <div class="offerta-card" style="background: #F0FDF4; border-color: #10B981;">
-                        <div class="offerta-header">
-                            <div class="offerta-nome">✓ ${buono.nome || 'Sconto Sbloccato'}</div>
-                        </div>
-                        <div class="offerta-descrizione">${buono.descrizione || 'Sconto già tuo'}</div>
-                        <div class="offerta-sconto" style="background: #10B981; color: white; border-radius: 10px;">
-                            💰 ${sconto}% di sconto
-                        </div>
-                        <button disabled style="background: #cbd5e1; color: #94A3B8; cursor: not-allowed; border: none; padding: 12px; border-radius: 10px; font-weight: 700; margin-top: auto;">
-                            ✓ Disponibile al Checkout
-                        </button>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        function renderOfferte() {
+        // ── RENDER PREMI DISPONIBILI ──────────────────────────────────────
+        async function renderPremi() {
             const container = document.getElementById('offerteContainer');
+            
+            const premi = await DB_PREMI.getPremi();
 
-            if (offerte.length === 0) {
+            if (premi.length === 0) {
                 container.innerHTML = `
                     <div style="grid-column: 1 / -1;">
                         <div class="empty-state">
                             <div class="empty-state-icon">📭</div>
-                            <p>Non ci sono offerte disponibili al momento.</p>
+                            <p>Non ci sono premi disponibili al momento.</p>
                         </div>
                     </div>
                 `;
                 return;
             }
 
-            container.innerHTML = offerte.map(offerta => {
-                const puntiBastano = cliente.punti_spesa >= offerta.punti_richiesti;
+            container.innerHTML = premi.map(premio => {
+                const puntiBastano = cliente.punti_spesa >= premio.punti_richiesti;
+                const prezzoText = (premio.prezzo_aggiuntivo || 0) > 0 
+                    ? `+ €${premio.prezzo_aggiuntivo.toFixed(2)}` 
+                    : 'Gratuito';
                 return `
                     <div class="offerta-card">
                         <div class="offerta-header">
-                            <div class="offerta-nome">${offerta.nome}</div>
+                            <div style="font-size:2.5rem;text-align:center;margin-bottom:10px;">${premio.icona || '🎁'}</div>
+                            <div class="offerta-nome">${premio.nome}</div>
                         </div>
-                        <div class="offerta-descrizione">${offerta.descrizione}</div>
-                        <div class="offerta-punti">⭐ ${offerta.punti_richiesti} punti</div>
-                        <div class="offerta-sconto">💰 Risparmia € ${offerta.sconto_euro.toFixed(2)}</div>
-                        <button class="btn-acquista" ${!puntiBastano ? 'disabled' : ''} onclick="acquistaOfferta(${offerta.id}, ${offerta.punti_richiesti}, '${offerta.nome}', ${offerta.sconto_euro})">
-                            ${puntiBastano ? 'Usa i Punti' : `Punti Insufficienti (ne servono ${offerta.punti_richiesti})`}
+                        <div class="offerta-descrizione">${premio.descrizione}</div>
+                        <div class="offerta-punti">⭐ ${premio.punti_richiesti} punti</div>
+                        <div class="offerta-sconto">💰 ${prezzoText}</div>
+                        <button class="btn-acquista" ${!puntiBastano ? 'disabled' : ''} onclick="riscattaPremio(${premio.id}, ${premio.punti_richiesti}, '${premio.nome}')">
+                            ${puntiBastano ? '🎯 Riscatta Ora' : `Punti insufficienti (ne servono ${premio.punti_richiesti})`}
                         </button>
                     </div>
                 `;
             }).join('');
         }
 
-        async function acquistaOfferta(offeID, puntiRichiesti, nomeoOfferta, sconto) {
+        // ── RISCATTA PREMIO ───────────────────────────────────────────────
+        async function riscattaPremio(premioId, puntiRichiesti, nomePremio) {
             if (cliente.punti_spesa < puntiRichiesti) {
                 showToast('❌ Punti insufficienti');
                 return;
             }
 
-            const result = await DB_CLIENTI.usaPuntiSpesa(cliente.id, puntiRichiesti, sconto);
+            const btn = event.target;
+            btn.disabled = true;
+            btn.textContent = '⏳ Elaborazione...';
 
-            if (result.success) {
-                cliente.punti_spesa = result.puntiRimanenti;
-                salvaClienteLoggato(cliente);
-                document.getElementById('puntiValue').textContent = cliente.punti_spesa;
-                showToast(`✅ Offerta "${nomeoOfferta}" acquistata! Hai ancora ${result.puntiRimanenti} punti.`);
-                
-                const messageBox = document.getElementById('messageBox');
-                messageBox.className = 'message success show';
-                messageBox.innerHTML = `
-                    <div>✅ <strong>Offerta Acquistata!</strong></div>
-                    <div style="font-size: 0.9rem; margin-top: 5px;">
-                        Hai utilizzato ${puntiRichiesti} punti. Sconto di € ${sconto.toFixed(2)} applicato al tuo prossimo acquisto.
-                    </div>
-                `;
-                setTimeout(() => messageBox.classList.remove('show'), 5000);
-            } else {
-                showToast('❌ ' + result.error);
+            try {
+                const result = await DB_PREMI.riscattaPremio(cliente.id, premioId);
+
+                if (result.success) {
+                    // Aggiorna il cliente
+                    cliente.punti_spesa = result.puntiRimanenti;
+                    salvaClienteLoggato(cliente);
+                    document.getElementById('puntiValue').textContent = cliente.punti_spesa;
+                    
+                    showToast(`✅ Premio "${nomePremio}" riscattato con successo!`);
+                    
+                    // Mostra messaggio di successo
+                    const messageBox = document.getElementById('messageBox');
+                    messageBox.className = 'message success show';
+                    messageBox.innerHTML = `
+                        <div>🎉 <strong>Premio Riscattato!</strong></div>
+                        <div style="font-size: 0.9rem; margin-top: 5px;">
+                            Hai utilizzato ${puntiRichiesti} punti per ottenere: <strong>${nomePremio}</strong>
+                            ${(result.premio.prezzo_aggiuntivo || 0) > 0 ? ` con un contributo di €${result.premio.prezzo_aggiuntivo.toFixed(2)}` : ' completamente gratuito!'}
+                        </div>
+                    `;
+                    setTimeout(() => messageBox.classList.remove('show'), 5000);
+                    
+                    // Ricarica i premi e i riscattati
+                    renderPremi();
+                    caricaPremiRiscattati();
+                } else {
+                    showToast('❌ ' + result.error);
+                }
+            } catch (error) {
+                console.error('Errore riscatto premio:', error);
+                showToast('❌ Errore durante il riscatto. Riprova.');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🎯 Riscatta Ora';
             }
         }
 
+        // ── CARICA PREMI RISCATTATI ──────────────────────────────────────
+        async function caricaPremiRiscattati() {
+            const container = document.getElementById('premiRiscattatiContainer');
+            
+            try {
+                const riscattati = await DB_PREMI.getPremiRiscattati(cliente.id);
+
+                if (!riscattati || riscattati.length === 0) {
+                    container.innerHTML = `
+                        <div style="grid-column: 1 / -1;">
+                            <div class="empty-state">
+                                <div class="empty-state-icon">🏆</div>
+                                <p>Non hai ancora riscattato nessun premio. Accumula punti e scegli il tuo premio!</p>
+                            </div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = riscattati.map(item => {
+                    const premio = item.premio;
+                    return `
+                        <div class="offerta-card" style="background: #F0FDF4; border-color: #10B981;">
+                            <div class="offerta-header">
+                                <div style="font-size:2.5rem;text-align:center;margin-bottom:10px;">${premio.icona || '🎁'}</div>
+                                <div class="offerta-nome">✓ ${premio.nome}</div>
+                            </div>
+                            <div class="offerta-descrizione">${premio.descrizione}</div>
+                            <div class="offerta-punti" style="background: #10B981;">⭐ ${item.punti_utilizzati} punti utilizzati</div>
+                            <div class="offerta-sconto" style="background: #e2e8f0; color: #475569;">
+                                📅 Riscattato il ${new Date(item.data_riscatto).toLocaleDateString('it-IT')}
+                            </div>
+                            <button disabled style="background: #cbd5e1; color: #94A3B8; cursor: not-allowed; border: none; padding: 12px; border-radius: 10px; font-weight: 700; margin-top: auto;">
+                                ✅ Già Riscattato
+                            </button>
+                        </div>
+                    `;
+                }).join('');
+            } catch (error) {
+                console.error('Errore caricamento premi riscattati:', error);
+                container.innerHTML = `
+                    <div style="grid-column: 1 / -1; text-align: center; padding: 30px; color: var(--text-muted);">
+                        <p>Errore nel caricamento dei premi riscattati</p>
+                    </div>
+                `;
+            }
+        }
+
+        // ── TOAST ──────────────────────────────────────────────────────────
         function showToast(message) {
             const toast = document.getElementById('points-toast');
             toast.textContent = message;
@@ -215,13 +243,15 @@
             toast._timer = setTimeout(() => toast.style.display = 'none', 3000);
         }
 
+        // ── LOGOUT ─────────────────────────────────────────────────────────
         function logoutUser() {
             if (confirm('Sei sicuro di voler fare il logout?')) {
                 logoutCliente();
-                window.location.href = 'index.html';
+                 ìwindow.location.href = 'home.html';  // ← CORRETTO
             }
         }
 
+        // ── AVVIO ──────────────────────────────────────────────────────────
         initPage();
     </script>
 </body>
