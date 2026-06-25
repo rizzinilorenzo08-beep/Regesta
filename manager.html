@@ -45,6 +45,19 @@
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
         .budget-box { background: var(--secondary); color: white; padding: 10px 20px; border-radius: 8px; font-weight: bold; font-size: 1.2rem; }
 
+        /* Badge del ruolo */
+        .ruolo-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+        .ruolo-super_admin { background: #8b5cf6; color: white; }
+        .ruolo-admin_negozio { background: #3b82f6; color: white; }
+        .ruolo-responsabile_acquisti { background: #f59e0b; color: white; }
+        .ruolo-analista { background: #06b6d4; color: white; }
+
         .section { display: none; }
         .section.active { display: block; }
         .controls { display: flex; gap: 15px; margin-bottom: 20px; align-items: center; flex-wrap: wrap; }
@@ -91,12 +104,20 @@
             <button class="category-btn sub-btn" onclick="filtraCategoria('Macchina', this)">Macchina</button>
         </div>
 
-        <button onclick="logoutManager()" class="logout-btn">Esci alla Vista Cliente</button>
+        <button onclick="logoutUtente()" class="logout-btn">Esci alla Vista Cliente</button>
     </div>
 
     <div class="main">
         <div class="header">
-            <h1 id="titolo-sezione">Gestione Magazzino</h1>
+            <div>
+                <h1 id="titolo-sezione">Gestione Magazzino</h1>
+                <!-- ===== INFO UTENTE CON RUOLO ===== -->
+                <div style="display: flex; gap: 15px; align-items: center; margin-top: 8px; flex-wrap: wrap;">
+                    <span style="font-weight: 600; color: #64748B;">👤 Utente:</span>
+                    <span style="font-weight: 700; color: #1E293B;" id="utenteNome"></span>
+                    <span id="utenteRuoloBadge" class="ruolo-badge"></span>
+                </div>
+            </div>
             <div class="budget-box" id="display-budget-top">Budget: € …</div>
         </div>
 
@@ -213,17 +234,49 @@
     <div id="toast" class="toast"></div>
 
     <script>
-        // ── CONTROLLO DI SICUREZZA DI SESSIONE ───────────────────────────
+        // =============================================
+        // 🛡️ CONTROLLO DI SICUREZZA - SESSIONE
+        // =============================================
         if (sessionStorage.getItem('manager_autenticato') !== 'true') {
-            window.location.replace('login.html');
+            window.location.replace('login-manager.html');
         }
 
-        function logoutManager() {
-            sessionStorage.removeItem('manager_autenticato');
-            window.location.href = 'index.html';
+        // =============================================
+        // 👤 MOSTRA INFO UTENTE (questa funzione va QUI)
+        // =============================================
+        function mostraInfoUtente() {
+            const utente = caricaUtenteLoggato();
+            if (!utente) {
+                window.location.href = 'login-manager.html';
+                return;
+            }
+            document.getElementById('utenteNome').textContent = utente.nome;
+            
+            const badge = document.getElementById('utenteRuoloBadge');
+            const ruoloLabels = {
+                'super_admin': '🛡️ Super Admin',
+                'admin_negozio': '🏪 Admin Negozio',
+                'responsabile_acquisti': '📦 Resp. Acquisti',
+                'analista': '📊 Analista'
+            };
+            badge.textContent = ruoloLabels[utente.ruolo] || utente.ruolo;
+            badge.className = `ruolo-badge ruolo-${utente.ruolo}`;
         }
 
-        // ── Stato globale ────────────────────────────────────────────────
+        // =============================================
+        // 🚪 LOGOUT
+        // =============================================
+        function logoutUtente() {
+            if (confirm('Sei sicuro di voler uscire?')) {
+                sessionStorage.removeItem('manager_autenticato');
+                sessionStorage.removeItem('utente_loggato');
+                window.location.href = 'login-manager.html';
+            }
+        }
+
+        // =============================================
+        // 📦 STATO GLOBALE
+        // =============================================
         let inventario      = [];
         let vendite         = [];
         let expenses        = [];
@@ -275,6 +328,9 @@
         async function caricaDati() {
             setSpinner(true);
             try {
+                // MOSTRA INFO UTENTE ALL'AVVIO
+                mostraInfoUtente();
+
                 ensureDatabase();
                 inventario = await loadInventario();
 
@@ -299,7 +355,6 @@
 
                 vendite = await loadVendite();
 
-                // Recupero spese da Supabase con fallback locale
                 try {
                     const { data: dbExpenses, error: expError } = await supabaseClient
                         .from('spese')
@@ -313,7 +368,6 @@
                 managerCart     = loadManagerCart();
                 budgetAziendale = await loadBudget();
 
-                // Carica offerte flash attive da Supabase
                 const { data: offerteDB, error: offerteErr } = await supabaseClient
                     .from('offerte_flash')
                     .select('*')
@@ -510,7 +564,7 @@
             );
         }
 
-        // ── ACQUISTO MANAGER (CON INTEGRAZIONE SUPABASE) ──────────────────
+        // ── ACQUISTO MANAGER ─────────────────────────────────────────────
         function procCompraManager() {
             if (isProcessing) {
                 showToast('⏳ Elaborazione in corso...', 'info');
@@ -552,14 +606,12 @@
                             totale: costoTotale
                         };
 
-                        // Salvataggio locale (backup)
                         recordExpense(spesa);
                         expenses.push(spesa);
 
                         budgetAziendale -= costoTotale;
                         await saveBudget(budgetAziendale);
 
-                        // Inserimento spesa su Supabase
                         const { error: insertExpError } = await supabaseClient
                             .from('spese')
                             .insert([{
@@ -568,11 +620,10 @@
                             }]);
 
                         if (insertExpError) {
-                            console.error("Errore nell'inserimento della spesa su Supabase:", insertExpError);
-                            throw new Error("Impossibile salvare la spesa sul database cloud.");
+                            console.error("Errore inserimento spesa:", insertExpError);
+                            throw new Error("Impossibile salvare la spesa sul database.");
                         }
 
-                        // Svuota il carrello dopo il salvataggio confermato
                         managerCart = [];
                         clearManagerCart();
 
@@ -643,7 +694,6 @@
             try {
                 setSpinner(true);
 
-                // Disattiva eventuali offerte precedenti sullo stesso prodotto
                 const { error: updateError } = await supabaseClient
                     .from('offerte_flash')
                     .update({ attiva: false })
@@ -651,7 +701,6 @@
 
                 if (updateError) throw updateError;
 
-                // Inserisce la nuova offerta
                 const { data, error } = await supabaseClient
                     .from('offerte_flash')
                     .insert([{ prodotto_id: idProdotto, sconto: sconto, attiva: true }])
@@ -659,7 +708,6 @@
 
                 if (error) throw error;
 
-                // Aggiorna la lista locale
                 promozioniAttive = promozioniAttive.filter(p => p.idProdotto !== idProdotto);
                 promozioniAttive.push({ idProdotto, sconto });
 
@@ -778,6 +826,9 @@
             });
         }
 
+        // =============================================
+        // 🚀 AVVIA TUTTO
+        // =============================================
         caricaDati();
     </script>
 </body>

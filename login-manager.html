@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Manager - SinGo</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="db.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
+        body {
+            background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .login-container {
+            background: white;
+            padding: 45px;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            width: 100%;
+            max-width: 420px;
+        }
+        .login-header {
+            text-align: center;
+            margin-bottom: 35px;
+        }
+        .login-header h1 {
+            color: #1E293B;
+            font-size: 1.8rem;
+            margin-bottom: 8px;
+        }
+        .login-header p {
+            color: #64748B;
+            font-size: 0.95rem;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            color: #1E293B;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 0.95rem;
+        }
+        input, select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #E2E8F0;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+        input:focus, select:focus {
+            outline: none;
+            border-color: #10B981;
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+        }
+        .btn-login {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #10B981, #059669);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(16, 185, 129, 0.3);
+        }
+        .btn-login:disabled {
+            background: #cbd5e1;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .form-links {
+            text-align: center;
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 1px solid #E2E8F0;
+        }
+        .form-links a {
+            color: #10B981;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .form-links a:hover {
+            color: #059669;
+        }
+        .message {
+            padding: 12px 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-weight: 600;
+            display: none;
+        }
+        .message.error {
+            background-color: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+        .message.success {
+            background-color: #dcfce7;
+            color: #166534;
+            border: 1px solid #86efac;
+        }
+        .message.show {
+            display: block;
+        }
+        .ruolo-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            margin-top: 10px;
+        }
+        .ruolo-super_admin { background: #8b5cf6; color: white; }
+        .ruolo-admin_negozio { background: #3b82f6; color: white; }
+        .ruolo-responsabile_acquisti { background: #f59e0b; color: white; }
+        .ruolo-analista { background: #06b6d4; color: white; }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-header">
+            <h1>🛠️ Accesso Manager</h1>
+            <p>Accedi con le tue credenziali aziendali</p>
+        </div>
+
+        <div id="messageBox" class="message"></div>
+
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="email">Email Aziendale</label>
+                <input type="email" id="email" placeholder="tuo.nome@singo.it" required>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" placeholder="Inserisci la tua password" required>
+            </div>
+
+            <button type="submit" class="btn-login">Accedi</button>
+        </form>
+
+        <div class="form-links">
+            <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 8px;">
+                💡 Credenziali di test:
+            </p>
+            <p style="font-size: 0.8rem; color: #64748B; line-height: 1.8;">
+                <span style="font-weight:600;">Super Admin:</span> superadmin@singo.it / SuperAdmin2024!<br>
+                <span style="font-weight:600;">Admin Negozio:</span> admin@singo.it / AdminNegozio2024!<br>
+                <span style="font-weight:600;">Responsabile Acquisti:</span> acquisti@singo.it / Acquisti2024!<br>
+                <span style="font-weight:600;">Analista:</span> analista@singo.it / Analista2024!
+            </p>
+            <p style="margin-top: 15px; border-top: 1px solid #E2E8F0; padding-top: 15px;">
+                <a href="index.html">← Torna allo Shop Cliente</a>
+            </p>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('loginForm');
+        const messageBox = document.getElementById('messageBox');
+
+        form.addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+
+            if (!email || !password) {
+                mostraMessaggio('Compila tutti i campi', 'error');
+                return;
+            }
+
+            const btn = form.querySelector('.btn-login');
+            btn.disabled = true;
+            btn.textContent = 'Login in corso...';
+
+            try {
+                // Usa DB_UTENTI.loginUtente() dal db.js
+                const result = await DB_UTENTI.loginUtente(email, password);
+
+                if (result.success) {
+                    mostraMessaggio(`✓ Benvenuto ${result.utente.nome}! Reindirizzamento...`, 'success');
+                    
+                    // Salva l'utente in sessionStorage per la sessione
+                    sessionStorage.setItem('utente_loggato', JSON.stringify(result.utente));
+                    sessionStorage.setItem('manager_autenticato', 'true');
+                    
+                    // Redirect al manager
+                    setTimeout(() => {
+                        window.location.href = 'manager.html';
+                    }, 1500);
+                } else {
+                    mostraMessaggio(result.error, 'error');
+                    btn.disabled = false;
+                    btn.textContent = 'Accedi';
+                }
+            } catch (error) {
+                console.error('Errore login:', error);
+                mostraMessaggio('Errore durante il login. Riprova.', 'error');
+                btn.disabled = false;
+                btn.textContent = 'Accedi';
+            }
+        });
+
+        function mostraMessaggio(testo, tipo) {
+            messageBox.textContent = testo;
+            messageBox.className = `message ${tipo} show`;
+            setTimeout(() => {
+                messageBox.classList.remove('show');
+            }, 4000);
+        }
+    </script>
+</body>
+</html>

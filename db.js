@@ -528,3 +528,244 @@ function isClienteLoggato() {
 function formatCurrency(value) {
     return `€ ${Number(value).toFixed(2)}`;
 }
+
+// ==========================================
+// 6. GESTIONE UTENTI E RUOLI (MANAGER)
+// ==========================================
+
+const DB_UTENTI = {
+    // Login utente manager
+    async loginUtente(email, password) {
+        const { data, error } = await supabaseClient
+            .from('utenti')
+            .select('*')
+            .eq('email', email)
+            .single();
+
+        if (error || !data) {
+            return { success: false, error: 'Email non trovata' };
+        }
+
+        if (!data.attivo) {
+            return { success: false, error: 'Account disattivato. Contatta l\'amministratore.' };
+        }
+
+        // Decodifica password (salvata in base64)
+        const decodedPassword = atob(data.password);
+        if (decodedPassword !== password) {
+            return { success: false, error: 'Password errata' };
+        }
+
+        // Aggiorna ultimo accesso
+        await supabaseClient
+            .from('utenti')
+            .update({ ultimo_accesso: new Date().toISOString() })
+            .eq('id', data.id);
+
+        // Registra log di accesso
+        await this.registraLog(data.id, 'login', { email: data.email });
+
+        return { success: true, utente: data };
+    },
+
+    // Registra log di sistema
+    async registraLog(utenteId, azione, dettagli = {}) {
+        const { error } = await supabaseClient
+            .from('log_sistema')
+            .insert([{
+                utente_id: utenteId,
+                azione,
+                dettagli: JSON.stringify(dettagli),
+                timestamp: new Date().toISOString()
+            }]);
+
+        if (error) console.error("Errore registrazione log:", error);
+    },
+
+    // Ottieni tutti gli utenti (solo Super Admin)
+    async getUtenti() {
+        const { data, error } = await supabaseClient
+            .from('utenti')
+            .select('*')
+            .order('data_registrazione', { ascending: false });
+
+        if (error) {
+            console.error("Errore caricamento utenti:", error);
+            return [];
+        }
+
+        return data;
+    },
+
+    // Ottieni un utente per ID
+    async getUtente(id) {
+        const { data, error } = await supabaseClient
+            .from('utenti')
+            .select('*')
+            .eq('id', id)
+            .single();
+
+        if (error) {
+            console.error("Errore caricamento utente:", error);
+            return null;
+        }
+
+        return data;
+    },
+
+    // Crea un nuovo utente (solo Super Admin)
+    async creaUtente(email, password, nome, ruolo, negozioId = null) {
+        // Verifica se l'email esiste già
+        const { data: existing, error: checkError } = await supabaseClient
+            .from('utenti')
+            .select('email')
+            .eq('email', email)
+            .single();
+
+        if (existing) {
+            return { success: false, error: 'Email già registrata' };
+        }
+
+        const { data, error } = await supabaseClient
+            .from('utenti')
+            .insert([{
+                email,
+                password: btoa(password),
+                nome,
+                ruolo,
+                negozio_id: negozioId,
+                attivo: true,
+                data_registrazione: new Date().toISOString()
+            }])
+            .select();
+
+        if (error) {
+            console.error("Errore creazione utente:", error);
+            return { success: false, error: error.message };
+        }
+
+        return { success: true, utente: data[0] };
+    },
+
+    // Aggiorna un utente
+    async aggiornaUtente(id, updates) {
+        // Rimuovi campi che non devono essere aggiornati
+        delete updates.data_registrazione;
+        delete updates.id;
+        delete updates.ultimo_accesso;
+
+        // Se password è presente, codificala
+        if (updates.password) {
+            updates.password = btoa(updates.password);
+        }
+
+        const { data, error } = await supabaseClient
+            .from('utenti')
+            .update(updates)
+            .eq('id', id)
+            .select();
+
+        if (error) {
+            console.error("Errore aggiornamento utente:", error);
+            return { success: false, error: error.message };
+        }
+
+        return { success: true, utente: data[0] };
+    },
+
+    // Disattiva/attiva un utente
+    async toggleAttivo(id, attivo) {
+        const { error } = await supabaseClient
+            .from('utenti')
+            .update({ attivo })
+            .eq('id', id);
+
+        if (error) {
+            console.error("Errore toggle utente:", error);
+            return { success: false, error: error.message };
+        }
+
+        await this.registraLog(id, attivo ? 'attivato' : 'disattivato', {});
+        return { success: true };
+    },
+
+    // Elimina un utente (solo Super Admin)
+    async eliminaUtente(id) {
+        const { error } = await supabaseClient
+            .from('utenti')
+            .delete()
+            .eq('id', id);
+
+        if (error) {
+            console.error("Errore eliminazione utente:", error);
+            return { success: false, error: error.message };
+        }
+
+        return { success: true };
+    },
+
+    // Ottieni log di sistema
+    async getLogs(limite = 100) {
+        const { data, error } = await supabaseClient
+            .from('log_sistema')
+            .select(`
+                *,
+                utenti:utente_id (nome, email)
+            `)
+            .order('timestamp', { ascending: false })
+            .limit(limite);
+
+        if (error) {
+            console.error("Errore caricamento log:", error);
+            return [];
+        }
+
+        return data;
+    }
+};
+
+// ==========================================
+// 7. FUNZIONI GLOBALI PER UTENTI MANAGER
+// ==========================================
+
+function caricaUtenteLoggato() {
+    const utente = sessionStorage.getItem('utente_loggato');
+    return utente ? JSON.parse(utente) : null;
+}
+
+function logoutUtente() {
+    const utente = caricaUtenteLoggato();
+    if (utente) {
+        DB_UTENTI.registraLog(utente.id, 'logout', { email: utente.email });
+    }
+    sessionStorage.removeItem('utente_loggato');
+    sessionStorage.removeItem('manager_autenticato');
+    window.location.href = 'login-manager.html';
+}
+
+// Verifica se l'utente ha un permesso specifico
+function haPermesso(permesso) {
+    const utente = caricaUtenteLoggato();
+    if (!utente) return false;
+    
+    const permessi = {
+        'super_admin': [
+            'gestione_utenti', 'gestione_ruoli', 'configurazione_sistema',
+            'log_sistema', 'accesso_tutto'
+        ],
+        'admin_negozio': [
+            'gestione_prodotti', 'gestione_prezzi', 'gestione_promozioni',
+            'gestione_fornitori', 'gestione_ordini_acquisto', 'gestione_inventario',
+            'report_vendite', 'segnalazione_esaurimento'
+        ],
+        'responsabile_acquisti': [
+            'creazione_ordini_acquisto', 'gestione_fornitori_acquisti',
+            'accesso_prezzi_acquisto'
+        ],
+        'analista': [
+            'accesso_report', 'accesso_kpi', 'esportazione_dati'
+        ]
+    };
+    
+    return permessi[utente.ruolo]?.includes(permesso) || false;
+}
