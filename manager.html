@@ -12,7 +12,6 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
         body { background-color: var(--bg); color: var(--text); display: flex; height: 100vh; }
 
-        /* Nascondi freccette dai campi numero */
         input[type="number"]::-webkit-inner-spin-button, 
         input[type="number"]::-webkit-outer-spin-button { 
             -webkit-appearance: none; 
@@ -103,6 +102,18 @@
         .permesso-negato h2 { color: #991b1b; margin-bottom: 10px; }
         .permesso-negato p { max-width: 400px; margin: 0 auto; }
 
+        .viaggio-card {
+            background: white;
+            padding: 16px;
+            border-radius: 8px;
+            border-left: 4px solid #10b981;
+            margin-bottom: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .viaggio-card .titolo { font-weight: 700; font-size: 1.1rem; }
+        .viaggio-card .destinazione { color: #64748B; }
+        .viaggio-card .date { font-size: 0.85rem; color: #94a3b8; }
+
         @media (max-width: 1200px) {
             .manager-grid { grid-template-columns: 1fr; }
             .cart-panel { position: static; max-height: none; }
@@ -121,6 +132,8 @@
         <button class="category-btn" id="btnUtenti" style="display:none;" onclick="cambiaVista('utenti', this)">👥 Gestione Utenti</button>
         <button class="category-btn" id="btnLogs" style="display:none;" onclick="cambiaVista('logs', this)">📋 Log di Sistema</button>
         <button class="category-btn" id="btnPremi" style="display:none;" onclick="cambiaVista('premi', this)">🎁 Gestione Premi</button>
+        <button class="category-btn" id="btnViaggi" style="display:none;" onclick="cambiaVista('viaggi', this)">✈️ Gestione Viaggi</button>
+        <button class="category-btn" id="btnOrdini" style="display:none;" onclick="cambiaVista('ordini', this)">📦 Ordini Clienti</button>
 
         <div id="menu-categorie" style="display: flex; flex-direction: column; gap: 5px;">
             <div class="menu-label">Filtra Categorie</div>
@@ -214,7 +227,7 @@
             </div>
         </div>
 
-        <!-- ========== VISTA OFFERTE (con timer) ========== -->
+        <!-- ========== VISTA OFFERTE ========== -->
         <div id="vista-promozioni" class="section">
             <div class="stats-cards" style="flex-direction: column; gap: 20px;">
                 <div class="card" style="text-align: left; border-bottom: 4px solid #3b82f6;">
@@ -243,7 +256,7 @@
             </div>
         </div>
 
-        <!-- ========== VISTA GESTIONE UTENTI (solo Super Admin) ========== -->
+        <!-- ========== VISTA GESTIONE UTENTI ========== -->
         <div id="vista-utenti" class="section">
             <h2>👥 Gestione Utenti</h2>
             <div style="margin: 20px 0; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
@@ -279,7 +292,7 @@
             </div>
         </div>
 
-        <!-- ========== VISTA LOG SISTEMA (solo Super Admin) ========== -->
+        <!-- ========== VISTA LOG SISTEMA ========== -->
         <div id="vista-logs" class="section">
             <h2>📋 Log di Sistema</h2>
             <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-top: 20px; max-height: 600px; overflow-y: auto;">
@@ -291,7 +304,6 @@
         <div id="vista-premi" class="section">
             <h2>🎁 Gestione Premi (Catalogo)</h2>
             
-            <!-- Form Creazione Premio -->
             <div style="margin: 20px 0; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
                 <h3>➕ Aggiungi Nuovo Premio</h3>
                 <form id="formCreaPremio" onsubmit="creaNuovoPremio(event)" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
@@ -319,10 +331,70 @@
                 </form>
             </div>
 
-            <!-- Lista Premi -->
             <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
                 <h3>📋 Catalogo Premi</h3>
                 <div id="listaPremi" style="margin-top: 15px;"></div>
+            </div>
+        </div>
+
+        <!-- ========== VISTA GESTIONE VIAGGI ========== -->
+        <div id="vista-viaggi" class="section">
+            <h2>✈️ Gestione Viaggi in Palio</h2>
+            
+            <div style="margin: 20px 0; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <h3>➕ Aggiungi Nuovo Viaggio</h3>
+                <form id="formCreaViaggio" onsubmit="creaNuovoViaggio(event)" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+                    <div style="grid-column: 1/-1;">
+                        <label style="display:block; font-weight:bold; margin-bottom:5px; color:#475569;">Titolo</label>
+                        <input type="text" id="viaggioTitolo" required placeholder="Es. Weekend a Venezia" style="width:100%; padding:10px; border-radius:6px; border:1px solid #cbd5e1;">
+                    </div>
+                    <div style="grid-column: 1/-1;">
+                        <label style="display:block; font-weight:bold; margin-bottom:5px; color:#475569;">Descrizione</label>
+                        <input type="text" id="viaggioDescrizione" placeholder="Es. Viaggio per 2 persone con hotel 4 stelle" style="width:100%; padding:10px; border-radius:6px; border:1px solid #cbd5e1;">
+                    </div>
+                    <div>
+                        <label style="display:block; font-weight:bold; margin-bottom:5px; color:#475569;">Destinazione</label>
+                        <input type="text" id="viaggioDestinazione" required placeholder="Es. Rimini, Riviera Romagnola" style="width:100%; padding:10px; border-radius:6px; border:1px solid #cbd5e1;">
+                    </div>
+                    <div>
+                        <label style="display:block; font-weight:bold; margin-bottom:5px; color:#475569;">Data Partenza</label>
+                        <input type="date" id="viaggioPartenza" required style="width:100%; padding:10px; border-radius:6px; border:1px solid #cbd5e1;">
+                    </div>
+                    <div>
+                        <label style="display:block; font-weight:bold; margin-bottom:5px; color:#475569;">Data Ritorno</label>
+                        <input type="date" id="viaggioRitorno" required style="width:100%; padding:10px; border-radius:6px; border:1px solid #cbd5e1;">
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <label style="display:block; font-weight:bold; margin-bottom:5px; color:#475569;">Attivo</label>
+                        <input type="checkbox" id="viaggioAttivo" checked style="width:20px; height:20px; cursor:pointer;">
+                    </div>
+                    <button type="submit" style="grid-column: 1/-1; background: #10b981; color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-weight: bold;">✈️ Aggiungi Viaggio</button>
+                </form>
+            </div>
+
+            <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <h3>📋 Viaggi Disponibili</h3>
+                <div id="listaViaggi" style="margin-top: 15px;"></div>
+            </div>
+        </div>
+
+        <!-- ========== VISTA ORDINI CLIENTI ========== -->
+        <div id="vista-ordini" class="section">
+            <h2>📦 Ordini Clienti</h2>
+            <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-top: 20px;">
+                <div style="margin-bottom: 15px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+                    <label style="font-weight:600; color:#475569;">Filtra per stato:</label>
+                    <select id="filtroStatoOrdine" onchange="caricaOrdini()" style="padding:8px 12px; border-radius:6px; border:1px solid #cbd5e1;">
+                        <option value="tutti">Tutti</option>
+                        <option value="in_elaborazione">⏳ In Elaborazione</option>
+                        <option value="spedito">📦 Spedito</option>
+                        <option value="in_transito">🚚 In Transito</option>
+                        <option value="in_consegna">🚪 In Consegna</option>
+                        <option value="consegnato">✅ Consegnato</option>
+                    </select>
+                    <button onclick="caricaOrdini()" style="background:#3b82f6; color:white; border:none; padding:8px 16px; border-radius:6px; cursor:pointer; font-weight:600;">🔄 Aggiorna</button>
+                </div>
+                <div id="listaOrdini" style="max-height: 600px; overflow-y: auto;"></div>
             </div>
         </div>
 
@@ -398,6 +470,8 @@
             document.getElementById('btnUtenti').style.display = (ruolo === 'super_admin') ? 'block' : 'none';
             document.getElementById('btnLogs').style.display = (ruolo === 'super_admin') ? 'block' : 'none';
             document.getElementById('btnPremi').style.display = (ruolo === 'super_admin' || ruolo === 'admin_negozio') ? 'block' : 'none';
+            document.getElementById('btnViaggi').style.display = (ruolo === 'super_admin' || ruolo === 'admin_negozio') ? 'block' : 'none';
+            document.getElementById('btnOrdini').style.display = (ruolo !== 'analista') ? 'block' : 'none';
             
             document.getElementById('btnEditorStock').style.display = (ruolo !== 'analista') ? 'inline-block' : 'none';
             document.getElementById('btnToggleCart').style.display = (ruolo === 'super_admin' || ruolo === 'admin_negozio') ? 'inline-block' : 'none';
@@ -542,7 +616,10 @@
 
                 if (isSuperAdmin() || isAdminNegozio()) {
                     caricaPremi();
+                    caricaViaggi();
                 }
+
+                caricaOrdini();
 
             } catch (err) {
                 showToast('Errore caricamento: ' + err.message, 'error');
@@ -570,7 +647,9 @@
                 'promozioni': ['super_admin', 'admin_negozio'],
                 'utenti': ['super_admin'],
                 'logs': ['super_admin'],
-                'premi': ['super_admin', 'admin_negozio']
+                'premi': ['super_admin', 'admin_negozio'],
+                'viaggi': ['super_admin', 'admin_negozio'],
+                'ordini': ['super_admin', 'admin_negozio', 'responsabile_acquisti']
             };
             
             if (!vistePermesse[vista] || !vistePermesse[vista].includes(ruolo)) {
@@ -594,7 +673,9 @@
                 promozioni: 'Gestione Offerte',
                 utenti: 'Gestione Utenti',
                 logs: 'Log di Sistema',
-                premi: 'Gestione Premi'
+                premi: 'Gestione Premi',
+                viaggi: 'Gestione Viaggi in Palio',
+                ordini: 'Ordini Clienti'
             };
             document.getElementById('titolo-sezione').innerText = titoli[vista] || 'Pannello Manager';
             
@@ -603,6 +684,8 @@
             if (vista === 'utenti' && isSuperAdmin()) caricaUtenti();
             if (vista === 'logs' && isSuperAdmin()) caricaLogs();
             if (vista === 'premi' && (isSuperAdmin() || isAdminNegozio())) caricaPremi();
+            if (vista === 'viaggi' && (isSuperAdmin() || isAdminNegozio())) caricaViaggi();
+            if (vista === 'ordini') caricaOrdini();
         }
 
         function filtraCategoria(categoria, btn) {
@@ -872,7 +955,7 @@
             );
         }
 
-        // ── Promozioni con timer ──────────────────────────────────────
+        // ── Promozioni ──────────────────────────────────────────────────
         function renderPromozioni() {
             const select = document.getElementById('promo-prodotto-select');
             if (select) {
@@ -1416,8 +1499,255 @@
             );
         }
 
+        // =============================================
+        // ✈️ GESTIONE VIAGGI
+        // =============================================
+        async function caricaViaggi() {
+            if (!isSuperAdmin() && !isAdminNegozio()) return;
+            
+            const viaggi = await DB_VIAGGI.getTuttiViaggi();
+            const container = document.getElementById('listaViaggi');
+            
+            if (viaggi.length === 0) {
+                container.innerHTML = '<p style="color:#94a3b8;">Nessun viaggio in palio.</p>';
+                return;
+            }
+            
+            container.innerHTML = viaggi.map(v => `
+                <div class="viaggio-card">
+                    <div class="titolo">${v.titolo}</div>
+                    <div class="destinazione">📍 ${v.destinazione}</div>
+                    <div class="date">📅 ${v.data_partenza ? new Date(v.data_partenza).toLocaleDateString('it-IT') : 'N/A'} - ${v.data_ritorno ? new Date(v.data_ritorno).toLocaleDateString('it-IT') : 'N/A'}</div>
+                    <div style="margin-top:8px; display:flex; gap:8px; align-items:center;">
+                        <span style="font-size:0.85rem; color:${v.attivo ? '#10b981' : '#94a3b8'}; font-weight:600;">
+                            ${v.attivo ? '✅ Attivo' : '❌ Disattivo'}
+                        </span>
+                        ${v.descrizione ? `<span style="font-size:0.85rem; color:#64748B;">${v.descrizione}</span>` : ''}
+                    </div>
+                    <div style="margin-top:10px; display:flex; gap:8px;">
+                        <button onclick="toggleViaggio(${v.id}, ${!v.attivo})" style="background:${v.attivo ? '#f59e0b' : '#10b981'}; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; font-size:0.8rem;">
+                            ${v.attivo ? '⏸️ Disattiva' : '▶️ Attiva'}
+                        </button>
+                        <button onclick="eliminaViaggio(${v.id})" style="background:#ef4444; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; font-size:0.8rem;">
+                            🗑️ Elimina
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function creaNuovoViaggio(e) {
+            e.preventDefault();
+            
+            if (!isSuperAdmin() && !isAdminNegozio()) {
+                showToast('❌ Non hai i permessi per questa azione', 'error');
+                return;
+            }
+            
+            const titolo = document.getElementById('viaggioTitolo').value.trim();
+            const descrizione = document.getElementById('viaggioDescrizione').value.trim();
+            const destinazione = document.getElementById('viaggioDestinazione').value.trim();
+            const partenza = document.getElementById('viaggioPartenza').value;
+            const ritorno = document.getElementById('viaggioRitorno').value;
+            const attivo = document.getElementById('viaggioAttivo').checked;
+            const utente = caricaUtenteLoggato();
+
+            if (!titolo || !destinazione || !partenza || !ritorno) {
+                showToast('❌ Compila tutti i campi obbligatori', 'error');
+                return;
+            }
+
+            setSpinner(true);
+            try {
+                const result = await DB_VIAGGI.creaViaggio(
+                    titolo, 
+                    descrizione, 
+                    destinazione, 
+                    partenza, 
+                    ritorno, 
+                    utente ? utente.id : null
+                );
+                
+                if (result.success) {
+                    if (!attivo && result.viaggio) {
+                        await DB_VIAGGI.aggiornaViaggio(result.viaggio.id, { attivo: false });
+                    }
+                    showToast('✈️ Viaggio aggiunto con successo!', 'success');
+                    document.getElementById('formCreaViaggio').reset();
+                    document.getElementById('viaggioAttivo').checked = true;
+                    caricaViaggi();
+                } else {
+                    showToast('❌ ' + result.error, 'error');
+                }
+            } catch (err) {
+                showToast('❌ Errore: ' + err.message, 'error');
+            } finally {
+                setSpinner(false);
+            }
+        }
+
+        async function toggleViaggio(id, attivo) {
+            if (!isSuperAdmin() && !isAdminNegozio()) {
+                showToast('❌ Non hai i permessi per questa azione', 'error');
+                return;
+            }
+            
+            setSpinner(true);
+            try {
+                const result = await DB_VIAGGI.aggiornaViaggio(id, { attivo });
+                if (result.success) {
+                    showToast(attivo ? '✅ Viaggio attivato' : '⏸️ Viaggio disattivato', 'success');
+                    caricaViaggi();
+                } else {
+                    showToast('❌ ' + result.error, 'error');
+                }
+            } catch (err) {
+                showToast('❌ Errore: ' + err.message, 'error');
+            } finally {
+                setSpinner(false);
+            }
+        }
+
+        async function eliminaViaggio(id) {
+            if (!isSuperAdmin() && !isAdminNegozio()) {
+                showToast('❌ Non hai i permessi per questa azione', 'error');
+                return;
+            }
+            
+            showModal(
+                '🗑️ Elimina Viaggio',
+                'Sei sicuro di voler eliminare questo viaggio? Questa operazione è irreversibile.',
+                async (confirmed) => {
+                    if (!confirmed) return;
+                    
+                    setSpinner(true);
+                    try {
+                        const result = await DB_VIAGGI.eliminaViaggio(id);
+                        if (result.success) {
+                            showToast('✅ Viaggio eliminato', 'success');
+                            caricaViaggi();
+                        } else {
+                            showToast('❌ ' + result.error, 'error');
+                        }
+                    } catch (err) {
+                        showToast('❌ Errore: ' + err.message, 'error');
+                    } finally {
+                        setSpinner(false);
+                    }
+                }
+            );
+        }
+
+        // =============================================
+        // 📦 ORDINI CLIENTI
+        // =============================================
+        async function caricaOrdini() {
+            const filtro = document.getElementById('filtroStatoOrdine').value;
+            const container = document.getElementById('listaOrdini');
+            
+            setSpinner(true);
+            try {
+                let ordini = await DB_ORDINI.getTuttiOrdini(200);
+                
+                if (filtro !== 'tutti') {
+                    ordini = ordini.filter(o => o.stato_consegna === filtro);
+                }
+                
+                if (ordini.length === 0) {
+                    container.innerHTML = '<p style="color:#94a3b8; text-align:center; padding:30px;">Nessun ordine trovato.</p>';
+                    return;
+                }
+                
+                const statoLabels = {
+                    'in_elaborazione': '⏳ In Elaborazione',
+                    'spedito': '📦 Spedito',
+                    'in_transito': '🚚 In Transito',
+                    'in_consegna': '🚪 In Consegna',
+                    'consegnato': '✅ Consegnato'
+                };
+                
+                const statoColors = {
+                    'in_elaborazione': '#f59e0b',
+                    'spedito': '#3b82f6',
+                    'in_transito': '#8b5cf6',
+                    'in_consegna': '#ec4899',
+                    'consegnato': '#10b981'
+                };
+                
+                container.innerHTML = ordini.map(o => `
+                    <div style="padding:16px; border-bottom:1px solid #e2e8f0; background:${o.stato_consegna === 'consegnato' ? '#f8fafc' : 'white'};">
+                        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                            <div>
+                                <strong>#${o.id}</strong>
+                                <span style="color:#64748B; margin-left:12px;">${o.clienti ? o.clienti.nome : 'Cliente'}</span>
+                                <span style="color:#94a3b8; font-size:0.85rem; margin-left:8px;">${o.clienti ? o.clienti.email : ''}</span>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:12px;">
+                                <span style="background:${statoColors[o.stato_consegna] || '#94a3b8'}; color:white; padding:4px 12px; border-radius:12px; font-size:0.8rem; font-weight:600;">
+                                    ${statoLabels[o.stato_consegna] || o.stato_consegna}
+                                </span>
+                                <span style="font-weight:700; color:#1E293B;">€ ${Number(o.totale).toFixed(2)}</span>
+                            </div>
+                        </div>
+                        <div style="display:flex; gap:16px; margin-top:6px; font-size:0.85rem; color:#64748B; flex-wrap:wrap;">
+                            <span>📅 ${new Date(o.data_ordine).toLocaleString('it-IT')}</span>
+                            <span>📍 ${o.indirizzo_via}, ${o.indirizzo_citta}</span>
+                            <span>💳 ${o.metodo_pagamento}</span>
+                            ${o.data_consegna_prevista ? `<span>🚚 Prevista: ${new Date(o.data_consegna_prevista).toLocaleDateString('it-IT')}</span>` : ''}
+                            ${o.data_consegna_effettiva ? `<span>✅ Consegnato: ${new Date(o.data_consegna_effettiva).toLocaleDateString('it-IT')}</span>` : ''}
+                        </div>
+                        ${o.viaggio_vincente_id ? `<div style="margin-top:6px; background:#fef3c7; padding:4px 12px; border-radius:4px; font-size:0.85rem; color:#92400e; display:inline-block;">✈️ Cliente ha vinto un viaggio!</div>` : ''}
+                        ${o.stato_consegna !== 'consegnato' ? `
+                            <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
+                                <button onclick="aggiornaStatoOrdine(${o.id}, 'in_elaborazione')" style="background:#f59e0b; color:white; border:none; padding:4px 10px; border-radius:4px; cursor:pointer; font-size:0.75rem;">⏳ Elaborazione</button>
+                                <button onclick="aggiornaStatoOrdine(${o.id}, 'spedito')" style="background:#3b82f6; color:white; border:none; padding:4px 10px; border-radius:4px; cursor:pointer; font-size:0.75rem;">📦 Spedito</button>
+                                <button onclick="aggiornaStatoOrdine(${o.id}, 'in_transito')" style="background:#8b5cf6; color:white; border:none; padding:4px 10px; border-radius:4px; cursor:pointer; font-size:0.75rem;">🚚 Transito</button>
+                                <button onclick="aggiornaStatoOrdine(${o.id}, 'in_consegna')" style="background:#ec4899; color:white; border:none; padding:4px 10px; border-radius:4px; cursor:pointer; font-size:0.75rem;">🚪 Consegna</button>
+                                <button onclick="aggiornaStatoOrdine(${o.id}, 'consegnato')" style="background:#10b981; color:white; border:none; padding:4px 10px; border-radius:4px; cursor:pointer; font-size:0.75rem;">✅ Consegnato</button>
+                            </div>
+                        ` : ''}
+                    </div>
+                `).join('');
+                
+            } catch (err) {
+                console.error('Errore caricamento ordini:', err);
+                container.innerHTML = '<p style="color:#ef4444; text-align:center; padding:30px;">Errore nel caricamento degli ordini.</p>';
+            } finally {
+                setSpinner(false);
+            }
+        }
+
+        async function aggiornaStatoOrdine(ordineId, nuovoStato) {
+            setSpinner(true);
+            try {
+                const result = await DB_ORDINI.aggiornaStatoOrdine(ordineId, nuovoStato);
+                if (result.success) {
+                    showToast(`✅ Ordine #${ordineId} aggiornato a "${nuovoStato}"`, 'success');
+                    caricaOrdini();
+                } else {
+                    showToast('❌ ' + result.error, 'error');
+                }
+            } catch (err) {
+                showToast('❌ Errore: ' + err.message, 'error');
+            } finally {
+                setSpinner(false);
+            }
+        }
+
         // ── Avvio ──────────────────────────────────────────────────────
         caricaDati();
+
+        // Simula avanzamento consegne ogni 30 secondi
+        setInterval(async () => {
+            try {
+                await DB_ORDINI.simulaAvanzamentoConsegna();
+                if (document.getElementById('vista-ordini').classList.contains('active')) {
+                    caricaOrdini();
+                }
+            } catch (err) {
+                console.error('Errore simulazione consegna:', err);
+            }
+        }, 30000);
     </script>
 </body>
 </html>

@@ -41,8 +41,9 @@
         .indirizzo-section h3 { color: #1E293B; margin-bottom: 15px; margin-top: 20px; }
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; color: #0F172A; font-weight: 600; margin-bottom: 6px; font-size: 0.9rem; }
-        .form-group input { width: 100%; padding: 12px; border: 2px solid #E2E8F0; border-radius: 8px; font-size: 0.95rem; }
-        .form-group input:focus { outline: none; border-color: #10B981; box-shadow: 0 0 0 3px rgba(16,185,129,0.1); }
+        .form-group input, .form-group select { width: 100%; padding: 12px; border: 2px solid #E2E8F0; border-radius: 8px; font-size: 0.95rem; }
+        .form-group input:focus, .form-group select:focus { outline: none; border-color: #10B981; box-shadow: 0 0 0 3px rgba(16,185,129,0.1); }
+        .form-group select { background: white; cursor: pointer; }
         
         .metodo-section h3 { color: #1E293B; margin-bottom: 15px; margin-top: 20px; }
         .metodo { margin: 10px 0; padding: 15px; border: 2px solid #E2E8F0; border-radius: 8px; cursor: pointer; }
@@ -56,8 +57,21 @@
         .punti-section .title { font-weight: 700; margin-bottom: 8px; }
         .punti-section .value { font-size: 1.2rem; }
         
+        .vincita-section { display: none; background: linear-gradient(135deg, #F59E0B, #D97706); color: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; text-align: center; }
+        .vincita-section .title { font-weight: 700; font-size: 1.2rem; margin-bottom: 8px; }
+        .vincita-section .emoji { font-size: 2.5rem; }
+        
         .toast-container { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 1000; }
         .toast-message { display: none; background: rgba(45,55,72,0.95); color: white; padding: 14px 20px; border-radius: 12px; font-weight: 700; }
+        
+        .indirizzo-selezionato { 
+            background: #F0FDF4; 
+            border: 2px solid #10B981; 
+            padding: 12px; 
+            border-radius: 8px; 
+            margin-bottom: 10px; 
+        }
+        .indirizzo-selezionato .label { font-weight: 600; color: #10B981; }
         
         @media (max-width: 1024px) {
             .checkout-container { flex-direction: column; }
@@ -105,6 +119,13 @@
                     <div class="value" id="puntiGuadagnati"></div>
                     <div style="font-size: 0.85rem; margin-top: 8px;">Usa i tuoi punti per sconti esclusivi!</div>
                 </div>
+
+                <div id="vincitaSection" class="vincita-section">
+                    <div class="emoji">✈️</div>
+                    <div class="title">🎉 HAI VINTO UN VIAGGIO!</div>
+                    <div id="vincitaDettagli" style="font-size: 0.95rem;"></div>
+                    <div style="font-size: 0.85rem; margin-top: 8px; opacity: 0.9;">Controlla la tua email per i dettagli!</div>
+                </div>
             </div>
         </div>
 
@@ -115,6 +136,27 @@
                 
                 <div class="indirizzo-section">
                     <h3>🏠 Indirizzo di Consegna</h3>
+                    
+                    <div id="indirizziSalvatiContainer" style="display:none; margin-bottom: 15px;">
+                        <label style="display:block; font-weight:600; margin-bottom:6px; font-size:0.9rem;">Scegli un indirizzo salvato:</label>
+                        <select id="indirizziSalvati" onchange="caricaIndirizzoSelezionato()" style="width:100%; padding:12px; border:2px solid #E2E8F0; border-radius:8px; font-size:0.95rem;">
+                            <option value="">-- Usa un indirizzo salvato --</option>
+                        </select>
+                        <div style="margin-top: 10px; display: flex; gap: 10px;">
+                            <button type="button" onclick="caricaIndirizzoPreferito()" style="background:#10B981; color:white; border:none; padding:8px 16px; border-radius:6px; cursor:pointer; font-weight:600;">⭐ Usa Preferito</button>
+                            <button type="button" onclick="resetFormIndirizzo()" style="background:#64748B; color:white; border:none; padding:8px 16px; border-radius:6px; cursor:pointer; font-weight:600;">✕ Svuota Campi</button>
+                        </div>
+                        <div style="margin-top: 8px;">
+                            <a href="gestione-indirizzi.html" style="color:#10B981; font-weight:600; text-decoration:none;">📝 Gestisci i tuoi indirizzi</a>
+                        </div>
+                    </div>
+                    
+                    <div id="indirizzoSelezionatoDisplay" class="indirizzo-selezionato" style="display:none;">
+                        <div class="label">📍 Indirizzo selezionato:</div>
+                        <div id="indirizzoSelezionatoTesto"></div>
+                        <button type="button" onclick="resetFormIndirizzo()" style="margin-top:8px; background:#e2e8f0; border:none; padding:4px 12px; border-radius:4px; cursor:pointer; font-size:0.85rem;">Cambia</button>
+                    </div>
+                    
                     <div class="form-group">
                         <label for="indirizzoVia">Via e numero civico</label>
                         <input type="text" id="indirizzoVia" placeholder="Es. Via Roma 10" />
@@ -137,9 +179,13 @@
                         <label for="checkoutEmail">Email per lo scontrino</label>
                         <input type="email" id="checkoutEmail" placeholder="esempio@cliente.it" />
                     </div>
+                    
+                    <div style="margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+                        <input type="checkbox" id="salvaIndirizzo" style="width:20px; height:20px; cursor:pointer;">
+                        <label for="salvaIndirizzo" style="margin:0; cursor:pointer; font-weight:600; font-size:0.9rem;">💾 Salva questo indirizzo per i prossimi acquisti</label>
+                    </div>
                 </div>
 
-                <!-- BUONI/SCONTI -->
                 <div id="buoniContainer" style="display:none;">
                     <div class="buoni-section">
                         <h3>🎁 Usa i Tuoi Buoni Sconto</h3>
@@ -207,6 +253,7 @@
         let isProcessing = false;
         let buoniSelezionati = [];
         let totaleFinale = totaleOrigine;
+        let indirizzoSelezionatoId = null;
 
         debugLog(`Totale iniziale: €${totaleOrigine}, Articoli: ${cartToUse.length}`);
 
@@ -214,9 +261,10 @@
         async function initCheckoutPage() {
             renderArticoli();
             await caricaBuoni();
+            await caricaIndirizziSalvati();
+            await caricaIndirizzoPreferito();
         }
 
-        // RENDER ARTICOLI
         function renderArticoli() {
             const container = document.getElementById('articoli-container');
             container.innerHTML = cartToUse.map(item => {
@@ -237,7 +285,6 @@
             aggiornaTotali();
         }
 
-        // LOAD BUONI DEL CLIENTE
         async function caricaBuoni() {
             if (!cliente) {
                 document.getElementById('buoniContainer').style.display = 'none';
@@ -245,7 +292,7 @@
             }
 
             try {
-                const buoni = await DB_CLIENTI.getOffertePuntiSpesa(cliente.id);
+                const buoni = await DB_CLIENTI.getOfferteSpesa();
                 if (buoni && buoni.length > 0) {
                     document.getElementById('buoniContainer').style.display = 'block';
                     const buoniList = document.getElementById('buoniList');
@@ -269,7 +316,6 @@
             }
         }
 
-        // AGGIORNA TOTALI
         function aggiornaTotali() {
             let subtotale = cartToUse.reduce((tot, item) => {
                 const unitPrice = isProductOnSale(item) ? getDiscountedPrice(item.prezzo, item) : item.prezzo;
@@ -309,7 +355,100 @@
             }
         }
 
-        // SELEZIONA METODO
+        // ==========================================
+        // GESTIONE INDIRIZZI SALVATI
+        // ==========================================
+        
+        async function caricaIndirizziSalvati() {
+            if (!cliente) {
+                document.getElementById('indirizziSalvatiContainer').style.display = 'none';
+                return;
+            }
+
+            try {
+                const indirizzi = await DB_INDIRIZZI.getIndirizziCliente(cliente.id);
+                const container = document.getElementById('indirizziSalvatiContainer');
+                const select = document.getElementById('indirizziSalvati');
+
+                if (indirizzi && indirizzi.length > 0) {
+                    container.style.display = 'block';
+                    select.innerHTML = `
+                        <option value="">-- Usa un indirizzo salvato --</option>
+                        ${indirizzi.map(i => `
+                            <option value="${i.id}" ${i.preferito ? 'selected' : ''}>
+                                ${i.preferito ? '⭐ ' : ''}${i.via}, ${i.citta} (${i.provincia})
+                            </option>
+                        `).join('')}
+                    `;
+                } else {
+                    container.style.display = 'none';
+                }
+            } catch (err) {
+                console.error('Errore caricamento indirizzi:', err);
+            }
+        }
+
+        function caricaIndirizzoSelezionato() {
+            const select = document.getElementById('indirizziSalvati');
+            const id = parseInt(select.value);
+            if (!id) {
+                resetFormIndirizzo();
+                return;
+            }
+            caricaIndirizzoDaId(id);
+        }
+
+        async function caricaIndirizzoDaId(id) {
+            try {
+                const indirizzi = await DB_INDIRIZZI.getIndirizziCliente(cliente.id);
+                const indirizzo = indirizzi.find(i => i.id === id);
+                if (!indirizzo) return;
+
+                indirizzoSelezionatoId = id;
+                
+                document.getElementById('indirizzoVia').value = indirizzo.via;
+                document.getElementById('indirizzoCap').value = indirizzo.cap;
+                document.getElementById('indirizzoCitta').value = indirizzo.citta;
+                document.getElementById('indirizzoProvincia').value = indirizzo.provincia;
+                if (indirizzo.email) document.getElementById('checkoutEmail').value = indirizzo.email;
+
+                const display = document.getElementById('indirizzoSelezionatoDisplay');
+                display.style.display = 'block';
+                document.getElementById('indirizzoSelezionatoTesto').textContent = 
+                    `${indirizzo.via}, ${indirizzo.cap} ${indirizzo.citta} (${indirizzo.provincia})`;
+                
+                showCheckoutToast('✅ Indirizzo caricato!');
+            } catch (err) {
+                console.error('Errore caricamento indirizzo:', err);
+            }
+        }
+
+        async function caricaIndirizzoPreferito() {
+            if (!cliente) return;
+            try {
+                const preferito = await DB_INDIRIZZI.getIndirizzoPreferito(cliente.id);
+                if (preferito) {
+                    const select = document.getElementById('indirizziSalvati');
+                    select.value = preferito.id;
+                    await caricaIndirizzoDaId(preferito.id);
+                    showCheckoutToast('⭐ Indirizzo preferito caricato!');
+                }
+            } catch (err) {
+                console.error('Errore caricamento indirizzo preferito:', err);
+            }
+        }
+
+        function resetFormIndirizzo() {
+            document.getElementById('indirizzoVia').value = '';
+            document.getElementById('indirizzoCap').value = '';
+            document.getElementById('indirizzoCitta').value = '';
+            document.getElementById('indirizzoProvincia').value = '';
+            document.getElementById('indirizzoSelezionatoDisplay').style.display = 'none';
+            indirizzoSelezionatoId = null;
+            const select = document.getElementById('indirizziSalvati');
+            if (select) select.value = '';
+        }
+
         function salvaMetodo(m, el) {
             metodoSelezionato = m;
             document.querySelectorAll('.metodo').forEach(e => e.classList.remove('selezionato'));
@@ -317,7 +456,6 @@
             showCheckoutToast("✅ Metodo: " + m);
         }
 
-        // TOAST
         function showCheckoutToast(message) {
             const toast = document.getElementById('checkout-toast');
             toast.innerText = message;
@@ -327,9 +465,32 @@
         }
 
         // SEND EMAIL
-        async function sendReceiptEmail({ toEmail, customerName, orderTotal, orderDate, paymentMethod, address, itemsText }) {
+        async function sendReceiptEmail({ toEmail, customerName, orderTotal, orderDate, paymentMethod, address, itemsText, puntiGuadagnati, viaggioVinto }) {
             if (typeof emailjs === 'undefined') {
                 return { success: false };
+            }
+
+            // Costruisci il messaggio del viaggio se vinto
+            let viaggioMessaggio = '';
+            if (viaggioVinto) {
+                viaggioMessaggio = `
+━━━━━━━━━━━━━━━━━━━━
+✈️ 🎉 CONGRATULAZIONI! HAI VINTO UN VIAGGIO!
+━━━━━━━━━━━━━━━━━━━━
+📍 ${viaggioVinto.titolo}
+📍 Destinazione: ${viaggioVinto.destinazione}
+${viaggioVinto.descrizione ? `📝 ${viaggioVinto.descrizione}` : ''}
+${viaggioVinto.data_partenza ? `📅 Partenza: ${new Date(viaggioVinto.data_partenza).toLocaleDateString('it-IT')}` : ''}
+${viaggioVinto.data_ritorno ? `📅 Ritorno: ${new Date(viaggioVinto.data_ritorno).toLocaleDateString('it-IT')}` : ''}
+━━━━━━━━━━━━━━━━━━━━
+Per riscattare il premio, rispondi a questa email o contatta il nostro servizio clienti.
+`;
+            }
+
+            // Costruisci il messaggio dei punti
+            let puntiMessaggio = '';
+            if (puntiGuadagnati > 0) {
+                puntiMessaggio = `⭐ Hai guadagnato ${puntiGuadagnati} punti spesa!`;
             }
 
             const templateParams = {
@@ -339,7 +500,7 @@
                 order_date: orderDate,
                 payment_method: paymentMethod,
                 delivery_address: address,
-                items_list: itemsText
+                items_list: itemsText + (viaggioMessaggio ? '\n\n' + viaggioMessaggio : '') + (puntiMessaggio ? '\n\n' + puntiMessaggio : '')
             };
 
             try {
@@ -351,7 +512,22 @@
             }
         }
 
+        // ==========================================
+        // MOSTRA VINCITA NELLA UI
+        // ==========================================
+        function mostraVincitaUI(viaggio) {
+            const section = document.getElementById('vincitaSection');
+            section.style.display = 'block';
+            document.getElementById('vincitaDettagli').innerHTML = `
+                <strong>${viaggio.titolo}</strong><br>
+                📍 ${viaggio.destinazione}
+                ${viaggio.descrizione ? `<br>📝 ${viaggio.descrizione}` : ''}
+            `;
+        }
+
+        // ==========================================
         // CONFERMA ORDINE
+        // ==========================================
         async function confermaOrdine() {
             if (isProcessing) return;
 
@@ -370,6 +546,7 @@
             const indirizzoCap = document.getElementById('indirizzoCap').value.trim();
             const indirizzoProvincia = document.getElementById('indirizzoProvincia').value.trim();
             const checkoutEmail = document.getElementById('checkoutEmail').value.trim();
+            const salvaIndirizzo = document.getElementById('salvaIndirizzo').checked;
 
             if (!indirizzoVia || !indirizzoCitta || !indirizzoCap || !indirizzoProvincia) {
                 showCheckoutToast("❌ Completa l'indirizzo di consegna.");
@@ -403,11 +580,16 @@
                     throw new Error('Errore registrazione vendita.');
                 }
 
+                const venditaId = resultVendita.data?.[0]?.id;
+
                 let budget = await loadBudget();
                 budget += totaleFinale;
                 await saveBudget(budget);
 
                 const puntiGuadagnati = Math.floor(totaleFinale / 15);
+                let viaggioVinto = null;
+
+                // ---- AGGIUNGI PUNTI ----
                 if (cliente && puntiGuadagnati > 0) {
                     try {
                         const resultPunti = await DB_CLIENTI.aggiungiPuntiSpesa(cliente.id, totaleFinale);
@@ -422,10 +604,106 @@
                     }
                 }
 
-                const itemsText = cartToUse.map(item => {
+                // ---- VERIFICA VINCITA (1 su 1000) ----
+                let haVinto = false;
+                let viaggio = null;
+                if (cliente) {
+                    try {
+                        haVinto = await DB_VIAGGI.verificaVincita();
+                        if (haVinto) {
+                            viaggio = await DB_VIAGGI.scegliViaggioCasuale();
+                            if (viaggio) {
+                                // Registra la vincita
+                                await DB_VIAGGI.registraVincita(cliente.id, viaggio.id, null);
+                                viaggioVinto = viaggio;
+                                
+                                // Mostra nella UI
+                                mostraVincitaUI(viaggio);
+                                
+                                // Aggiorna l'ordine con il viaggio vinto
+                                if (ordineCreato && ordineCreato.id) {
+                                    await supabaseClient
+                                        .from('ordini')
+                                        .update({ viaggio_vincente_id: viaggio.id })
+                                        .eq('id', ordineCreato.id);
+                                }
+                            }
+                        }
+                    } catch (vErr) {
+                        console.error('Errore verifica vincita:', vErr);
+                    }
+                }
+
+                // ---- SALVA L'INDIRIZZO SE RICHIESTO ----
+                if (cliente && salvaIndirizzo) {
+                    try {
+                        await DB_INDIRIZZI.salvaIndirizzo(
+                            cliente.id,
+                            indirizzoVia,
+                            indirizzoCap,
+                            indirizzoCitta,
+                            indirizzoProvincia,
+                            checkoutEmail,
+                            null,
+                            false
+                        );
+                    } catch (addrErr) {
+                        console.error('Errore salvataggio indirizzo:', addrErr);
+                    }
+                }
+
+                // ---- CREA L'ORDINE ----
+                let ordineCreato = null;
+                if (cliente) {
+                    try {
+                        const resultOrdine = await DB_ORDINI.creaOrdine(
+                            cliente.id,
+                            { via: indirizzoVia, cap: indirizzoCap, citta: indirizzoCitta, provincia: indirizzoProvincia },
+                            metodoSelezionato,
+                            totaleFinale,
+                            checkoutEmail
+                        );
+                        if (resultOrdine.success) {
+                            ordineCreato = resultOrdine.ordine;
+                            
+                            // Se ha vinto, aggiorna l'ordine
+                            if (viaggioVinto && ordineCreato.id) {
+                                await supabaseClient
+                                    .from('ordini')
+                                    .update({ viaggio_vincente_id: viaggioVinto.id })
+                                    .eq('id', ordineCreato.id);
+                            }
+                        }
+                    } catch (ordErr) {
+                        console.error('Errore creazione ordine:', ordErr);
+                    }
+                }
+
+                // ---- PREPARA EMAIL ----
+                let itemsText = cartToUse.map(item => {
                     const unitPrice = isProductOnSale(item) ? getDiscountedPrice(item.prezzo, item) : item.prezzo;
                     return `${item.nome} x${item.qty} - € ${(unitPrice * item.qty).toFixed(2)}`;
                 }).join('\n');
+
+                // Aggiungi info vincita nell'email
+                if (viaggioVinto) {
+                    itemsText += `
+
+━━━━━━━━━━━━━━━━━━━━
+✈️ 🎉 CONGRATULAZIONI! HAI VINTO UN VIAGGIO!
+━━━━━━━━━━━━━━━━━━━━
+📍 ${viaggioVinto.titolo}
+📍 Destinazione: ${viaggioVinto.destinazione}
+${viaggioVinto.descrizione ? `📝 ${viaggioVinto.descrizione}` : ''}
+${viaggioVinto.data_partenza ? `📅 Partenza: ${new Date(viaggioVinto.data_partenza).toLocaleDateString('it-IT')}` : ''}
+${viaggioVinto.data_ritorno ? `📅 Ritorno: ${new Date(viaggioVinto.data_ritorno).toLocaleDateString('it-IT')}` : ''}
+━━━━━━━━━━━━━━━━━━━━
+Per riscattare il premio, rispondi a questa email o contatta il nostro servizio clienti.`;
+                }
+
+                if (puntiGuadagnati > 0) {
+                    itemsText += `\n\n⭐ Hai guadagnato ${puntiGuadagnati} punti spesa!`;
+                }
 
                 const orderDate = new Date().toLocaleDateString('it-IT');
                 const deliveryAddress = `${indirizzoVia}, ${indirizzoCap} ${indirizzoCitta} (${indirizzoProvincia})`;
@@ -438,7 +716,9 @@
                     orderDate,
                     paymentMethod: metodoSelezionato,
                     address: deliveryAddress,
-                    itemsText
+                    itemsText: itemsText,
+                    puntiGuadagnati: puntiGuadagnati,
+                    viaggioVinto: viaggioVinto
                 });
 
                 localStorage.removeItem('carrelloCheckout');
@@ -446,7 +726,10 @@
                 localStorage.removeItem('managerCart');
                 localStorage.removeItem('ultimoTotale');
 
-                showCheckoutToast("✅ Ordine completato! Grazie.");
+                const msg = viaggioVinto 
+                    ? `🎉 Ordine completato! HAI VINTO UN VIAGGIO: ${viaggioVinto.titolo}! Controlla la tua email!` 
+                    : '✅ Ordine completato! Grazie.';
+                showCheckoutToast(msg);
                 setTimeout(() => { window.location.href = "home.html"; }, 1500);
 
             } catch (error) {
@@ -459,7 +742,6 @@
             }
         }
 
-        // INIT
         initCheckoutPage();
     </script>
 </body>

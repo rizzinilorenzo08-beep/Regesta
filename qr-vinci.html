@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scopri il tuo Premio - SinGo</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="db.js"></script>
+    <style>
+        .qr-container { max-width: 600px; margin: 40px auto; padding: 0 20px; }
+        .qr-card { background: white; border-radius: 16px; padding: 40px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); border: 1px solid #E2E8F0; text-align: center; }
+        .qr-card .icon { font-size: 4rem; margin-bottom: 20px; }
+        .qr-card h1 { font-size: 1.8rem; color: #1E293B; margin-bottom: 10px; }
+        .qr-card p { color: #64748B; margin-bottom: 20px; }
+        .qr-card .result { padding: 20px; border-radius: 12px; margin: 20px 0; }
+        .qr-card .result.success { background: #DCFCE7; border: 1px solid #86EFAC; color: #166534; }
+        .qr-card .result.error { background: #FEE2E2; border: 1px solid #FECACA; color: #991B1B; }
+        .qr-card .result .viaggio-title { font-weight: 700; font-size: 1.2rem; color: #1E293B; }
+        .qr-card .result .viaggio-dest { color: #475569; }
+        .qr-card .btn-home { display: inline-block; background: #10B981; color: white; padding: 12px 30px; border-radius: 10px; text-decoration: none; font-weight: 600; margin-top: 10px; }
+        .qr-card .btn-home:hover { background: #059669; }
+        .spinner { width: 40px; height: 40px; border: 4px solid #E2E8F0; border-top-color: #10B981; border-radius: 50%; animation: spin 0.7s linear infinite; margin: 20px auto; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+    <div class="navbar">
+        <div class="nav-left">
+            <a href="home.html" class="nav-logo"><img src="logo.png" alt="SinGo" style="height: 40px; width: auto;"></a>
+            <a href="home.html">🏠 Home</a>
+            <a href="shop.html">📦 Prodotti</a>
+            <a href="sconti.html">🔥 Offerte</a>
+        </div>
+        <div class="nav-right">
+            <a href="login-manager.html">🔐 Area Riservata</a>
+        </div>
+    </div>
+
+    <div class="qr-container">
+        <div class="qr-card">
+            <div class="icon">🎉</div>
+            <h1>Scopri il tuo Premio!</h1>
+            <p>Stiamo verificando il tuo codice... attendi un momento.</p>
+            
+            <div id="loading" class="spinner"></div>
+            
+            <div id="result" style="display:none;"></div>
+            
+            <a href="home.html" class="btn-home" style="display:none;" id="btnHome">🏠 Torna alla Home</a>
+        </div>
+    </div>
+
+    <div class="footer">
+        <div class="footer-content">
+            <div class="footer-links">
+                <a href="privacy.html">Privacy Policy</a>
+                <a href="termini.html">Termini e Condizioni</a>
+            </div>
+            <div class="footer-copy">© 2026 SinGo - Shop Online. Tutti i diritti riservati.</div>
+        </div>
+    </div>
+
+    <script>
+        async function verificaQR() {
+            const params = new URLSearchParams(window.location.search);
+            const codice = params.get('codice');
+            
+            const loading = document.getElementById('loading');
+            const result = document.getElementById('result');
+            const btnHome = document.getElementById('btnHome');
+
+            if (!codice) {
+                loading.style.display = 'none';
+                result.style.display = 'block';
+                result.className = 'result error';
+                result.innerHTML = `
+                    <div style="font-size:2rem; margin-bottom:10px;">❌</div>
+                    <p><strong>Codice QR non valido</strong></p>
+                    <p>Il link che hai utilizzato non contiene un codice valido.</p>
+                `;
+                btnHome.style.display = 'inline-block';
+                return;
+            }
+
+            try {
+                const response = await DB_QR.utilizzaQR(codice);
+                
+                loading.style.display = 'none';
+                result.style.display = 'block';
+                btnHome.style.display = 'inline-block';
+
+                if (response.success) {
+                    if (response.viaggio) {
+                        result.className = 'result success';
+                        result.innerHTML = `
+                            <div style="font-size:3rem; margin-bottom:10px;">✈️</div>
+                            <div class="viaggio-title">🎉 Hai vinto un Viaggio!</div>
+                            <div style="font-size:1.3rem; font-weight:700; color:#10B981; margin:10px 0;">${response.viaggio.titolo}</div>
+                            <div class="viaggio-dest">📍 ${response.viaggio.destinazione}</div>
+                            ${response.viaggio.descrizione ? `<div style="margin-top:8px; color:#475569;">${response.viaggio.descrizione}</div>` : ''}
+                            <div style="margin-top:8px; font-size:0.9rem; color:#64748B;">
+                                📅 ${response.viaggio.data_partenza ? new Date(response.viaggio.data_partenza).toLocaleDateString('it-IT') : 'N/A'} - 
+                                ${response.viaggio.data_ritorno ? new Date(response.viaggio.data_ritorno).toLocaleDateString('it-IT') : 'N/A'}
+                            </div>
+                            <div style="margin-top:12px; padding:12px; background:#F0FDF4; border-radius:8px; color:#166534; font-size:0.9rem;">
+                                ✅ Hai riscattato con successo il tuo premio! Ti contatteremo via email per i dettagli.
+                            </div>
+                        `;
+                    } else {
+                        result.className = 'result success';
+                        result.innerHTML = `
+                            <div style="font-size:2rem; margin-bottom:10px;">🎁</div>
+                            <p><strong>Premio riscattato con successo!</strong></p>
+                            <p>Ti è stato assegnato un premio. Controlla la tua email per i dettagli.</p>
+                        `;
+                    }
+                } else {
+                    result.className = 'result error';
+                    result.innerHTML = `
+                        <div style="font-size:2rem; margin-bottom:10px;">❌</div>
+                        <p><strong>${response.error || 'Errore nella verifica'}</strong></p>
+                        <p>Il codice QR potrebbe essere già stato utilizzato o essere scaduto.</p>
+                    `;
+                }
+            } catch (err) {
+                console.error('Errore verifica QR:', err);
+                loading.style.display = 'none';
+                result.style.display = 'block';
+                btnHome.style.display = 'inline-block';
+                result.className = 'result error';
+                result.innerHTML = `
+                    <div style="font-size:2rem; margin-bottom:10px;">❌</div>
+                    <p><strong>Errore durante la verifica</strong></p>
+                    <p>Si è verificato un problema. Riprova più tardi.</p>
+                `;
+            }
+        }
+
+        verificaQR();
+    </script>
+</body>
+</html>

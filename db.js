@@ -11,7 +11,6 @@ const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 // 2. OGGETTO DB (METODI BASE)
 // ==========================================
 const DB = {
-    // Recupera l'intero inventario ordinato dal database
     async getInventario() {
         const { data, error } = await supabaseClient
             .from('inventario')
@@ -24,7 +23,6 @@ const DB = {
         return data ? data.map(p => ({ ...p, maxQty: p.max_qty })) : [];
     },
 
-    // Aggiorna un campo specifico di un determinato prodotto
     async updateSpecificitaProdotto(id, nuoveProprieta) {
         if (nuoveProprieta.maxQty !== undefined) {
             nuoveProprieta.max_qty = nuoveProprieta.maxQty;
@@ -37,7 +35,6 @@ const DB = {
         if (error) console.error("Errore nell'aggiornamento del prodotto:", error);
     },
 
-    // Legge il budget aziendale memorizzato nella tabella configurazione
     async getBudget() {
         const { data, error } = await supabaseClient
             .from('configurazione')
@@ -48,7 +45,6 @@ const DB = {
         return parseFloat(data.valore);
     },
 
-    // Sovrascrive il budget aziendale aggiornato
     async updateBudget(nuovoBudget) {
         const { error } = await supabaseClient
             .from('configurazione')
@@ -56,7 +52,6 @@ const DB = {
         if (error) console.error("Errore nel salvataggio del budget:", error);
     },
 
-    // Recupera lo storico di tutte le vendite effettuate
     async getVendite() {
         const { data, error } = await supabaseClient
             .from('vendite')
@@ -69,7 +64,6 @@ const DB = {
         return data || [];
     },
 
-    // Aggiunge una nuova riga di vendita con data odierna automatica (INSERT)
     async registraVendita(totale) {
         const { data, error } = await supabaseClient
             .from('vendite')
@@ -87,10 +81,9 @@ const DB = {
 };
 
 // ==========================================
-// 3. FUNZIONI GLOBALI (usate dalle pagine HTML)
+// 3. FUNZIONI GLOBALI
 // ==========================================
 
-// INVENTARIO
 async function loadInventario() {
     return await DB.getInventario();
 }
@@ -106,7 +99,6 @@ async function saveInventario(inventario) {
     if (error) console.error("Errore nel salvataggio dell'inventario su Supabase:", error);
 }
 
-// BUDGET
 async function loadBudget() {
     return await DB.getBudget();
 }
@@ -115,7 +107,6 @@ async function saveBudget(budget) {
     await DB.updateBudget(budget);
 }
 
-// VENDITE
 async function loadVendite() {
     return await DB.getVendite();
 }
@@ -137,7 +128,6 @@ const STORAGE_KEYS = {
     saleInfo: 'saleInfo'
 };
 
-// Offerte manuali del manager caricate da Supabase
 let _offerteFlashDB = [];
 
 async function syncOfferteFlash() {
@@ -292,7 +282,6 @@ function ensureDatabase() {
     }
 }
 
-// SPESE
 function loadExpenses() {
     ensureDatabase();
     return JSON.parse(localStorage.getItem(STORAGE_KEYS.expenses));
@@ -306,7 +295,6 @@ function recordExpense(entry) {
     saveExpenses(ex);
 }
 
-// CARRELLO MANAGER
 function loadManagerCart() {
     return JSON.parse(localStorage.getItem(STORAGE_KEYS.managerCart) || '[]');
 }
@@ -317,7 +305,6 @@ function clearManagerCart() {
     localStorage.removeItem(STORAGE_KEYS.managerCart);
 }
 
-// OFFERTE (sale)
 function loadSaleInfo() {
     ensureDatabase();
     return JSON.parse(localStorage.getItem(STORAGE_KEYS.saleInfo));
@@ -401,6 +388,30 @@ const DB_CLIENTI = {
         }
 
         return { success: true, cliente: data };
+    },
+
+    async resetPasswordCliente(email, nuovaPassword) {
+        const { data, error } = await supabaseClient
+            .from('clienti')
+            .select('id')
+            .eq('email', email)
+            .single();
+
+        if (error || !data) {
+            return { success: false, message: 'Email non trovata' };
+        }
+
+        const { error: updateError } = await supabaseClient
+            .from('clienti')
+            .update({ password: btoa(nuovaPassword) })
+            .eq('id', data.id);
+
+        if (updateError) {
+            console.error("Errore reset password:", updateError);
+            return { success: false, message: updateError.message };
+        }
+
+        return { success: true };
     },
 
     async getCliente(clienteId) {
@@ -496,7 +507,430 @@ const DB_CLIENTI = {
 };
 
 // ==========================================
-// 6. FUNZIONI GLOBALI PER CLIENTI E PUNTI
+// 6. FUNZIONI PER VIAGGI IN PALIO
+// ==========================================
+
+const DB_VIAGGI = {
+    async getViaggiAttivi() {
+        const { data, error } = await supabaseClient
+            .from('viaggi_in_palio')
+            .select('*')
+            .eq('attivo', true)
+            .order('data_inserimento', { ascending: false });
+
+        if (error) {
+            console.error("Errore caricamento viaggi:", error);
+            return [];
+        }
+        return data || [];
+    },
+
+    async getTuttiViaggi() {
+        const { data, error } = await supabaseClient
+            .from('viaggi_in_palio')
+            .select('*')
+            .order('data_inserimento', { ascending: false });
+
+        if (error) {
+            console.error("Errore caricamento viaggi:", error);
+            return [];
+        }
+        return data || [];
+    },
+
+    async creaViaggio(titolo, descrizione, destinazione, dataPartenza, dataRitorno, creatoDa) {
+        const { data, error } = await supabaseClient
+            .from('viaggi_in_palio')
+            .insert([{
+                titolo,
+                descrizione,
+                destinazione,
+                data_partenza: dataPartenza,
+                data_ritorno: dataRitorno,
+                attivo: true,
+                creato_da: creatoDa
+            }])
+            .select();
+
+        if (error) {
+            console.error("Errore creazione viaggio:", error);
+            return { success: false, error: error.message };
+        }
+        return { success: true, viaggio: data[0] };
+    },
+
+    async aggiornaViaggio(id, updates) {
+        const { data, error } = await supabaseClient
+            .from('viaggi_in_palio')
+            .update(updates)
+            .eq('id', id)
+            .select();
+
+        if (error) {
+            console.error("Errore aggiornamento viaggio:", error);
+            return { success: false, error: error.message };
+        }
+        return { success: true, viaggio: data[0] };
+    },
+
+    async eliminaViaggio(id) {
+        const { error } = await supabaseClient
+            .from('viaggi_in_palio')
+            .delete()
+            .eq('id', id);
+
+        if (error) {
+            console.error("Errore eliminazione viaggio:", error);
+            return { success: false, error: error.message };
+        }
+        return { success: true };
+    },
+
+    // Scegli un viaggio casuale per una vincita
+    async scegliViaggioCasuale() {
+        const viaggi = await this.getViaggiAttivi();
+        if (viaggi.length === 0) return null;
+        return viaggi[Math.floor(Math.random() * viaggi.length)];
+    },
+
+    // Registra una vincita
+    async registraVincita(clienteId, viaggioId, ordineId = null) {
+        const codice = 'VIN-' + Date.now() + '-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+        
+        const { data, error } = await supabaseClient
+            .from('vincite_viaggi')
+            .insert([{
+                cliente_id: clienteId,
+                viaggio_id: viaggioId,
+                ordine_id: ordineId,
+                codice_vincita: codice,
+                riscattato: false
+            }])
+            .select();
+
+        if (error) {
+            console.error("Errore registrazione vincita:", error);
+            return { success: false, error: error.message };
+        }
+        return { success: true, vincita: data[0] };
+    },
+
+    // Verifica se un cliente ha vinto (1 su 1000)
+    async verificaVincita() {
+        return Math.random() < 0.001; // 1 su 1000
+    },
+
+    // Ottieni le vincite di un cliente
+    async getVinciteCliente(clienteId) {
+        const { data, error } = await supabaseClient
+            .from('vincite_viaggi')
+            .select('*, viaggi_in_palio(*)')
+            .eq('cliente_id', clienteId)
+            .order('data_vincita', { ascending: false });
+
+        if (error) {
+            console.error("Errore caricamento vincite:", error);
+            return [];
+        }
+        return data || [];
+    },
+
+    // Riscatta una vincita
+    async riscattaVincita(vincitaId) {
+        const { data, error } = await supabaseClient
+            .from('vincite_viaggi')
+            .update({ riscattato: true, data_riscatto: new Date().toISOString() })
+            .eq('id', vincitaId)
+            .select();
+
+        if (error) {
+            console.error("Errore riscatto vincita:", error);
+            return { success: false, error: error.message };
+        }
+        return { success: true, vincita: data[0] };
+    }
+};
+
+// ==========================================
+// 7. FUNZIONI PER INDIRIZZI CLIENTE
+// ==========================================
+
+const DB_INDIRIZZI = {
+    async salvaIndirizzo(clienteId, via, cap, citta, provincia, email = null, telefono = null, preferito = false) {
+        const { data: existent, error: checkError } = await supabaseClient
+            .from('indirizzi_cliente')
+            .select('id, preferito')
+            .eq('cliente_id', clienteId)
+            .eq('via', via)
+            .eq('cap', cap)
+            .eq('citta', citta)
+            .eq('provincia', provincia)
+            .maybeSingle();
+
+        if (existent) {
+            const { data, error } = await supabaseClient
+                .from('indirizzi_cliente')
+                .update({ 
+                    email: email || null,
+                    telefono: telefono || null,
+                    preferito: preferito || existent.preferito
+                })
+                .eq('id', existent.id)
+                .select();
+            
+            if (error) return { success: false, error: error.message };
+            return { success: true, indirizzo: data[0] };
+        }
+
+        if (preferito) {
+            await supabaseClient
+                .from('indirizzi_cliente')
+                .update({ preferito: false })
+                .eq('cliente_id', clienteId);
+        }
+
+        const { data, error } = await supabaseClient
+            .from('indirizzi_cliente')
+            .insert([{
+                cliente_id: clienteId,
+                via,
+                cap,
+                citta,
+                provincia,
+                email: email || null,
+                telefono: telefono || null,
+                preferito: preferito || false
+            }])
+            .select();
+
+        if (error) {
+            console.error("Errore salvataggio indirizzo:", error);
+            return { success: false, error: error.message };
+        }
+        return { success: true, indirizzo: data[0] };
+    },
+
+    async getIndirizziCliente(clienteId) {
+        const { data, error } = await supabaseClient
+            .from('indirizzi_cliente')
+            .select('*')
+            .eq('cliente_id', clienteId)
+            .order('preferito', { ascending: false })
+            .order('data_inserimento', { ascending: false });
+
+        if (error) {
+            console.error("Errore caricamento indirizzi:", error);
+            return [];
+        }
+        return data || [];
+    },
+
+    async getIndirizzoPreferito(clienteId) {
+        const { data, error } = await supabaseClient
+            .from('indirizzi_cliente')
+            .select('*')
+            .eq('cliente_id', clienteId)
+            .eq('preferito', true)
+            .maybeSingle();
+
+        if (error) {
+            console.error("Errore caricamento indirizzo preferito:", error);
+            return null;
+        }
+        return data;
+    },
+
+    async eliminaIndirizzo(id, clienteId) {
+        const { error } = await supabaseClient
+            .from('indirizzi_cliente')
+            .delete()
+            .eq('id', id)
+            .eq('cliente_id', clienteId);
+
+        if (error) {
+            console.error("Errore eliminazione indirizzo:", error);
+            return { success: false, error: error.message };
+        }
+        return { success: true };
+    },
+
+    async setPreferito(id, clienteId) {
+        await supabaseClient
+            .from('indirizzi_cliente')
+            .update({ preferito: false })
+            .eq('cliente_id', clienteId);
+
+        const { data, error } = await supabaseClient
+            .from('indirizzi_cliente')
+            .update({ preferito: true })
+            .eq('id', id)
+            .eq('cliente_id', clienteId)
+            .select();
+
+        if (error) {
+            console.error("Errore impostazione preferito:", error);
+            return { success: false, error: error.message };
+        }
+        return { success: true, indirizzo: data[0] };
+    }
+};
+
+// ==========================================
+// 8. FUNZIONI PER ORDINI E STATO CONSEGNA
+// ==========================================
+
+const DB_ORDINI = {
+    async creaOrdine(clienteId, indirizzoData, metodoPagamento, totale, emailContatto) {
+        const puntiGuadagnati = Math.floor(totale / 15);
+
+        const giorni = Math.floor(Math.random() * 5) + 1;
+        const consegnaPrevista = new Date();
+        consegnaPrevista.setDate(consegnaPrevista.getDate() + giorni);
+
+        const { data, error } = await supabaseClient
+            .from('ordini')
+            .insert([{
+                cliente_id: clienteId,
+                indirizzo_via: indirizzoData.via,
+                indirizzo_cap: indirizzoData.cap,
+                indirizzo_citta: indirizzoData.citta,
+                indirizzo_provincia: indirizzoData.provincia,
+                email_contatto: emailContatto,
+                metodo_pagamento: metodoPagamento,
+                totale: totale,
+                punti_guadagnati: puntiGuadagnati,
+                stato_consegna: 'in_elaborazione',
+                data_consegna_prevista: consegnaPrevista.toISOString()
+            }])
+            .select();
+
+        if (error) {
+            console.error("Errore creazione ordine:", error);
+            return { success: false, error: error.message };
+        }
+
+        return { success: true, ordine: data[0] };
+    },
+
+    async aggiornaStatoOrdine(ordineId, nuovoStato, note = null) {
+        const updateData = { stato_consegna: nuovoStato };
+        if (nuovoStato === 'consegnato') {
+            updateData.data_consegna_effettiva = new Date().toISOString();
+        }
+
+        const { data, error } = await supabaseClient
+            .from('ordini')
+            .update(updateData)
+            .eq('id', ordineId)
+            .select();
+
+        if (error) {
+            console.error("Errore aggiornamento stato:", error);
+            return { success: false, error: error.message };
+        }
+
+        if (note) {
+            await supabaseClient
+                .from('storico_stato_ordini')
+                .insert([{
+                    ordine_id: ordineId,
+                    stato_nuovo: nuovoStato,
+                    note: note
+                }]);
+        }
+
+        return { success: true, ordine: data[0] };
+    },
+
+    async getOrdiniCliente(clienteId) {
+        const { data, error } = await supabaseClient
+            .from('ordini')
+            .select('*')
+            .eq('cliente_id', clienteId)
+            .order('data_ordine', { ascending: false });
+
+        if (error) {
+            console.error("Errore caricamento ordini:", error);
+            return [];
+        }
+        return data || [];
+    },
+
+    async getOrdine(ordineId) {
+        const { data, error } = await supabaseClient
+            .from('ordini')
+            .select('*')
+            .eq('id', ordineId)
+            .single();
+
+        if (error) {
+            console.error("Errore caricamento ordine:", error);
+            return null;
+        }
+        return data;
+    },
+
+    async getTuttiOrdini(limit = 100) {
+        const { data, error } = await supabaseClient
+            .from('ordini')
+            .select('*, clienti(nome, email)')
+            .order('data_ordine', { ascending: false })
+            .limit(limit);
+
+        if (error) {
+            console.error("Errore caricamento ordini:", error);
+            return [];
+        }
+        return data || [];
+    },
+
+    async getStoricoOrdine(ordineId) {
+        const { data, error } = await supabaseClient
+            .from('storico_stato_ordini')
+            .select('*')
+            .eq('ordine_id', ordineId)
+            .order('data_cambio', { ascending: true });
+
+        if (error) {
+            console.error("Errore caricamento storico:", error);
+            return [];
+        }
+        return data || [];
+    },
+
+    async simulaAvanzamentoConsegna() {
+        const { data, error } = await supabaseClient
+            .from('ordini')
+            .select('*')
+            .in('stato_consegna', ['in_elaborazione', 'spedito', 'in_transito', 'in_consegna']);
+
+        if (error || !data) return;
+
+        for (const ordine of data) {
+            const dataOrdine = new Date(ordine.data_ordine);
+            const giorniPassati = Math.floor((new Date() - dataOrdine) / (1000 * 60 * 60 * 24));
+            
+            let nuovoStato = ordine.stato_consegna;
+            
+            if (giorniPassati >= 0 && ordine.stato_consegna === 'in_elaborazione') {
+                nuovoStato = 'spedito';
+            } else if (giorniPassati >= 1 && ordine.stato_consegna === 'spedito') {
+                nuovoStato = 'in_transito';
+            } else if (giorniPassati >= 2 && ordine.stato_consegna === 'in_transito') {
+                nuovoStato = 'in_consegna';
+            } else if (giorniPassati >= 4 && ordine.stato_consegna === 'in_consegna') {
+                nuovoStato = 'consegnato';
+            }
+
+            if (nuovoStato !== ordine.stato_consegna) {
+                await this.aggiornaStatoOrdine(ordine.id, nuovoStato);
+            }
+        }
+    }
+};
+
+// ==========================================
+// 9. FUNZIONI GLOBALI PER CLIENTI
 // ==========================================
 
 const STORAGE_KEYS_CLIENTI = {
@@ -525,7 +959,7 @@ function formatCurrency(value) {
 }
 
 // ==========================================
-// 6. GESTIONE UTENTI E RUOLI (MANAGER)
+// 10. GESTIONE UTENTI E RUOLI (MANAGER)
 // ==========================================
 
 const DB_UTENTI = {
@@ -705,7 +1139,7 @@ const DB_UTENTI = {
 };
 
 // ==========================================
-// 7. FUNZIONI GLOBALI PER UTENTI MANAGER
+// 11. FUNZIONI GLOBALI PER UTENTI MANAGER
 // ==========================================
 
 function caricaUtenteLoggato() {
@@ -723,34 +1157,8 @@ function logoutUtente() {
     window.location.href = 'home.html';
 }
 
-function haPermesso(permesso) {
-    const utente = caricaUtenteLoggato();
-    if (!utente) return false;
-    
-    const permessi = {
-        'super_admin': [
-            'gestione_utenti', 'gestione_ruoli', 'configurazione_sistema',
-            'log_sistema', 'accesso_tutto'
-        ],
-        'admin_negozio': [
-            'gestione_prodotti', 'gestione_prezzi', 'gestione_promozioni',
-            'gestione_fornitori', 'gestione_ordini_acquisto', 'gestione_inventario',
-            'report_vendite', 'segnalazione_esaurimento'
-        ],
-        'responsabile_acquisti': [
-            'creazione_ordini_acquisto', 'gestione_fornitori_acquisti',
-            'accesso_prezzi_acquisto'
-        ],
-        'analista': [
-            'accesso_report', 'accesso_kpi', 'esportazione_dati'
-        ]
-    };
-    
-    return permessi[utente.ruolo]?.includes(permesso) || false;
-}
-
 // ==========================================
-// 8. PERMESSI PER RUOLI
+// 12. PERMESSI PER RUOLI
 // ==========================================
 
 const PERMESSI = {
@@ -759,7 +1167,6 @@ const PERMESSI = {
     CONFIGURAZIONE_SISTEMA: 'configurazione_sistema',
     LOG_SISTEMA: 'log_sistema',
     ACCESSO_TUTTO: 'accesso_tutto',
-    
     GESTIONE_PRODOTTI: 'gestione_prodotti',
     GESTIONE_PREZZI: 'gestione_prezzi',
     GESTIONE_PROMOZIONI: 'gestione_promozioni',
@@ -768,11 +1175,9 @@ const PERMESSI = {
     GESTIONE_INVENTARIO: 'gestione_inventario',
     REPORT_VENDITE: 'report_vendite',
     SEGNALAZIONE_ESURIMENTO: 'segnalazione_esaurimento',
-    
     CREAZIONE_ORDINI_ACQUISTO: 'creazione_ordini_acquisto',
     GESTIONE_FORNITORI_ACQUISTI: 'gestione_fornitori_acquisti',
     ACCESSO_PREZZI_ACQUISTO: 'accesso_prezzi_acquisto',
-    
     ACCESSO_REPORT: 'accesso_report',
     ACCESSO_KPI: 'accesso_kpi',
     ESPORTAZIONE_DATI: 'esportazione_dati'
@@ -805,13 +1210,8 @@ const RUOLI_PERMESSI = {
 function haPermesso(permesso) {
     const utente = caricaUtenteLoggato();
     if (!utente) return false;
-    
     const permessiUtente = RUOLI_PERMESSI[utente.ruolo] || [];
     return permessiUtente.includes(permesso) || permessiUtente.includes(PERMESSI.ACCESSO_TUTTO);
-}
-
-function haAlmenoUno(permessi) {
-    return permessi.some(p => haPermesso(p));
 }
 
 function getRuolo() {
@@ -836,11 +1236,10 @@ function isAnalista() {
 }
 
 // ==========================================
-// 9. GESTIONE PREMI (CATALOGO PREMI)
+// 13. GESTIONE PREMI (CATALOGO PREMI)
 // ==========================================
 
 const DB_PREMI = {
-    // Ottieni tutti i premi dal catalogo
     async getPremi() {
         const { data, error } = await supabaseClient
             .from('catalogo_premi')
@@ -854,7 +1253,6 @@ const DB_PREMI = {
         return data || [];
     },
 
-    // Crea un nuovo premio
     async creaPremio(nome, descrizione, puntiRichiesti, prezzoAggiuntivo, icona = '🎁') {
         const { data, error } = await supabaseClient
             .from('catalogo_premi')
@@ -874,7 +1272,6 @@ const DB_PREMI = {
         return { success: true, premio: data[0] };
     },
 
-    // Aggiorna un premio
     async aggiornaPremio(id, updates) {
         const { data, error } = await supabaseClient
             .from('catalogo_premi')
@@ -889,7 +1286,6 @@ const DB_PREMI = {
         return { success: true, premio: data[0] };
     },
 
-    // Elimina un premio
     async eliminaPremio(id) {
         const { error } = await supabaseClient
             .from('catalogo_premi')
@@ -903,9 +1299,7 @@ const DB_PREMI = {
         return { success: true };
     },
 
-    // Un cliente riscatta un premio con i punti
     async riscattaPremio(clienteId, premioId) {
-        // 1. Ottieni il premio
         const { data: premio, error: premioError } = await supabaseClient
             .from('catalogo_premi')
             .select('*')
@@ -916,7 +1310,6 @@ const DB_PREMI = {
             return { success: false, error: 'Premio non trovato' };
         }
 
-        // 2. Ottieni il cliente
         const { data: cliente, error: clienteError } = await supabaseClient
             .from('clienti')
             .select('punti_spesa')
@@ -927,12 +1320,10 @@ const DB_PREMI = {
             return { success: false, error: 'Cliente non trovato' };
         }
 
-        // 3. Verifica punti sufficienti
         if (cliente.punti_spesa < premio.punti_richiesti) {
             return { success: false, error: 'Punti insufficienti' };
         }
 
-        // 4. Deduci punti
         const nuoviPunti = cliente.punti_spesa - premio.punti_richiesti;
         const { error: updateError } = await supabaseClient
             .from('clienti')
@@ -943,7 +1334,6 @@ const DB_PREMI = {
             return { success: false, error: updateError.message };
         }
 
-        // 5. Registra il riscatto
         const { error: insertError } = await supabaseClient
             .from('premi_riscattati')
             .insert([{
@@ -955,7 +1345,6 @@ const DB_PREMI = {
 
         if (insertError) {
             console.error("Errore registrazione riscatto premio:", insertError);
-            // Ripristina i punti
             await supabaseClient
                 .from('clienti')
                 .update({ punti_spesa: cliente.punti_spesa })
@@ -970,7 +1359,6 @@ const DB_PREMI = {
         };
     },
 
-    // Ottieni i premi riscattati da un cliente
     async getPremiRiscattati(clienteId) {
         const { data, error } = await supabaseClient
             .from('premi_riscattati')

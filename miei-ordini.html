@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>I Miei Ordini - SinGo</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="db.js"></script>
+    <style>
+        .orders-container { max-width: 1200px; margin: 30px auto; padding: 0 20px; }
+        .orders-header { text-align: center; margin-bottom: 30px; }
+        .orders-header h1 { font-size: 2rem; color: #1E293B; }
+        .orders-header p { color: #64748B; }
+        
+        .order-card { background: white; border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid #E2E8F0; margin-bottom: 16px; transition: all 0.3s ease; }
+        .order-card:hover { box-shadow: 0 10px 25px rgba(0,0,0,0.08); }
+        .order-card .top-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .order-card .order-id { font-weight: 700; color: #1E293B; }
+        .order-card .order-date { color: #64748B; font-size: 0.9rem; }
+        .order-card .order-total { font-weight: 700; font-size: 1.2rem; color: #10B981; }
+        .order-card .order-status { display: inline-block; padding: 4px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; color: white; }
+        .order-card .order-address { color: #64748B; font-size: 0.9rem; margin-top: 8px; }
+        .order-card .order-details { margin-top: 12px; padding-top: 12px; border-top: 1px solid #E2E8F0; }
+        .order-card .order-details .label { font-weight: 600; color: #1E293B; }
+        .order-card .order-details .value { color: #475569; }
+        .order-card .order-timeline { margin-top: 12px; padding: 12px; background: #F8FAFC; border-radius: 8px; }
+        .order-card .order-timeline .step { display: flex; align-items: center; gap: 12px; padding: 6px 0; }
+        .order-card .order-timeline .step .dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+        .order-card .order-timeline .step .dot.done { background: #10B981; }
+        .order-card .order-timeline .step .dot.current { background: #F59E0B; animation: pulse 1.5s infinite; }
+        .order-card .order-timeline .step .dot.pending { background: #E2E8F0; }
+        .order-card .order-timeline .step .text { font-size: 0.9rem; color: #475569; }
+        .order-card .order-timeline .step .text.done { color: #10B981; font-weight: 600; }
+        .order-card .order-timeline .step .text.current { color: #F59E0B; font-weight: 600; }
+        
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); } 70% { box-shadow: 0 0 0 8px rgba(245, 158, 11, 0); } 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); } }
+        
+        .empty-orders { text-align: center; padding: 60px 20px; background: white; border-radius: 16px; border: 1px solid #E2E8F0; }
+        .empty-orders .icon { font-size: 4rem; margin-bottom: 20px; }
+        .empty-orders h2 { color: #1E293B; margin-bottom: 10px; }
+        .empty-orders p { color: #64748B; margin-bottom: 20px; }
+        .empty-orders .btn-shop { background: #10B981; color: white; padding: 12px 30px; border-radius: 10px; text-decoration: none; font-weight: 600; display: inline-block; }
+        
+        .login-required { text-align: center; padding: 60px 20px; background: #FEF3C7; border-radius: 16px; border: 2px solid #FCD34D; }
+        .login-required .icon { font-size: 4rem; margin-bottom: 20px; }
+        .login-required h2 { color: #92400E; margin-bottom: 10px; }
+        .login-required p { color: #78350F; margin-bottom: 20px; }
+        .login-required .btn-login { background: #F59E0B; color: white; padding: 12px 30px; border-radius: 10px; text-decoration: none; font-weight: 600; display: inline-block; margin: 0 8px; }
+        .login-required .btn-register { background: #10B981; color: white; padding: 12px 30px; border-radius: 10px; text-decoration: none; font-weight: 600; display: inline-block; margin: 0 8px; }
+        
+        .viaggio-badge { display: inline-block; background: #FEF3C7; color: #92400E; padding: 2px 10px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; margin-left: 8px; }
+        
+        .toast-container { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 1000; }
+        .toast-message { display: none; background: rgba(45,55,72,0.95); color: white; padding: 14px 20px; border-radius: 12px; font-weight: 700; }
+    </style>
+</head>
+<body>
+
+    <div class="navbar">
+        <div class="nav-left">
+            <a href="home.html" class="nav-logo"><img src="logo.png" alt="SinGo" style="height: 40px; width: auto;"></a>
+            <a href="home.html">🏠 Home</a>
+            <a href="shop.html">📦 Prodotti</a>
+            <a href="sconti.html">🔥 Offerte</a>
+            <a href="miei-ordini.html">📦 I Miei Ordini</a>
+        </div>
+        <div class="nav-right">
+            <div class="user-section">
+                <span class="user-greeting" id="userGreeting"></span>
+                <a class="points-link" id="puntiLink" href="points.html">⭐ I Miei Punti</a>
+                <button class="btn-logout" id="logoutBtn" onclick="logoutUser()">Logout</button>
+                <a class="register-link" id="registerLink" href="register.html" style="display:none;">📝 Registrati</a>
+                <a class="login-link" id="loginLink" href="login-cliente.html" style="display:none;">🔓 Login</a>
+            </div>
+            <a href="login-manager.html">🔐 Area Riservata</a>
+        </div>
+    </div>
+
+    <div class="orders-container">
+        <div class="orders-header">
+            <h1>📦 I Miei Ordini</h1>
+            <p>Traccia tutti i tuoi acquisti e lo stato della consegna</p>
+        </div>
+
+        <div id="loginRequired" class="login-required" style="display:none;">
+            <div class="icon">🔐</div>
+            <h2>Accedi per vedere i tuoi ordini</h2>
+            <p>Registrati o accedi per visualizzare lo storico dei tuoi acquisti e tracciare le consegne.</p>
+            <div>
+                <a href="register.html" class="btn-register">📝 Registrati</a>
+                <a href="login-cliente.html" class="btn-login">🔓 Accedi</a>
+            </div>
+        </div>
+
+        <div id="ordersContent" style="display:none;">
+            <div id="ordersList"></div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <div class="footer-content">
+            <div class="footer-links">
+                <a href="privacy.html">Privacy Policy</a>
+                <a href="termini.html">Termini e Condizioni</a>
+            </div>
+            <div class="footer-copy">© 2026 SinGo - Shop Online. Tutti i diritti riservati.</div>
+        </div>
+    </div>
+
+    <div class="toast-container"><div id="orders-toast" class="toast-message"></div></div>
+
+    <script>
+        let cliente = null;
+
+        function updateUserUI() {
+            cliente = caricaClienteLoggato();
+            const userGreeting = document.getElementById('userGreeting');
+            const puntiLink = document.getElementById('puntiLink');
+            const logoutBtn = document.getElementById('logoutBtn');
+            const registerLink = document.getElementById('registerLink');
+            const loginLink = document.getElementById('loginLink');
+
+            if (cliente) {
+                userGreeting.style.display = 'inline-block';
+                userGreeting.textContent = `👤 Ciao ${cliente.nome}!`;
+                puntiLink.style.display = 'inline-block';
+                logoutBtn.style.display = 'inline-block';
+                registerLink.style.display = 'none';
+                loginLink.style.display = 'none';
+            } else {
+                userGreeting.style.display = 'none';
+                puntiLink.style.display = 'none';
+                logoutBtn.style.display = 'none';
+                registerLink.style.display = 'inline-block';
+                loginLink.style.display = 'inline-block';
+            }
+        }
+
+        function logoutUser() {
+            if (confirm('Sei sicuro di voler fare il logout?')) {
+                logoutCliente();
+                updateUserUI();
+                location.reload();
+            }
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('orders-toast');
+            toast.textContent = message;
+            toast.style.display = 'block';
+            clearTimeout(toast._timer);
+            toast._timer = setTimeout(() => toast.style.display = 'none', 3000);
+        }
+
+        const statoLabels = {
+            'in_elaborazione': '⏳ In Elaborazione',
+            'spedito': '📦 Spedito',
+            'in_transito': '🚚 In Transito',
+            'in_consegna': '🚪 In Consegna',
+            'consegnato': '✅ Consegnato'
+        };
+
+        const statoColors = {
+            'in_elaborazione': '#f59e0b',
+            'spedito': '#3b82f6',
+            'in_transito': '#8b5cf6',
+            'in_consegna': '#ec4899',
+            'consegnato': '#10b981'
+        };
+
+        const statoOrder = ['in_elaborazione', 'spedito', 'in_transito', 'in_consegna', 'consegnato'];
+
+        function getStatusIndex(stato) {
+            return statoOrder.indexOf(stato);
+        }
+
+        async function caricaOrdini() {
+            if (!cliente) {
+                document.getElementById('loginRequired').style.display = 'block';
+                document.getElementById('ordersContent').style.display = 'none';
+                return;
+            }
+
+            document.getElementById('loginRequired').style.display = 'none';
+            document.getElementById('ordersContent').style.display = 'block';
+
+            try {
+                const ordini = await DB_ORDINI.getOrdiniCliente(cliente.id);
+                const container = document.getElementById('ordersList');
+
+                if (ordini.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-orders">
+                            <div class="icon">📭</div>
+                            <h2>Nessun ordine trovato</h2>
+                            <p>Non hai ancora effettuato acquisti. Inizia ora a fare shopping!</p>
+                            <a href="shop.html" class="btn-shop">🛒 Vai allo Shop</a>
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = ordini.map(o => {
+                    const currentIndex = getStatusIndex(o.stato_consegna);
+                    
+                    const steps = statoOrder.map((stato, idx) => {
+                        let dotClass = 'pending';
+                        let textClass = '';
+                        let label = statoLabels[stato] || stato;
+                        
+                        if (idx < currentIndex) {
+                            dotClass = 'done';
+                            textClass = 'done';
+                        } else if (idx === currentIndex) {
+                            dotClass = 'current';
+                            textClass = 'current';
+                        }
+                        
+                        return `
+                            <div class="step">
+                                <div class="dot ${dotClass}"></div>
+                                <div class="text ${textClass}">${label}</div>
+                            </div>
+                        `;
+                    }).join('');
+
+                    return `
+                        <div class="order-card">
+                            <div class="top-row">
+                                <div>
+                                    <span class="order-id">#${o.id}</span>
+                                    <span class="order-date">📅 ${new Date(o.data_ordine).toLocaleString('it-IT')}</span>
+                                    ${o.viaggio_vincente_id ? `<span class="viaggio-badge">✈️ Hai vinto un viaggio!</span>` : ''}
+                                </div>
+                                <div>
+                                    <span class="order-status" style="background:${statoColors[o.stato_consegna] || '#94a3b8'}">
+                                        ${statoLabels[o.stato_consegna] || o.stato_consegna}
+                                    </span>
+                                    <span class="order-total">€ ${Number(o.totale).toFixed(2)}</span>
+                                </div>
+                            </div>
+                            
+                            <div class="order-address">
+                                📍 ${o.indirizzo_via}, ${o.indirizzo_cap} ${o.indirizzo_citta} (${o.indirizzo_provincia})
+                            </div>
+                            
+                            <div class="order-details">
+                                <div><span class="label">Metodo di pagamento:</span> <span class="value">${o.metodo_pagamento}</span></div>
+                                ${o.data_consegna_prevista ? `<div><span class="label">Consegna prevista:</span> <span class="value">${new Date(o.data_consegna_prevista).toLocaleDateString('it-IT')}</span></div>` : ''}
+                                ${o.data_consegna_effettiva ? `<div><span class="label">Consegnato il:</span> <span class="value">${new Date(o.data_consegna_effettiva).toLocaleString('it-IT')}</span></div>` : ''}
+                                ${o.punti_guadagnati > 0 ? `<div><span class="label">Punti guadagnati:</span> <span class="value">⭐ ${o.punti_guadagnati}</span></div>` : ''}
+                                ${o.viaggio_vincente_id ? `<div style="margin-top:6px; background:#FEF3C7; padding:6px 12px; border-radius:4px; font-size:0.9rem; color:#92400E;">✈️ Hai vinto un viaggio! Controlla la tua email per i dettagli.</div>` : ''}
+                            </div>
+                            
+                            <div class="order-timeline">
+                                ${steps}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+            } catch (err) {
+                console.error('Errore caricamento ordini:', err);
+                document.getElementById('ordersList').innerHTML = `
+                    <div class="empty-orders">
+                        <div class="icon">❌</div>
+                        <h2>Errore nel caricamento</h2>
+                        <p>Impossibile caricare i tuoi ordini. Riprova più tardi.</p>
+                    </div>
+                `;
+            }
+        }
+
+        updateUserUI();
+        caricaOrdini();
+
+        setInterval(() => {
+            if (!document.hidden) {
+                caricaOrdini();
+            }
+        }, 30000);
+    </script>
+</body>
+</html>

@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestione Indirizzi - SinGo</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="db.js"></script>
+    <style>
+        .address-container { max-width: 800px; margin: 30px auto; padding: 0 20px; }
+        .address-header { text-align: center; margin-bottom: 30px; }
+        .address-header h1 { font-size: 2rem; color: #1E293B; }
+        .address-header p { color: #64748B; }
+        
+        .address-card { background: white; border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid #E2E8F0; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+        .address-card .info .via { font-weight: 600; color: #1E293B; }
+        .address-card .info .dettagli { color: #64748B; font-size: 0.9rem; }
+        .address-card .preferito { background: #F59E0B; color: white; padding: 2px 10px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; }
+        .address-card .actions { display: flex; gap: 8px; }
+        .address-card .actions button { padding: 6px 14px; border-radius: 6px; border: none; cursor: pointer; font-size: 0.85rem; font-weight: 600; }
+        .btn-preferito { background: #F59E0B; color: white; }
+        .btn-elimina { background: #EF4444; color: white; }
+        .btn-elimina:hover { background: #DC2626; }
+        
+        .add-address-form { background: white; padding: 24px; border-radius: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid #E2E8F0; margin-top: 20px; }
+        .add-address-form h3 { margin-bottom: 16px; color: #1E293B; }
+        .add-address-form .form-row { display: flex; gap: 12px; flex-wrap: wrap; }
+        .add-address-form .form-row .form-group { flex: 1; min-width: 120px; }
+        .add-address-form .form-group { margin-bottom: 12px; }
+        .add-address-form label { display: block; font-weight: 600; font-size: 0.9rem; color: #1E293B; margin-bottom: 4px; }
+        .add-address-form input { width: 100%; padding: 10px 12px; border: 2px solid #E2E8F0; border-radius: 8px; font-size: 0.95rem; }
+        .add-address-form input:focus { outline: none; border-color: #10B981; }
+        .add-address-form .checkbox-group { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+        .add-address-form .checkbox-group input { width: auto; }
+        .add-address-form .checkbox-group label { margin: 0; cursor: pointer; }
+        .btn-save-address { background: #10B981; color: white; padding: 12px 30px; border-radius: 8px; border: none; font-weight: 700; cursor: pointer; margin-top: 8px; }
+        .btn-save-address:hover { background: #059669; }
+        .btn-save-address:disabled { opacity: 0.6; cursor: not-allowed; }
+        
+        .login-required { text-align: center; padding: 60px 20px; background: #FEF3C7; border-radius: 16px; border: 2px solid #FCD34D; }
+        .login-required .icon { font-size: 4rem; margin-bottom: 20px; }
+        .login-required h2 { color: #92400E; margin-bottom: 10px; }
+        .login-required p { color: #78350F; margin-bottom: 20px; }
+        .login-required .btn-login { background: #F59E0B; color: white; padding: 12px 30px; border-radius: 10px; text-decoration: none; font-weight: 600; display: inline-block; margin: 0 8px; }
+        .login-required .btn-register { background: #10B981; color: white; padding: 12px 30px; border-radius: 10px; text-decoration: none; font-weight: 600; display: inline-block; margin: 0 8px; }
+        
+        .toast-container { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 1000; }
+        .toast-message { display: none; background: rgba(45,55,72,0.95); color: white; padding: 14px 20px; border-radius: 12px; font-weight: 700; }
+    </style>
+</head>
+<body>
+
+    <div class="navbar">
+        <div class="nav-left">
+            <a href="home.html" class="nav-logo"><img src="logo.png" alt="SinGo" style="height: 40px; width: auto;"></a>
+            <a href="home.html">🏠 Home</a>
+            <a href="shop.html">📦 Prodotti</a>
+            <a href="sconti.html">🔥 Offerte</a>
+            <a href="miei-ordini.html">📦 I Miei Ordini</a>
+        </div>
+        <div class="nav-right">
+            <div class="user-section">
+                <span class="user-greeting" id="userGreeting"></span>
+                <a class="points-link" id="puntiLink" href="points.html">⭐ I Miei Punti</a>
+                <button class="btn-logout" id="logoutBtn" onclick="logoutUser()">Logout</button>
+                <a class="register-link" id="registerLink" href="register.html" style="display:none;">📝 Registrati</a>
+                <a class="login-link" id="loginLink" href="login-cliente.html" style="display:none;">🔓 Login</a>
+            </div>
+            <a href="login-manager.html">🔐 Area Riservata</a>
+        </div>
+    </div>
+
+    <div class="address-container">
+        <div class="address-header">
+            <h1>📍 Gestione Indirizzi</h1>
+            <p>Salva i tuoi indirizzi per rendere gli acquisti più veloci</p>
+        </div>
+
+        <div id="loginRequired" class="login-required" style="display:none;">
+            <div class="icon">🔐</div>
+            <h2>Accedi per gestire i tuoi indirizzi</h2>
+            <p>Registrati o accedi per salvare e gestire i tuoi indirizzi di consegna.</p>
+            <div>
+                <a href="register.html" class="btn-register">📝 Registrati</a>
+                <a href="login-cliente.html" class="btn-login">🔓 Accedi</a>
+            </div>
+        </div>
+
+        <div id="addressContent" style="display:none;">
+            <div id="addressList"></div>
+
+            <div class="add-address-form">
+                <h3>➕ Aggiungi Nuovo Indirizzo</h3>
+                <form id="addressForm" onsubmit="salvaNuovoIndirizzo(event)">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="nuovaVia">Via e numero</label>
+                            <input type="text" id="nuovaVia" placeholder="Es. Via Roma 10" required>
+                        </div>
+                        <div class="form-group" style="flex:0.5;">
+                            <label for="nuovoCap">CAP</label>
+                            <input type="text" id="nuovoCap" placeholder="20100" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="nuovaCitta">Città</label>
+                            <input type="text" id="nuovaCitta" placeholder="Milano" required>
+                        </div>
+                        <div class="form-group" style="flex:0.5;">
+                            <label for="nuovaProvincia">Provincia</label>
+                            <input type="text" id="nuovaProvincia" placeholder="MI" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="nuovaEmail">Email (opzionale)</label>
+                        <input type="email" id="nuovaEmail" placeholder="email@esempio.it">
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="nuovoPreferito">
+                        <label for="nuovoPreferito">⭐ Imposta come indirizzo preferito</label>
+                    </div>
+                    <button type="submit" class="btn-save-address">💾 Salva Indirizzo</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <div class="footer-content">
+            <div class="footer-links">
+                <a href="privacy.html">Privacy Policy</a>
+                <a href="termini.html">Termini e Condizioni</a>
+            </div>
+            <div class="footer-copy">© 2026 SinGo - Shop Online. Tutti i diritti riservati.</div>
+        </div>
+    </div>
+
+    <div class="toast-container"><div id="address-toast" class="toast-message"></div></div>
+
+    <script>
+        let cliente = null;
+
+        function updateUserUI() {
+            cliente = caricaClienteLoggato();
+            const userGreeting = document.getElementById('userGreeting');
+            const puntiLink = document.getElementById('puntiLink');
+            const logoutBtn = document.getElementById('logoutBtn');
+            const registerLink = document.getElementById('registerLink');
+            const loginLink = document.getElementById('loginLink');
+
+            if (cliente) {
+                userGreeting.style.display = 'inline-block';
+                userGreeting.textContent = `👤 Ciao ${cliente.nome}!`;
+                puntiLink.style.display = 'inline-block';
+                logoutBtn.style.display = 'inline-block';
+                registerLink.style.display = 'none';
+                loginLink.style.display = 'none';
+            } else {
+                userGreeting.style.display = 'none';
+                puntiLink.style.display = 'none';
+                logoutBtn.style.display = 'none';
+                registerLink.style.display = 'inline-block';
+                loginLink.style.display = 'inline-block';
+            }
+        }
+
+        function logoutUser() {
+            if (confirm('Sei sicuro di voler fare il logout?')) {
+                logoutCliente();
+                updateUserUI();
+                location.reload();
+            }
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('address-toast');
+            toast.textContent = message;
+            toast.style.display = 'block';
+            clearTimeout(toast._timer);
+            toast._timer = setTimeout(() => toast.style.display = 'none', 3000);
+        }
+
+        async function caricaIndirizzi() {
+            if (!cliente) {
+                document.getElementById('loginRequired').style.display = 'block';
+                document.getElementById('addressContent').style.display = 'none';
+                return;
+            }
+
+            document.getElementById('loginRequired').style.display = 'none';
+            document.getElementById('addressContent').style.display = 'block';
+
+            try {
+                const indirizzi = await DB_INDIRIZZI.getIndirizziCliente(cliente.id);
+                const container = document.getElementById('addressList');
+
+                if (indirizzi.length === 0) {
+                    container.innerHTML = `
+                        <div style="text-align:center; padding:30px; color:#64748B;">
+                            <div style="font-size:3rem; margin-bottom:12px;">📍</div>
+                            <p>Non hai ancora salvato nessun indirizzo.</p>
+                            <p style="font-size:0.9rem;">Aggiungi il tuo primo indirizzo qui sotto!</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = indirizzi.map(i => `
+                    <div class="address-card">
+                        <div class="info">
+                            <div class="via">${i.via}</div>
+                            <div class="dettagli">${i.cap} ${i.citta} (${i.provincia})</div>
+                            ${i.email ? `<div class="dettagli">✉️ ${i.email}</div>` : ''}
+                            ${i.preferito ? '<span class="preferito">⭐ Preferito</span>' : ''}
+                        </div>
+                        <div class="actions">
+                            ${!i.preferito ? `<button class="btn-preferito" onclick="settaPreferito(${i.id})">⭐ Preferito</button>` : ''}
+                            <button class="btn-elimina" onclick="eliminaIndirizzo(${i.id})">🗑️</button>
+                        </div>
+                    </div>
+                `).join('');
+
+            } catch (err) {
+                console.error('Errore caricamento indirizzi:', err);
+                document.getElementById('addressList').innerHTML = `
+                    <div style="text-align:center; padding:30px; color:#EF4444;">
+                        <p>Errore nel caricamento degli indirizzi.</p>
+                    </div>
+                `;
+            }
+        }
+
+        async function salvaNuovoIndirizzo(e) {
+            e.preventDefault();
+            
+            if (!cliente) {
+                showToast('❌ Devi essere loggato per salvare un indirizzo');
+                return;
+            }
+
+            const via = document.getElementById('nuovaVia').value.trim();
+            const cap = document.getElementById('nuovoCap').value.trim();
+            const citta = document.getElementById('nuovaCitta').value.trim();
+            const provincia = document.getElementById('nuovaProvincia').value.trim().toUpperCase();
+            const email = document.getElementById('nuovaEmail').value.trim() || null;
+            const preferito = document.getElementById('nuovoPreferito').checked;
+
+            if (!via || !cap || !citta || !provincia) {
+                showToast('❌ Compila tutti i campi obbligatori');
+                return;
+            }
+
+            const btn = e.target.querySelector('.btn-save-address');
+            btn.disabled = true;
+            btn.textContent = '⏳ Salvataggio...';
+
+            try {
+                const result = await DB_INDIRIZZI.salvaIndirizzo(
+                    cliente.id,
+                    via, cap, citta, provincia,
+                    email,
+                    null,
+                    preferito
+                );
+
+                if (result.success) {
+                    showToast('✅ Indirizzo salvato con successo!');
+                    document.getElementById('addressForm').reset();
+                    caricaIndirizzi();
+                } else {
+                    showToast('❌ ' + result.error);
+                }
+            } catch (err) {
+                console.error('Errore salvataggio indirizzo:', err);
+                showToast('❌ Errore durante il salvataggio');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '💾 Salva Indirizzo';
+            }
+        }
+
+        async function settaPreferito(id) {
+            if (!cliente) return;
+
+            try {
+                const result = await DB_INDIRIZZI.setPreferito(id, cliente.id);
+                if (result.success) {
+                    showToast('⭐ Indirizzo preferito aggiornato!');
+                    caricaIndirizzi();
+                } else {
+                    showToast('❌ ' + result.error);
+                }
+            } catch (err) {
+                console.error('Errore impostazione preferito:', err);
+                showToast('❌ Errore durante l\'operazione');
+            }
+        }
+
+        async function eliminaIndirizzo(id) {
+            if (!cliente) return;
+            
+            if (!confirm('Sei sicuro di voler eliminare questo indirizzo?')) return;
+
+            try {
+                const result = await DB_INDIRIZZI.eliminaIndirizzo(id, cliente.id);
+                if (result.success) {
+                    showToast('✅ Indirizzo eliminato');
+                    caricaIndirizzi();
+                } else {
+                    showToast('❌ ' + result.error);
+                }
+            } catch (err) {
+                console.error('Errore eliminazione indirizzo:', err);
+                showToast('❌ Errore durante l\'eliminazione');
+            }
+        }
+
+        updateUserUI();
+        caricaIndirizzi();
+    </script>
+</body>
+</html>

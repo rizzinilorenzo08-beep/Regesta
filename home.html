@@ -16,11 +16,13 @@
             <a href="home.html">🏠 Home</a>
             <a href="shop.html">📦 Prodotti</a>
             <a href="sconti.html">🔥 Offerte</a>
+            <a href="miei-ordini.html">📦 I Miei Ordini</a>
         </div>
         <div class="nav-right">
             <div class="user-section">
                 <span class="user-greeting" id="userGreeting"></span>
                 <a class="points-link" id="puntiLink" href="points.html" style="display:none;">⭐ I Miei Punti</a>
+                <a class="points-link" id="ordiniLink" href="miei-ordini.html" style="display:none;">📦 Ordini</a>
                 <button class="btn-logout" id="logoutBtn" onclick="logoutUser()" style="display:none;">Logout</button>
                 <a class="register-link" id="registerLink" href="register.html" style="display:none;">📝 Registrati</a>
                 <a class="login-link" id="loginLink" href="login-cliente.html" style="display:none;">🔓 Login</a>
@@ -174,6 +176,7 @@
             const cliente = caricaClienteLoggato();
             const userGreeting = document.getElementById('userGreeting');
             const puntiLink = document.getElementById('puntiLink');
+            const ordiniLink = document.getElementById('ordiniLink');
             const logoutBtn = document.getElementById('logoutBtn');
             const registerLink = document.getElementById('registerLink');
             const loginLink = document.getElementById('loginLink');
@@ -182,12 +185,14 @@
                 userGreeting.style.display = 'inline-block';
                 userGreeting.textContent = `👤 Ciao ${cliente.nome}!`;
                 puntiLink.style.display = 'inline-block';
+                ordiniLink.style.display = 'inline-block';
                 logoutBtn.style.display = 'inline-block';
                 registerLink.style.display = 'none';
                 loginLink.style.display = 'none';
             } else {
                 userGreeting.style.display = 'none';
                 puntiLink.style.display = 'none';
+                ordiniLink.style.display = 'none';
                 logoutBtn.style.display = 'none';
                 registerLink.style.display = 'inline-block';
                 loginLink.style.display = 'inline-block';
