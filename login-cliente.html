@@ -8,42 +8,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
     <script src="db.js"></script>
-    <style>
-        :root {
-            --primary: #1E293B;
-            --secondary: #10B981;
-            --secondary-hover: #059669;
-            --bg: #F8FAFC;
-            --text: #0F172A;
-            --text-muted: #64748B;
-            --card-bg: #FFFFFF;
-            --border: #E2E8F0;
-            --error: #ef4444;
-        }
-
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Poppins', sans-serif; }
-        body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
-        .login-container { background: var(--card-bg); padding: 40px; border-radius: 16px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3); width: 100%; max-width: 420px; }
-        .login-header { text-align: center; margin-bottom: 35px; }
-        .login-header h1 { color: var(--primary); font-size: 1.8rem; margin-bottom: 8px; }
-        .login-header p { color: var(--text-muted); font-size: 0.95rem; }
-        .form-group { margin-bottom: 20px; }
-        label { display: block; color: var(--text); font-weight: 600; margin-bottom: 8px; font-size: 0.95rem; }
-        input { width: 100%; padding: 12px 15px; border: 2px solid var(--border); border-radius: 10px; font-size: 1rem; }
-        input:focus { outline: none; border-color: var(--secondary); }
-        .btn-login { width: 100%; padding: 14px; background: linear-gradient(135deg, var(--secondary), var(--secondary-hover)); color: white; border: none; border-radius: 10px; font-weight: 700; font-size: 1rem; cursor: pointer; margin-top: 10px; }
-        .btn-login:disabled { background: #cbd5e1; cursor: not-allowed; }
-        .form-links { text-align: center; margin-top: 25px; padding-top: 20px; border-top: 1px solid var(--border); }
-        .form-links p { color: var(--text-muted); font-size: 0.95rem; margin-bottom: 8px; }
-        .form-links a { color: var(--secondary); text-decoration: none; font-weight: 600; }
-        .message { padding: 12px 15px; border-radius: 10px; margin-bottom: 20px; font-weight: 600; display: none; }
-        .message.error { background-color: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
-        .message.success { background-color: #dcfce7; color: #166534; border: 1px solid #86efac; }
-        .message.show { display: block; }
-        .forgot-password-link { text-align: right; margin-top: 6px; }
-        .forgot-password-link a { color: var(--secondary); font-size: 0.85rem; text-decoration: none; font-weight: 600; }
-        .forgot-password-link a:hover { text-decoration: underline; }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="login-container">
@@ -75,7 +40,7 @@
             <p>Non hai ancora un account?</p>
             <a href="register.html">Registrati ora</a>
             <p style="margin-top: 15px; border-top: 1px solid var(--border); padding-top: 15px;">
-                <a href="index.html">← Torna allo Shop</a>
+                <a href="home.html">← Torna alla Home</a>
             </p>
         </div>
     </div>
@@ -109,7 +74,7 @@
                 if (result.success) {
                     mostraMessaggio('✓ Login riuscito! Reindirizzamento...', 'success');
                     salvaClienteLoggato(result.cliente);
-                    setTimeout(() => { window.location.href = 'index.html'; }, 1500);
+                    setTimeout(() => { window.location.href = 'home.html'; }, 1500);
                 } else {
                     mostraMessaggio(result.error, 'error');
                     btn.disabled = false;
@@ -140,22 +105,23 @@
                 const linkReset = window.location.origin + "/nuova-password.html?email=" + encodeURIComponent(email);
 
                 // =========================================================================
-                // 🛑 CONFIGURAZIONE EMAILJS: INSERISCI I TUOI ID NEI CAMPI SOTTO 🛑
+                // ✅ SERVIZIO EMAILJS - USA I TUOI DATI ESISTENTI
                 // =========================================================================
-                const SERVICE_ID = "IL_TUO_SERVICE_ID_EMAILJS";
-                const TEMPLATE_ID = "IL_TUO_TEMPLATE_ID_EMAILJS";
+                const SERVICE_ID = "service_70i2s1t";  // Stesso service che usi per gli scontrini
+                const TEMPLATE_ID = "template_PASSWORD_RESET";  // 👈 CREA questo template su EmailJS
 
                 const templateParams = {
                     to_email: email,
-                    reset_link: linkReset
+                    reset_link: linkReset,
+                    expiry_time: '15 minuti'
                 };
 
                 const emailResponse = await emailjs.send(SERVICE_ID, TEMPLATE_ID, templateParams);
                 
                 if(emailResponse.status === 200) {
-                    mostraMessaggio('✓ Mail di recupero inviata con EmailJS! Controlla la tua casella postale.', 'success');
+                    mostraMessaggio('✓ Mail di recupero inviata! Controlla il tuo email (controlla anche SPAM).', 'success');
                 } else {
-                    mostraMessaggio('Errore nell\'invio della mail tramite EmailJS.', 'error');
+                    mostraMessaggio('Errore nell\'invio della mail. Riprova.', 'error');
                 }
             } catch (error) {
                 console.error('Errore recupero password:', error);

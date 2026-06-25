@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SinGo - Home</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="db.js"></script>
+</head>
+<body>
+
+    <div class="navbar navbar-home">
+        <div class="nav-left">
+            <a href="home.html" class="nav-logo"><img src="logo.png" alt="SinGo" style="height: 40px; width: auto;"></a>
+            <a href="home.html">🏠 Home</a>
+            <a href="shop.html">📦 Prodotti</a>
+            <a href="sconti.html">🔥 Offerte</a>
+        </div>
+        <div class="nav-right">
+            <div class="user-section">
+                <span class="user-greeting" id="userGreeting"></span>
+                <a class="points-link" id="puntiLink" href="points.html" style="display:none;">⭐ I Miei Punti</a>
+                <button class="btn-logout" id="logoutBtn" onclick="logoutUser()" style="display:none;">Logout</button>
+                <a class="register-link" id="registerLink" href="register.html" style="display:none;">📝 Registrati</a>
+                <a class="login-link" id="loginLink" href="login-cliente.html" style="display:none;">🔓 Login</a>
+            </div>
+            <a href="login-manager.html">🔐 Area Riservata</a>
+        </div>
+    </div>
+
+    <div class="hero">
+        <h1>🛍️ Benvenuto in SinGo</h1>
+        <p>Il tuo supermercato online di fiducia dal 2020</p>
+        <div class="btn-group">
+            <a href="shop.html" class="btn-primary">Inizia a Fare Spesa</a>
+            <a href="#registrazione" class="btn-secondary">Scopri i Vantaggi</a>
+        </div>
+    </div>
+
+    <div class="container-home">
+        <!-- STORIA -->
+        <div class="section">
+            <h2>La Nostra Storia</h2>
+            <div class="story-box">
+                <p>
+                    <strong>SinGo</strong> nasce nel 2020 con una missione semplice ma importante: portare la comodità dello shopping online 
+                    a tutti. Partendo da un piccolo negozio nel cuore della città, abbiamo costruito una comunità di migliaia di clienti 
+                    che ripongono fiducia in noi ogni giorno.
+                </p>
+                <p style="margin-top: 15px;">
+                    Oggi offriamo una vasta gamma di prodotti, dai generi alimentari alla cura della casa, dal giardinaggio ai servizi automobilistici. 
+                    Il nostro impegno è garantire qualità, convenienza e soprattutto <strong>la miglior esperienza di acquisto</strong>.
+                </p>
+                <p style="margin-top: 15px;">
+                    Grazie ai nostri partner affidabili e al team dedicato, siamo in grado di offrire prodotti freschi, prezzi competitivi 
+                    e consegne rapide. <strong>La tua soddisfazione è il nostro successo.</strong>
+                </p>
+            </div>
+        </div>
+
+        <!-- OFFERTE SUCCULENTE -->
+        <div class="section">
+            <h2>🔥 Le Nostre Migliori Offerte</h2>
+            <p>Non perdere queste opportunità imperdibili disponibili per un tempo limitato!</p>
+            <div class="offers-grid">
+                <div class="offer-card">
+                    <div class="offer-icon">📦</div>
+                    <h3>Sconti Settimanali</h3>
+                    <p>Nuove promozioni ogni settimana su categorie diverse. Fino al 30% di sconto su prodotti selezionati!</p>
+                </div>
+                <div class="offer-card">
+                    <div class="offer-icon">⏰</div>
+                    <h3>Offerte Flash</h3>
+                    <p>Scopri gli sconti flash che cambiano ogni giorno. Veloci per pochi... Sii tra i primi!</p>
+                </div>
+                <div class="offer-card">
+                    <div class="offer-icon">💳</div>
+                    <h3>Bonus Fedeltà</h3>
+                    <p>Registrati e ricevi un coupon di benvenuto da usare sul tuo primo acquisto!</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- PUNTI SPESA -->
+        <div class="section">
+            <div class="points-info">
+                <h3>⭐ Sistema Punti Spesa SinGo</h3>
+                <p style="color: rgba(255,255,255,0.95); text-align: left; max-width: 100%;">
+                    Ogni acquisto che effettui in SinGo ti permette di guadagnare <strong>Punti Spesa</strong>. 
+                    Questi punti non sono solo numeri: sono veri e propri buoni sconto che puoi utilizzare per ottenere 
+                    prodotti gratuiti o sconti esclusivi!
+                </p>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="number">1 ⭐</div>
+                        <div class="label">Ogni €15 spesi</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="number">∞</div>
+                        <div class="label">Nessun limite</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="number">💰</div>
+                        <div class="label">Convenienti sconti</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- VANTAGGI REGISTRAZIONE -->
+        <div class="section" id="registrazione">
+            <h2>Perché Registrarsi?</h2>
+            <p>Ottieni vantaggi esclusivi e migliora la tua esperienza di acquisto</p>
+            <div class="benefits-grid">
+                <div class="benefit-card">
+                    <div class="icon">⭐</div>
+                    <h4>Guadagna Punti</h4>
+                    <p>Accumula 1 punto per ogni €15 spesi e convertili in sconti esclusivi sui tuoi prodotti preferiti.</p>
+                </div>
+                <div class="benefit-card">
+                    <div class="icon">🎁</div>
+                    <h4>Offerte Esclusive</h4>
+                    <p>Accedi a sconti e promozioni riservate solo ai clienti registrati. Sconti fino al 40%!</p>
+                </div>
+                <div class="benefit-card">
+                    <div class="icon">🚚</div>
+                    <h4>Consegne Veloci</h4>
+                    <p>Con un account puoi tracciare i tuoi ordini e ricevere aggiornamenti in tempo reale sulla consegna.</p>
+                </div>
+                <div class="benefit-card">
+                    <div class="icon">💳</div>
+                    <h4>Metodi Pagamento</h4>
+                    <p>Scegli fra PayPal, Bonifico Bancario, Contanti alla consegna. Sicuro e conveniente!</p>
+                </div>
+                <div class="benefit-card">
+                    <div class="icon">📧</div>
+                    <h4>Scontrini Digitali</h4>
+                    <p>Ricevi gli scontrini direttamente via email. Niente più carta, tutto organizzato digitalmente.</p>
+                </div>
+                <div class="benefit-card">
+                    <div class="icon">🛡️</div>
+                    <h4>Dati Protetti</h4>
+                    <p>La tua privacy è importante. Utilizziamo le migliori tecnologie di sicurezza per proteggere i tuoi dati.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- CALL TO ACTION -->
+        <div class="cta-section">
+            <h2>Pronto a Iniziare?</h2>
+            <p>Unisciti a migliaia di clienti che già godono dei vantaggi esclusivi di SinGo. 
+            Registrati in pochi secondi e ricevi un bonus di benvenuto!</p>
+            <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
+                <a href="register.html" class="btn-primary" style="background: white; color: #059669;">📝 Registrati Gratis</a>
+                <a href="shop.html" class="btn-primary">🛒 Vai allo Shop</a>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="footer">
+        <div class="footer-content">
+            <div class="footer-links">
+                <a href="privacy.html">Privacy Policy</a>
+                <a href="termini.html">Termini e Condizioni</a>
+            </div>
+            <div class="footer-copy">© 2026 SinGo - Shop Online. Tutti i diritti riservati.</div>
+        </div>
+    </div>
+
+    <script>
+        function updateUserUI() {
+            const cliente = caricaClienteLoggato();
+            const userGreeting = document.getElementById('userGreeting');
+            const puntiLink = document.getElementById('puntiLink');
+            const logoutBtn = document.getElementById('logoutBtn');
+            const registerLink = document.getElementById('registerLink');
+            const loginLink = document.getElementById('loginLink');
+
+            if (cliente) {
+                userGreeting.style.display = 'inline-block';
+                userGreeting.textContent = `👤 Ciao ${cliente.nome}!`;
+                puntiLink.style.display = 'inline-block';
+                logoutBtn.style.display = 'inline-block';
+                registerLink.style.display = 'none';
+                loginLink.style.display = 'none';
+            } else {
+                userGreeting.style.display = 'none';
+                puntiLink.style.display = 'none';
+                logoutBtn.style.display = 'none';
+                registerLink.style.display = 'inline-block';
+                loginLink.style.display = 'inline-block';
+            }
+        }
+
+        function logoutUser() {
+            if (confirm('Sei sicuro di voler fare il logout?')) {
+                logoutCliente();
+                updateUserUI();
+            }
+        }
+
+        updateUserUI();
+    </script>
+</body>
+</html>

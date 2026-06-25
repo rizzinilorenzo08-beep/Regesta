@@ -2,74 +2,188 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>Checkout - Conferma Ordine</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checkout - SinGo</title>
+    <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
     <script src="db.js"></script>
     <style>
-        body { font-family: sans-serif; background: #f4f7f6; display: flex; justify-content: center; padding: 50px; }
-        .card { background: white; padding: 30px; border-radius: 10px; width: 400px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        h2 { color: #2c3e50; }
-        .metodo { margin: 15px 0; padding: 10px; border: 2px solid #ddd; border-radius: 6px; cursor: pointer; }
-        .metodo:hover { border-color: #27ae60; }
-        .metodo.selezionato { border-color: #27ae60; background: #e8f5e9; }
-        button { width: 100%; padding: 15px; background: #27ae60; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; margin-top: 20px; }
-        button:disabled { opacity: 0.6; cursor: not-allowed; }
-        .indirizzo-section { background:#f9fafb; padding:15px; border-radius:8px; border:1px solid #d1d5db; margin:15px 0; }
-        .indirizzo-section h3 { margin-top:0; color:#1f2937; }
-        .indirizzo-section label { display:block; margin:10px 0 4px; color:#374151; font-size:0.95rem; }
-        .indirizzo-section input { width:100%; padding:10px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:1rem; }
-        .indirizzo-section input:focus { outline:none; border-color:#3b82f6; box-shadow:0 0 0 3px rgba(59,130,246,0.15); }
-        .punti-section { display:none; background:#e0f7e0; padding:15px; border-radius:6px; margin:15px 0; border:2px solid #27ae60; }
-        .punti-section .title { font-weight:bold; color:#27ae60; margin-bottom:8px; }
-        .punti-section .value { font-size:1.1rem; color:#27ae60; }
-        .punti-section .sub { font-size:0.85rem; color:#555; margin-top:8px; }
+        .navbar-home { background: linear-gradient(135deg, #1E293B, #334155); }
+        
+        .checkout-container { display: flex; max-width: 1600px; margin: 30px auto; gap: 30px; padding: 0 20px; width: 100%; }
+        .checkout-left { flex: 0.4; }
+        .checkout-right { flex: 0.6; }
+        
+        .riepilogo-card, .pagamento-card { background: white; border-radius: 16px; padding: 25px; box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); border: 1px solid #E2E8F0; margin-bottom: 20px; }
+        .riepilogo-card h2, .pagamento-card h2 { color: #1E293B; margin-bottom: 20px; font-size: 1.5rem; }
+        
+        .ordine-item { display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid #E2E8F0; }
+        .ordine-item:last-child { border-bottom: none; }
+        .ordine-item-nome { flex: 1; }
+        .ordine-item-nome strong { color: #1E293B; }
+        .ordine-item-nome .sub { color: #64748B; font-size: 0.85rem; }
+        .ordine-item-prezzo { text-align: right; }
+        .ordine-item-prezzo .prezzo { font-weight: 700; color: #10B981; }
+        
+        .totale-section { padding: 20px 0; border-top: 2px solid #F59E0B; padding-top: 20px; }
+        .totale-row { display: flex; justify-content: space-between; margin-bottom: 10px; }
+        .totale-row.finale { font-size: 1.3rem; font-weight: 800; color: #F59E0B; }
+        
+        .buoni-section { background: linear-gradient(135deg, #fbbf24, #f59e0b); border-radius: 12px; padding: 20px; color: white; margin-bottom: 20px; }
+        .buoni-section h3 { margin-bottom: 15px; }
+        .buoni-list { max-height: 150px; overflow-y: auto; }
+        .buono-item { background: rgba(255,255,255,0.2); padding: 10px; border-radius: 8px; margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }
+        .buono-item input[type="checkbox"] { cursor: pointer; }
+        .buono-item label { flex: 1; cursor: pointer; margin-bottom: 0; }
+        .buono-item .sconto { font-weight: 700; }
+        
+        .indirizzo-section h3 { color: #1E293B; margin-bottom: 15px; margin-top: 20px; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; color: #0F172A; font-weight: 600; margin-bottom: 6px; font-size: 0.9rem; }
+        .form-group input { width: 100%; padding: 12px; border: 2px solid #E2E8F0; border-radius: 8px; font-size: 0.95rem; }
+        .form-group input:focus { outline: none; border-color: #10B981; box-shadow: 0 0 0 3px rgba(16,185,129,0.1); }
+        
+        .metodo-section h3 { color: #1E293B; margin-bottom: 15px; margin-top: 20px; }
+        .metodo { margin: 10px 0; padding: 15px; border: 2px solid #E2E8F0; border-radius: 8px; cursor: pointer; }
+        .metodo:hover { border-color: #10B981; background: rgba(16,185,129,0.05); }
+        .metodo.selezionato { border-color: #10B981; background: rgba(16,185,129,0.15); font-weight: 600; }
+        
+        .btn-conferma { width: 100%; padding: 15px; background: linear-gradient(135deg, #10B981, #059669); color: white; border: none; border-radius: 8px; font-weight: 700; font-size: 1rem; cursor: pointer; margin-top: 20px; }
+        .btn-conferma:disabled { opacity: 0.6; cursor: not-allowed; }
+        
+        .punti-section { display: none; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
+        .punti-section .title { font-weight: 700; margin-bottom: 8px; }
+        .punti-section .value { font-size: 1.2rem; }
+        
+        .toast-container { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 1000; }
+        .toast-message { display: none; background: rgba(45,55,72,0.95); color: white; padding: 14px 20px; border-radius: 12px; font-weight: 700; }
+        
+        @media (max-width: 1024px) {
+            .checkout-container { flex-direction: column; }
+        }
     </style>
 </head>
 <body>
 
-    <div class="card">
-        <h2>Seleziona Pagamento</h2>
-        <div id="riepilogo"></div>
-        
-        <div id="puntiSection" class="punti-section">
-            <div class="title">⭐ Guadagnerai Punti Spesa!</div>
-            <div class="value" id="puntiGuadagnati"></div>
-            <div class="sub">Con questi punti potrai acquistare sconti esclusivi!</div>
+    <div class="navbar navbar-home">
+        <div class="nav-left">
+            <a href="home.html" class="nav-logo"><img src="logo.png" alt="SinGo" style="height: 40px; width: auto;"></a>
+            <a href="home.html">🏠 Home</a>
+            <a href="shop.html">📦 Prodotti</a>
+            <a href="sconti.html">🔥 Offerte</a>
         </div>
-        
-        <div class="indirizzo-section">
-            <h3>Indirizzo di consegna</h3>
-            <label for="indirizzoVia">Via e numero civico</label>
-            <input type="text" id="indirizzoVia" placeholder="Es. Via Roma 10" />
-            <label for="indirizzoCitta">Città</label>
-            <input type="text" id="indirizzoCitta" placeholder="Es. Milano" />
-            <label for="indirizzoCap">CAP</label>
-            <input type="text" id="indirizzoCap" placeholder="Es. 20100" />
-            <label for="indirizzoProvincia">Provincia</label>
-            <input type="text" id="indirizzoProvincia" placeholder="Es. MI" />
-            <label for="checkoutEmail">Email per lo scontrino</label>
-            <input type="email" id="checkoutEmail" placeholder="esempio@cliente.it" />
+        <div class="nav-right">
+            <a href="login-manager.html">🔐 Area Riservata</a>
         </div>
-        
-        <div class="metodo" data-metodo="PayPal" onclick="salvaMetodo('PayPal', this)">PayPal</div>
-        <div class="metodo" data-metodo="Bonifico" onclick="salvaMetodo('Bonifico', this)">Bonifico Bancario</div>
-        <div class="metodo" data-metodo="Contanti" onclick="salvaMetodo('Contanti', this)">Contanti alla consegna</div>
-        
-        <button id="btn-conferma" onclick="confermaOrdine()">Conferma Acquisto</button>
-        
-        <a href="index.html" style="display:block; text-align:center; margin-top:15px; color:#777;">Torna indietro</a>
-        
-        <div id="checkout-toast" style="display:none; position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:rgba(45,55,72,0.95); color:white; padding:14px 20px; border-radius:12px; box-shadow:0 20px 40px rgba(0,0,0,0.2); z-index:1000; font-weight:700;"></div>
     </div>
 
+    <div class="checkout-container">
+        <!-- SINISTRA: RIEPILOGO ORDINE -->
+        <div class="checkout-left">
+            <div class="riepilogo-card">
+                <h2>📦 Riepilogo Ordine</h2>
+                <div id="articoli-container"></div>
+                
+                <div class="totale-section">
+                    <div class="totale-row">
+                        <span>Subtotale:</span>
+                        <span id="subtotale">€ 0.00</span>
+                    </div>
+                    <div class="totale-row" id="sconto-row" style="display:none;">
+                        <span>Sconto Buoni:</span>
+                        <span id="importo-sconto" style="color: var(--secondary);">- € 0.00</span>
+                    </div>
+                    <div class="totale-row finale">
+                        <span>Totale:</span>
+                        <span id="totale-finale">€ 0.00</span>
+                    </div>
+                </div>
+
+                <div id="puntiSection" class="punti-section">
+                    <div class="title">⭐ Guadagnerai Punti Spesa!</div>
+                    <div class="value" id="puntiGuadagnati"></div>
+                    <div style="font-size: 0.85rem; margin-top: 8px;">Usa i tuoi punti per sconti esclusivi!</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- DESTRA: PAGAMENTO E INDIRIZZO -->
+        <div class="checkout-right">
+            <div class="pagamento-card">
+                <h2>💳 Dettagli Pagamento</h2>
+                
+                <div class="indirizzo-section">
+                    <h3>🏠 Indirizzo di Consegna</h3>
+                    <div class="form-group">
+                        <label for="indirizzoVia">Via e numero civico</label>
+                        <input type="text" id="indirizzoVia" placeholder="Es. Via Roma 10" />
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <div class="form-group" style="flex: 1;">
+                            <label for="indirizzoCap">CAP</label>
+                            <input type="text" id="indirizzoCap" placeholder="Es. 20100" />
+                        </div>
+                        <div class="form-group" style="flex: 2;">
+                            <label for="indirizzoCitta">Città</label>
+                            <input type="text" id="indirizzoCitta" placeholder="Es. Milano" />
+                        </div>
+                        <div class="form-group" style="flex: 0.5;">
+                            <label for="indirizzoProvincia">Provincia</label>
+                            <input type="text" id="indirizzoProvincia" placeholder="MI" />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="checkoutEmail">Email per lo scontrino</label>
+                        <input type="email" id="checkoutEmail" placeholder="esempio@cliente.it" />
+                    </div>
+                </div>
+
+                <!-- BUONI/SCONTI -->
+                <div id="buoniContainer" style="display:none;">
+                    <div class="buoni-section">
+                        <h3>🎁 Usa i Tuoi Buoni Sconto</h3>
+                        <p style="font-size: 0.9rem; margin-bottom: 15px;">Seleziona i buoni per applicare sconti:</p>
+                        <div class="buoni-list" id="buoniList"></div>
+                    </div>
+                </div>
+
+                <div class="metodo-section">
+                    <h3>💰 Metodo di Pagamento</h3>
+                    <div class="metodo" data-metodo="PayPal" onclick="salvaMetodo('PayPal', this)">
+                        <strong>PayPal</strong>
+                        <p style="color: #64748B; font-size: 0.85rem;">Paga in sicurezza con PayPal</p>
+                    </div>
+                    <div class="metodo" data-metodo="Bonifico" onclick="salvaMetodo('Bonifico', this)">
+                        <strong>Bonifico Bancario</strong>
+                        <p style="color: #64748B; font-size: 0.85rem;">Trasferisci da il tuo conto</p>
+                    </div>
+                    <div class="metodo" data-metodo="Contanti" onclick="salvaMetodo('Contanti', this)">
+                        <strong>Contanti alla Consegna</strong>
+                        <p style="color: #64748B; font-size: 0.85rem;">Paga al ritiro dell'ordine</p>
+                    </div>
+                </div>
+
+                <button id="btn-conferma" class="btn-conferma" onclick="confermaOrdine()">Conferma Ordine 🎉</button>
+                <a href="shop.html" style="display:block; text-align:center; margin-top:15px; color:#64748B; text-decoration:none; font-weight:600;">← Continua lo Shopping</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <div class="footer-content">
+            <div class="footer-links">
+                <a href="privacy.html">Privacy Policy</a>
+                <a href="termini.html">Termini e Condizioni</a>
+            </div>
+            <div class="footer-copy">© 2026 SinGo - Shop Online. Tutti i diritti riservati.</div>
+        </div>
+    </div>
+
+    <div class="toast-container"><div id="checkout-toast" class="toast-message"></div></div>
+
     <script>
-        // ===========================================
-        // 1. LOG DI DEBUG INIZIALE E INIZIALIZZAZIONE EMAILJS
-        // ===========================================
         console.log('🟢 checkout.html caricato');
-        console.log('📦 supabase disponibile?', typeof supabase !== 'undefined');
-        console.log('📦 loadInventario disponibile?', typeof loadInventario !== 'undefined');
 
         (function(){
             emailjs.init({
@@ -77,74 +191,145 @@
             });
         })();
 
-        // Background debug silente
         function debugLog(message, type = 'info') {
             const time = new Date().toLocaleTimeString();
             console.log(`[${time}] [${type.toUpperCase()}] ${message}`);
         }
 
-        debugLog('Pagina caricata correttamente e EmailJS configurato');
-
-        // ===========================================
-        // 2. VERIFICA CLIENTE REGISTRATO
-        // ===========================================
+        // DATI INIZIALI
         const cliente = caricaClienteLoggato();
-        debugLog('Cliente registrato: ' + (cliente ? 'SÌ (' + cliente.nome + ')' : 'NO'), cliente ? 'success' : 'warning');
-
-        // ===========================================
-        // 3. LEGGI DATI DAL LOCALSTORAGE
-        // ===========================================
-        const totale = localStorage.getItem('totaleCheckout') || localStorage.getItem('ultimoTotale') || "0.00";
+        const totaleOrigine = parseFloat(localStorage.getItem('totaleCheckout') || localStorage.getItem('ultimoTotale') || "0.00");
         const carrelloCliente = JSON.parse(localStorage.getItem('carrelloCheckout') || 'null');
         const carrelloManager = JSON.parse(localStorage.getItem('managerCart') || 'null');
         const cartToUse = carrelloCliente || carrelloManager || [];
 
-        debugLog(`Totale: €${totale}, Articoli: ${cartToUse.length}`);
-        console.log('🛒 Carrello:', cartToUse);
-
-        const puntiGuadagnati = Math.floor(parseFloat(totale) / 15);
-        
-        document.getElementById('riepilogo').innerHTML = 
-            `<p>Totale da pagare: <strong>€ ${totale}</strong></p><p>Articoli: ${cartToUse.length}</p>`;
-
-        if (cliente && puntiGuadagnati > 0) {
-            document.getElementById('puntiSection').style.display = 'block';
-            document.getElementById('puntiGuadagnati').textContent = `Guadagnerai ${puntiGuadagnati} ⭐ punti spesa!`;
-        }
-
-        // ===========================================
-        // 4. VARIABILI DI STATO
-        // ===========================================
         let metodoSelezionato = "";
         let isProcessing = false;
+        let buoniSelezionati = [];
+        let totaleFinale = totaleOrigine;
 
-        // ===========================================
-        // 5. FUNZIONI PRINCIPALI
-        // ===========================================
+        debugLog(`Totale iniziale: €${totaleOrigine}, Articoli: ${cartToUse.length}`);
+
+        // INIT PAGE
+        async function initCheckoutPage() {
+            renderArticoli();
+            await caricaBuoni();
+        }
+
+        // RENDER ARTICOLI
+        function renderArticoli() {
+            const container = document.getElementById('articoli-container');
+            container.innerHTML = cartToUse.map(item => {
+                const unitPrice = isProductOnSale(item) ? getDiscountedPrice(item.prezzo, item) : item.prezzo;
+                const lineTotal = unitPrice * item.qty;
+                return `
+                    <div class="ordine-item">
+                        <div class="ordine-item-nome">
+                            <strong>${item.nome}</strong>
+                            <div class="sub">x${item.qty} @ €${unitPrice.toFixed(2)}</div>
+                        </div>
+                        <div class="ordine-item-prezzo">
+                            <div class="prezzo">€ ${lineTotal.toFixed(2)}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            aggiornaTotali();
+        }
+
+        // LOAD BUONI DEL CLIENTE
+        async function caricaBuoni() {
+            if (!cliente) {
+                document.getElementById('buoniContainer').style.display = 'none';
+                return;
+            }
+
+            try {
+                const buoni = await DB_CLIENTI.getOffertePuntiSpesa(cliente.id);
+                if (buoni && buoni.length > 0) {
+                    document.getElementById('buoniContainer').style.display = 'block';
+                    const buoniList = document.getElementById('buoniList');
+                    buoniList.innerHTML = buoni.map(buono => `
+                        <div class="buono-item">
+                            <input type="checkbox" id="buono-${buono.id}" 
+                                   value="${buono.id}" 
+                                   data-sconto="${buono.sconto_percentuale || 0}"
+                                   onchange="aggiornaTotali()" />
+                            <label for="buono-${buono.id}">
+                                ${buono.nome} 
+                                <span class="sconto">${buono.sconto_percentuale || 0}% off</span>
+                            </label>
+                        </div>
+                    `).join('');
+                } else {
+                    document.getElementById('buoniContainer').style.display = 'none';
+                }
+            } catch (err) {
+                console.error('Errore caricamento buoni:', err);
+            }
+        }
+
+        // AGGIORNA TOTALI
+        function aggiornaTotali() {
+            let subtotale = cartToUse.reduce((tot, item) => {
+                const unitPrice = isProductOnSale(item) ? getDiscountedPrice(item.prezzo, item) : item.prezzo;
+                return tot + (unitPrice * item.qty);
+            }, 0);
+
+            const buoniCheckbox = document.querySelectorAll('.buono-item input[type="checkbox"]:checked');
+            buoniSelezionati = Array.from(buoniCheckbox).map(cb => ({
+                id: cb.value,
+                sconto: parseFloat(cb.dataset.sconto) || 0
+            }));
+
+            let scontoTotale = 0;
+            buoniSelezionati.forEach(buono => {
+                scontoTotale += subtotale * (buono.sconto / 100);
+            });
+
+            totaleFinale = Math.max(0, subtotale - scontoTotale);
+
+            document.getElementById('subtotale').textContent = `€ ${subtotale.toFixed(2)}`;
+            
+            if (scontoTotale > 0) {
+                document.getElementById('sconto-row').style.display = 'flex';
+                document.getElementById('importo-sconto').textContent = `- € ${scontoTotale.toFixed(2)}`;
+            } else {
+                document.getElementById('sconto-row').style.display = 'none';
+            }
+
+            document.getElementById('totale-finale').textContent = `€ ${totaleFinale.toFixed(2)}`;
+
+            const puntiGuadagnati = Math.floor(totaleFinale / 15);
+            if (cliente && puntiGuadagnati > 0) {
+                document.getElementById('puntiSection').style.display = 'block';
+                document.getElementById('puntiGuadagnati').textContent = `Guadagnerai ${puntiGuadagnati} ⭐ punti spesa!`;
+            } else {
+                document.getElementById('puntiSection').style.display = 'none';
+            }
+        }
+
+        // SELEZIONA METODO
+        function salvaMetodo(m, el) {
+            metodoSelezionato = m;
+            document.querySelectorAll('.metodo').forEach(e => e.classList.remove('selezionato'));
+            if (el) el.classList.add('selezionato');
+            showCheckoutToast("✅ Metodo: " + m);
+        }
+
+        // TOAST
         function showCheckoutToast(message) {
             const toast = document.getElementById('checkout-toast');
             toast.innerText = message;
             toast.style.display = 'block';
             clearTimeout(toast._timer);
             toast._timer = setTimeout(() => toast.style.display = 'none', 3000);
-            debugLog('Toast: ' + message);
         }
 
-        function salvaMetodo(m, el) {
-            metodoSelezionato = m;
-            document.querySelectorAll('.metodo').forEach(e => e.classList.remove('selezionato'));
-            if (el) el.classList.add('selezionato');
-            showCheckoutToast("✅ Selezionato: " + m);
-            debugLog('Metodo selezionato: ' + m, 'success');
-        }
-
-        // ===========================================
-        // 5. EMAILJS SETUP (AGGIORNATO)
-        // ===========================================
+        // SEND EMAIL
         async function sendReceiptEmail({ toEmail, customerName, orderTotal, orderDate, paymentMethod, address, itemsText }) {
             if (typeof emailjs === 'undefined') {
-                debugLog('❌ EmailJS non caricato', 'error');
-                return { success: false, error: 'EmailJS non caricato' };
+                return { success: false };
             }
 
             const templateParams = {
@@ -158,65 +343,25 @@
             };
 
             try {
-                const response = await emailjs.send('service_70i2s1t', 'template_8aj4c65', templateParams);
-                debugLog('✅ Scontrino inviato via EmailJS', 'success');
-                return { success: true, response };
+                await emailjs.send('service_70i2s1t', 'template_8aj4c65', templateParams);
+                return { success: true };
             } catch (error) {
-                console.error('Errore EmailJS:', error);
-                debugLog('❌ Errore invio email: ' + (error.text || error.message || error), 'error');
-                return { success: false, error: error.text || error.message || 'Errore EmailJS' };
+                console.error('EmailJS error:', error);
+                return { success: false };
             }
         }
 
-        // ===========================================
-        // 6. TEST CONNESSIONE SUPABASE (IN BACKGROUND)
-        // ===========================================
-        async function testConnessione() {
-            debugLog('🔍 Test connessione Supabase in corso...', 'info');
-            try {
-                if (typeof supabaseClient === 'undefined') {
-                    throw new Error('supabaseClient non definito! Verifica che db.js sia caricato.');
-                }
-                
-                const { data, error } = await supabaseClient
-                    .from('inventario')
-                    .select('*')
-                    .limit(1);
-                
-                if (error) {
-                    throw new Error('Errore Supabase: ' + error.message);
-                }
-                
-                debugLog('✅ Connessione OK! Trovati ' + (data?.length || 0) + ' prodotti.', 'success');
-                console.log('📦 Dati di test (Background):', data);
-                
-            } catch (error) {
-                debugLog('❌ ERRORE: ' + error.message, 'error');
-                console.error('Errore di connessione (Background):', error);
-            }
-        }
-
-        // ===========================================
-        // 7. CONFERMA ORDINE (CON INVIO EMAILJS INTEGRATO)
-        // ===========================================
+        // CONFERMA ORDINE
         async function confermaOrdine() {
-            console.log('🟢 confermaOrdine() chiamata');
-            debugLog('🔄 Inizio conferma ordine...', 'info');
-            
-            if (isProcessing) {
-                debugLog('⏳ Già in elaborazione, attendi...', 'info');
-                return;
-            }
-            
+            if (isProcessing) return;
+
             if (!metodoSelezionato) {
                 showCheckoutToast("❌ Scegli un metodo di pagamento!");
-                debugLog('❌ Nessun metodo selezionato', 'error');
                 return;
             }
 
             if (cartToUse.length === 0) {
                 showCheckoutToast("❌ Carrello vuoto!");
-                debugLog('❌ Carrello vuoto', 'error');
                 return;
             }
 
@@ -227,14 +372,12 @@
             const checkoutEmail = document.getElementById('checkoutEmail').value.trim();
 
             if (!indirizzoVia || !indirizzoCitta || !indirizzoCap || !indirizzoProvincia) {
-                showCheckoutToast("❌ Inserisci tutti i campi dell'indirizzo di consegna.");
-                debugLog('❌ Indirizzo di consegna incompleto', 'error');
+                showCheckoutToast("❌ Completa l'indirizzo di consegna.");
                 return;
             }
 
             if (!checkoutEmail || !/^\S+@\S+\.\S+$/.test(checkoutEmail)) {
-                showCheckoutToast("❌ Inserisci un'email valida per lo scontrino.");
-                debugLog('❌ Email scontrino mancante o non valida', 'error');
+                showCheckoutToast("❌ Email non valida.");
                 return;
             }
 
@@ -243,70 +386,42 @@
                 const btn = document.getElementById('btn-conferma');
                 btn.disabled = true;
                 btn.textContent = '⏳ Elaborazione...';
-                debugLog('⏳ Elaborazione in corso...', 'info');
 
-                if (typeof loadInventario !== 'function') {
-                    throw new Error('loadInventario non è definita. Verifica che db.js sia caricato correttamente.');
-                }
-
-                debugLog('📥 Caricamento inventario da Supabase...', 'info');
                 const inventario = await loadInventario();
-                
                 if (!inventario || inventario.length === 0) {
-                    throw new Error('Impossibile caricare l\'inventario dal database. Verifica la connessione a Supabase.');
+                    throw new Error('Impossibile caricare inventario.');
                 }
-
-                debugLog('✅ Inventario caricato: ' + inventario.length + ' prodotti', 'success');
 
                 cartToUse.forEach(it => {
                     const p = inventario.find(prod => prod.id === it.id);
-                    if (p) {
-                        const oldQty = p.qty;
-                        p.qty = Math.max(0, p.qty - it.qty);
-                        debugLog(`📦 ${p.nome}: ${oldQty} → ${p.qty}`, 'info');
-                    } else {
-                        debugLog(`⚠️ Prodotto non trovato in inventario: ID ${it.id}`, 'error');
-                    }
+                    if (p) p.qty = Math.max(0, p.qty - it.qty);
                 });
 
-                debugLog('💾 Salvataggio inventario su Supabase...', 'info');
                 await saveInventario(inventario);
-                debugLog('✅ Inventario salvato', 'success');
-
-                debugLog('💾 Registrazione vendita con INSERT...', 'info');
-                const resultVendita = await registraVendita(parseFloat(totale));
-                if (resultVendita.success) {
-                    debugLog(`✅ Vendita registrata: €${totale} (ID: ${resultVendita.data?.[0]?.id || 'N/A'})`, 'success');
-                } else {
-                    throw new Error('Errore registrazione vendita: ' + resultVendita.error);
+                const resultVendita = await registraVendita(totaleFinale);
+                if (!resultVendita.success) {
+                    throw new Error('Errore registrazione vendita.');
                 }
 
-                debugLog('💾 Aggiornamento budget...', 'info');
                 let budget = await loadBudget();
-                const oldBudget = budget;
-                budget += parseFloat(totale);
+                budget += totaleFinale;
                 await saveBudget(budget);
-                debugLog(`✅ Budget: €${oldBudget.toFixed(2)} → €${budget.toFixed(2)}`, 'success');
 
+                const puntiGuadagnati = Math.floor(totaleFinale / 15);
                 if (cliente && puntiGuadagnati > 0) {
-                    debugLog('💾 Aggiunta punti spesa al cliente...', 'info');
                     try {
-                        const resultPunti = await DB_CLIENTI.aggiungiPuntiSpesa(cliente.id, parseFloat(totale));
+                        const resultPunti = await DB_CLIENTI.aggiungiPuntiSpesa(cliente.id, totaleFinale);
                         if (resultPunti.success) {
-                            debugLog(`✅ Punti spesa aggiunti: +${resultPunti.puntiAggiunti} (Totale: ${resultPunti.puntiTotali})`, 'success');
                             const clienteAggiornato = await DB_CLIENTI.getCliente(cliente.id);
                             if (clienteAggiornato) {
                                 salvaClienteLoggato(clienteAggiornato);
                             }
-                        } else {
-                            debugLog(`⚠️ Errore nell'aggiunta punti: ${resultPunti.error}`, 'error');
                         }
                     } catch (pErr) {
-                        debugLog(`⚠️ Errore aggiunta punti (non critico): ${pErr.message}`, 'error');
+                        console.error('Errore punti:', pErr);
                     }
                 }
 
-                // Generazione testo prodotti per lo scontrino EmailJS
                 const itemsText = cartToUse.map(item => {
                     const unitPrice = isProductOnSale(item) ? getDiscountedPrice(item.prezzo, item) : item.prezzo;
                     return `${item.nome} x${item.qty} - € ${(unitPrice * item.qty).toFixed(2)}`;
@@ -315,81 +430,37 @@
                 const orderDate = new Date().toLocaleDateString('it-IT');
                 const deliveryAddress = `${indirizzoVia}, ${indirizzoCap} ${indirizzoCitta} (${indirizzoProvincia})`;
                 const customerName = cliente?.nome || 'Cliente';
-                
-                // Invio scontrino digitale via EmailJS
-                const receiptResult = await sendReceiptEmail({
+
+                await sendReceiptEmail({
                     toEmail: checkoutEmail,
                     customerName,
-                    orderTotal: `${parseFloat(totale).toFixed(2)}`,
+                    orderTotal: `${totaleFinale.toFixed(2)}`,
                     orderDate,
                     paymentMethod: metodoSelezionato,
                     address: deliveryAddress,
                     itemsText
                 });
 
-                if (!receiptResult.success) {
-                    showCheckoutToast('⚠️ Ordine confermato, ma invio email fallito. Vedi console.');
-                }
-
                 localStorage.removeItem('carrelloCheckout');
                 localStorage.removeItem('totaleCheckout');
                 localStorage.removeItem('managerCart');
                 localStorage.removeItem('ultimoTotale');
-                debugLog('🧹 localStorage pulito', 'info');
 
-                showCheckoutToast("✅ Ordine completato con " + metodoSelezionato + "! Grazie.");
-                debugLog('✅ ORDINE COMPLETATO!', 'success');
-                
-                setTimeout(() => {
-                    window.location.href = "index.html";
-                }, 1500);
+                showCheckoutToast("✅ Ordine completato! Grazie.");
+                setTimeout(() => { window.location.href = "home.html"; }, 1500);
 
             } catch (error) {
-                console.error('❌ Errore durante il checkout:', error);
-                debugLog('❌ ERRORE: ' + error.message, 'error');
+                console.error('Errore:', error);
                 showCheckoutToast("❌ Errore: " + error.message);
                 const btn = document.getElementById('btn-conferma');
                 btn.disabled = false;
-                btn.textContent = 'Conferma Acquisto';
+                btn.textContent = 'Conferma Ordine 🎉';
                 isProcessing = false;
             }
         }
 
-        // ===========================================
-        // 8. VERIFICA CARICAMENTO PAGINA
-        // ===========================================
-        document.addEventListener('DOMContentLoaded', function() {
-            debugLog('📄 DOM caricato, verifico dipendenze...', 'info');
-            
-            if (typeof loadInventario === 'undefined') {
-                debugLog('❌ ERRORE: db.js non caricato!', 'error');
-                document.getElementById('riepilogo').innerHTML += 
-                    '<p style="color:red;font-weight:bold;">⚠️ ERRORE: db.js non caricato. Ricarica la pagina.</p>';
-            } else {
-                debugLog('✅ db.js caricato correttamente', 'success');
-            }
-            
-            if (typeof supabaseClient === 'undefined') {
-                debugLog('❌ ERRORE: supabaseClient non definito!', 'error');
-            } else {
-                debugLog('✅ supabaseClient disponibile', 'success');
-            }
-            
-            if (typeof registraVendita === 'undefined') {
-                debugLog('❌ ERRORE: registraVendita non definita! Verifica db.js', 'error');
-            } else {
-                debugLog('✅ registraVendita disponibile', 'success');
-            }
-            
-            setTimeout(() => {
-                debugLog('🔍 Eseguo test connessione automatico in background...', 'info');
-                testConnessione();
-            }, 2000);
-        });
-
-        console.log('✅ checkout.html pronto');
-        console.log('📦 carrello:', cartToUse);
-        console.log('💰 totale:', totale);
+        // INIT
+        initCheckoutPage();
     </script>
 </body>
 </html>

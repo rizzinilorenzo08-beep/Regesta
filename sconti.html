@@ -7,51 +7,18 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="db.js"></script>
-    <style>
-        :root { 
-            --primary: #1E293B; --primary-light: #334155; --secondary: #10B981; 
-            --secondary-hover: #059669; --accent: #F59E0B; --bg: #F8FAFC; 
-            --text: #0F172A; --text-muted: #64748B; --card-bg: #FFFFFF; --border: #E2E8F0;
-            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05); --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1); --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
-        }
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Poppins', sans-serif; }
-        body { background-color: var(--bg); color: var(--text); min-height: 100vh; }
-        .navbar { background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: white; padding: 15px 40px; display: flex; justify-content: space-between; align-items: center; box-shadow: var(--shadow-md); position: sticky; top: 0; z-index: 100; }
-        .navbar h2 { font-weight: 700; font-size: 1.5rem; }
-        .navbar a { color: white; text-decoration: none; font-weight: 600; background: rgba(255,255,255,0.15); padding: 10px 20px; border-radius: 8px; transition: all 0.3s ease; font-size: 0.9rem; }
-        .navbar a:hover { background: rgba(255,255,255,0.25); }
-        .promo-banner { background: linear-gradient(135deg, #16a34a, #10b981); color: white; padding: 16px 24px; border-radius: 16px; margin: 20px auto; max-width: 1200px; display: flex; justify-content: space-between; align-items: center; gap: 20px; box-shadow: 0 15px 35px rgba(16, 185, 129, 0.18); }
-        .promo-banner p { margin: 0; font-weight: 600; }
-        .promo-badge { background: rgba(255,255,255,.18); padding: 8px 14px; border-radius: 999px; font-size: 0.95rem; }
-        .promo-banner.hidden { display: none; }
-        .container { display: flex; flex-wrap: wrap; gap: 24px; padding: 30px 40px; max-width: 1600px; margin: 0 auto; }
-        .products-grid { flex: 1; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 24px; }
-        .product-card { background: var(--card-bg); padding: 20px; border-radius: 16px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; border: 1px solid var(--border); transition: all 0.3s ease; }
-        .product-card:hover { box-shadow: var(--shadow-lg); transform: translateY(-4px); }
-        .product-icon { font-size: 2.5rem; margin-bottom: 15px; background: var(--bg); width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 12px; }
-        .product-card h3 { font-size: 1.15rem; font-weight: 600; margin-bottom: 4px; }
-        .product-sub { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px; text-transform: uppercase; font-weight: 600; }
-        .price-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        .prezzo { font-weight: 700; color: var(--primary); font-size: 1.4rem; }
-        .btn-add { background-color: var(--secondary); color: white; border: none; padding: 12px; border-radius: 10px; cursor: pointer; width: 100%; font-weight: 600; transition: 0.2s; }
-        .btn-add:disabled { background-color: #E2E8F0; color: #94A3B8; cursor: not-allowed; }
-        .cart-panel { width: 340px; background: var(--card-bg); padding: 25px; border-radius: 16px; box-shadow: var(--shadow-lg); border: 1px solid var(--border); min-height: 240px; }
-        .cart-items-wrapper { max-height: 40vh; overflow-y: auto; margin-bottom: 16px; }
-        .cart-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding: 12px; background: var(--bg); border-radius: 10px; }
-        .totale-carrello { font-size: 1.4rem; font-weight: 700; margin-top: 12px; text-align: right; color: var(--primary); }
-        .btn-checkout { background-color: var(--accent); color: white; border: none; padding: 15px; border-radius: 10px; cursor: pointer; width: 100%; font-weight: 700; font-size: 1.1rem; margin-top: 20px; transition: 0.3s; }
-        .btn-checkout:hover { background-color: #D97706; transform: translateY(-2px); }
-        .empty-state { grid-column: 1/-1; text-align: center; padding: 40px 20px; color: #475569; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .fade-in { animation: fadeIn 0.4s ease forwards; }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="navbar">
-        <h2>🔥 Offerte - SuperStore Premium</h2>
-        <div style="display:flex; gap:12px; align-items:center;">
-            <a href="index.html">🏠 Torna allo Shop</a>
-            <a href="login.html">⚙️ Area Manager</a>
+        <div class="nav-left">
+            <a href="home.html" class="nav-logo"><img src="logo.png" alt="SinGo" style="height: 40px; width: auto;"></a>
+            <a href="home.html">🏠 Home</a>
+            <a href="shop.html">📦 Prodotti</a>
+            <a href="sconti.html">🔥 Offerte</a>
+        </div>
+        <div class="nav-right" style="gap:15px;">
+            <a href="login-manager.html">🔐 Area Riservata</a>
         </div>
     </div>
 
@@ -70,6 +37,16 @@
             <div id="carrello-container" class="cart-items-wrapper"></div>
             <div id="totale-container" class="totale-carrello">Totale: € 0.00</div>
             <button class="btn-checkout" onclick="acquista()">Procedi al Pagamento ➔</button>
+        </div>
+    </div>
+
+    <div class="footer">
+        <div class="footer-content">
+            <div class="footer-links">
+                <a href="privacy.html">Privacy Policy</a>
+                <a href="termini.html">Termini e Condizioni</a>
+            </div>
+            <div class="footer-copy">© 2026 SinGo - Shop Online. Tutti i diritti riservati.</div>
         </div>
     </div>
 
