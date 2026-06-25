@@ -769,3 +769,97 @@ function haPermesso(permesso) {
     
     return permessi[utente.ruolo]?.includes(permesso) || false;
 }
+
+// ==========================================
+// 8. PERMESSI PER RUOLI
+// ==========================================
+
+const PERMESSI = {
+    // Super Admin - Accesso totale
+    GESTIONE_UTENTI: 'gestione_utenti',
+    GESTIONE_RUOLI: 'gestione_ruoli',
+    CONFIGURAZIONE_SISTEMA: 'configurazione_sistema',
+    LOG_SISTEMA: 'log_sistema',
+    ACCESSO_TUTTO: 'accesso_tutto',
+    
+    // Admin Negozio
+    GESTIONE_PRODOTTI: 'gestione_prodotti',
+    GESTIONE_PREZZI: 'gestione_prezzi',
+    GESTIONE_PROMOZIONI: 'gestione_promozioni',
+    GESTIONE_FORNITORI: 'gestione_fornitori',
+    GESTIONE_ORDINI_ACQUISTO: 'gestione_ordini_acquisto',
+    GESTIONE_INVENTARIO: 'gestione_inventario',
+    REPORT_VENDITE: 'report_vendite',
+    SEGNALAZIONE_ESURIMENTO: 'segnalazione_esaurimento',
+    
+    // Responsabile Acquisti
+    CREAZIONE_ORDINI_ACQUISTO: 'creazione_ordini_acquisto',
+    GESTIONE_FORNITORI_ACQUISTI: 'gestione_fornitori_acquisti',
+    ACCESSO_PREZZI_ACQUISTO: 'accesso_prezzi_acquisto',
+    
+    // Analista
+    ACCESSO_REPORT: 'accesso_report',
+    ACCESSO_KPI: 'accesso_kpi',
+    ESPORTAZIONE_DATI: 'esportazione_dati'
+};
+
+// Mappa ruoli -> permessi
+const RUOLI_PERMESSI = {
+    'super_admin': Object.values(PERMESSI),
+    'admin_negozio': [
+        PERMESSI.GESTIONE_PRODOTTI,
+        PERMESSI.GESTIONE_PREZZI,
+        PERMESSI.GESTIONE_PROMOZIONI,
+        PERMESSI.GESTIONE_FORNITORI,
+        PERMESSI.GESTIONE_ORDINI_ACQUISTO,
+        PERMESSI.GESTIONE_INVENTARIO,
+        PERMESSI.REPORT_VENDITE,
+        PERMESSI.SEGNALAZIONE_ESURIMENTO
+    ],
+    'responsabile_acquisti': [
+        PERMESSI.CREAZIONE_ORDINI_ACQUISTO,
+        PERMESSI.GESTIONE_FORNITORI_ACQUISTI,
+        PERMESSI.ACCESSO_PREZZI_ACQUISTO
+    ],
+    'analista': [
+        PERMESSI.ACCESSO_REPORT,
+        PERMESSI.ACCESSO_KPI,
+        PERMESSI.ESPORTAZIONE_DATI
+    ]
+};
+
+// Verifica se un utente ha un permesso specifico
+function haPermesso(permesso) {
+    const utente = caricaUtenteLoggato();
+    if (!utente) return false;
+    
+    const permessiUtente = RUOLI_PERMESSI[utente.ruolo] || [];
+    return permessiUtente.includes(permesso) || permessiUtente.includes(PERMESSI.ACCESSO_TUTTO);
+}
+
+// Verifica se un utente ha almeno uno dei permessi specificati
+function haAlmenoUno(permessi) {
+    return permessi.some(p => haPermesso(p));
+}
+
+// Verifica il ruolo dell'utente
+function getRuolo() {
+    const utente = caricaUtenteLoggato();
+    return utente ? utente.ruolo : null;
+}
+
+function isSuperAdmin() {
+    return getRuolo() === 'super_admin';
+}
+
+function isAdminNegozio() {
+    return getRuolo() === 'admin_negozio';
+}
+
+function isResponsabileAcquisti() {
+    return getRuolo() === 'responsabile_acquisti';
+}
+
+function isAnalista() {
+    return getRuolo() === 'analista';
+}
