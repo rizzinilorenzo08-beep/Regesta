@@ -11,6 +11,17 @@
         :root { --primary: #2c3e50; --secondary: #27ae60; --bg: #f4f7f6; --text: #333; }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
         body { background-color: var(--bg); color: var(--text); display: flex; height: 100vh; }
+
+        /* Nascondi freccette dai campi numero */
+        input[type="number"]::-webkit-inner-spin-button, 
+        input[type="number"]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+        input[type="number"] {
+            -moz-appearance: textfield;
+            appearance: textfield;
+        }
         
         .manager-grid { display: grid; grid-template-columns: 1.2fr 360px; gap: 20px; align-items: flex-start; }
         .cart-panel { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); position: sticky; top: 120px; max-height: calc(100vh - 180px); overflow-y: auto; }
@@ -69,7 +80,7 @@
         th, td { padding: 15px; text-align: left; border-bottom: 1px solid #eee; }
         th { background-color: var(--primary); color: white; }
 
-        .badge { padding: 5px 10px; border-radius: 20px; font-size: 0.8rem; color: white; font-weight: bold; }
+        .badge { padding: 5px 10px; border-radius: 20px; font-size: 0.8rem; color: white; font-weight: bold; white-space: nowrap; }
         .btn-qty { border: none; padding: 5px 10px; cursor: pointer; border-radius: 4px; font-weight: bold; color: white; margin-right: 5px; }
         .btn-plus { background-color: var(--secondary); }
         .btn-minus { background-color: #e74c3c; }
@@ -82,7 +93,6 @@
         .card p { font-size: 1.8rem; font-weight: bold; color: var(--primary); margin-top: 10px; }
         .card p small { font-size: 0.9rem; color: #999; font-weight: normal; }
 
-        /* Permesso negato - overlay */
         .permesso-negato {
             display: none;
             text-align: center;
@@ -105,19 +115,10 @@
         <h2>🛠️ Pannello Manager</h2>
         <div class="menu-label">Viste</div>
         
-        <!-- Magazzino - visibile a tutti tranne Analista -->
         <button class="category-btn active" id="btnMagazzino" onclick="cambiaVista('magazzino', this)">📦 Magazzino</button>
-        
-        <!-- Finanze - visibile a tutti -->
         <button class="category-btn" id="btnFinanze" onclick="cambiaVista('finanze', this)">📈 Finanze e Grafici</button>
-        
-        <!-- Promozioni - visibile solo a Super Admin e Admin Negozio -->
-        <button class="category-btn" id="btnPromozioni" style="display:none;" onclick="cambiaVista('promozioni', this)">⚡ Offerte Flash</button>
-        
-        <!-- Gestione Utenti - visibile solo a Super Admin -->
+        <button class="category-btn" id="btnPromozioni" style="display:none;" onclick="cambiaVista('promozioni', this)">⚡ Offerte</button>
         <button class="category-btn" id="btnUtenti" style="display:none;" onclick="cambiaVista('utenti', this)">👥 Gestione Utenti</button>
-        
-        <!-- Log Sistema - visibile solo a Super Admin -->
         <button class="category-btn" id="btnLogs" style="display:none;" onclick="cambiaVista('logs', this)">📋 Log di Sistema</button>
 
         <div id="menu-categorie" style="display: flex; flex-direction: column; gap: 5px;">
@@ -154,7 +155,6 @@
                     <option value="Medio">🟡 Medi (20% – 50%)</option>
                     <option value="Buono">🟢 Buoni (&gt; 50%)</option>
                 </select>
-                <!-- Nascondi carrello manager se non è Admin Negozio o Super Admin -->
                 <button id="btnToggleCart" style="margin-left:auto; padding:8px 12px; border-radius:6px; border:none; background:#10b981; color:white; cursor:pointer;" onclick="toggleManagerCart()">Mostra / Nascondi Carrello</button>
                 <button id="btnEditorStock" style="padding:8px 12px; border-radius:6px; border:none; background:#3b82f6; color:white; cursor:pointer;" onclick="apriEditorStock()">Editor Stock</button>
             </div>
@@ -208,17 +208,16 @@
             <div class="chart-container">
                 <canvas id="graficoVendite"></canvas>
             </div>
-            <!-- Esportazione dati - solo Analista e Super Admin -->
             <div id="btnEsporta" style="margin-top:20px; display:none;">
                 <button onclick="esportaDati()" style="background:#3b82f6; color:white; border:none; padding:12px 24px; border-radius:6px; cursor:pointer; font-weight:bold;">📊 Esporta Dati (CSV)</button>
             </div>
         </div>
 
-        <!-- ========== VISTA PROMOZIONI (solo Super Admin e Admin Negozio) ========== -->
+        <!-- ========== VISTA OFFERTE (con timer) ========== -->
         <div id="vista-promozioni" class="section">
             <div class="stats-cards" style="flex-direction: column; gap: 20px;">
                 <div class="card" style="text-align: left; border-bottom: 4px solid #3b82f6;">
-                    <h3>⚡ Attiva Nuova Offerta Flash</h3>
+                    <h3>⚡ Crea Nuova Offerta</h3>
                     <form id="form-promozione" onsubmit="attivaPromozioneManuale(event)" style="display: flex; flex-direction: column; gap: 15px; margin-top: 15px;">
                         <div>
                             <label style="display:block; font-weight:bold; margin-bottom:6px; color:#475569;">Seleziona Prodotto da Scontare</label>
@@ -228,11 +227,16 @@
                             <label style="display:block; font-weight:bold; margin-bottom:6px; color:#475569;">Percentuale Sconto (%)</label>
                             <input type="number" id="promo-sconto-pct" min="5" max="90" value="20" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1;" required>
                         </div>
-                        <button type="submit" style="background: #10b981; color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 1rem; margin-top: 5px;">⚡ Applica Sconto Flash</button>
+                        <div>
+                            <label style="display:block; font-weight:bold; margin-bottom:6px; color:#475569;">Durata Offerta (minuti)</label>
+                            <input type="number" id="promo-durata" min="5" max="1440" value="30" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1;" required>
+                            <small style="color:#94a3b8;">Inserisci la durata in minuti (minimo 5, massimo 1440)</small>
+                        </div>
+                        <button type="submit" style="background: #10b981; color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 1rem; margin-top: 5px;">⚡ Attiva Offerta</button>
                     </form>
                 </div>
                 <div class="card" style="text-align: left;">
-                    <h3>📋 Offerte Flash Attive</h3>
+                    <h3>📋 Offerte Attive</h3>
                     <div id="lista-promozioni-attive" style="margin-top: 15px; display: flex; flex-direction: column; gap: 10px;"></div>
                 </div>
             </div>
@@ -323,7 +327,7 @@
         // 🛡️ CONTROLLO SICUREZZA
         // =============================================
         if (sessionStorage.getItem('manager_autenticato') !== 'true') {
-            window.location.replace('login-manager.html');
+            window.location.replace('login.html');
         }
 
         // =============================================
@@ -332,7 +336,7 @@
         function mostraInfoUtente() {
             const utente = caricaUtenteLoggato();
             if (!utente) {
-                window.location.href = 'login-manager.html';
+                window.location.href = 'login.html';
                 return;
             }
             document.getElementById('utenteNome').textContent = utente.nome;
@@ -347,28 +351,19 @@
             badge.textContent = ruoloLabels[utente.ruolo] || utente.ruolo;
             badge.className = `ruolo-badge ruolo-${utente.ruolo}`;
             
-            // =============================================
-            // 🔐 MOSTRA/NASCONDI PULSANTI PER RUOLO
-            // =============================================
             const ruolo = utente.ruolo;
             
-            // Pulsanti sidebar
             document.getElementById('btnMagazzino').style.display = (ruolo !== 'analista') ? 'block' : 'none';
             document.getElementById('btnPromozioni').style.display = (ruolo === 'super_admin' || ruolo === 'admin_negozio') ? 'block' : 'none';
             document.getElementById('btnUtenti').style.display = (ruolo === 'super_admin') ? 'block' : 'none';
             document.getElementById('btnLogs').style.display = (ruolo === 'super_admin') ? 'block' : 'none';
             
-            // Pulsanti azioni
             document.getElementById('btnEditorStock').style.display = (ruolo !== 'analista') ? 'inline-block' : 'none';
             document.getElementById('btnToggleCart').style.display = (ruolo === 'super_admin' || ruolo === 'admin_negozio') ? 'inline-block' : 'none';
             
-            // Carrello manager - visibile solo a Super Admin e Admin Negozio
             document.getElementById('manager-cart').style.display = (ruolo === 'super_admin' || ruolo === 'admin_negozio') ? 'block' : 'none';
-            
-            // Esportazione dati - visibile a Analista e Super Admin
             document.getElementById('btnEsporta').style.display = (ruolo === 'analista' || ruolo === 'super_admin') ? 'block' : 'none';
             
-            // Se è analista, nascondi anche i controlli del carrello nella tabella
             if (ruolo === 'analista') {
                 document.querySelectorAll('.costo-info, .btn-qty, .btn-plus, .btn-minus, [style*="background:#10b981"]').forEach(el => {
                     if (el.closest('td')) {
@@ -385,7 +380,7 @@
             if (confirm('Sei sicuro di voler uscire?')) {
                 sessionStorage.removeItem('manager_autenticato');
                 sessionStorage.removeItem('utente_loggato');
-                window.location.href = 'login-manager.html';
+                window.location.href = 'login.html';
             }
         }
 
@@ -488,7 +483,8 @@
                 if (!offerteErr && offerteDB) {
                     promozioniAttive = offerteDB.map(o => ({
                         idProdotto: o.prodotto_id,
-                        sconto: o.sconto
+                        sconto: o.sconto,
+                        scadenza: o.scadenza
                     }));
                 }
 
@@ -498,7 +494,6 @@
                 renderManagerCart();
                 renderPromozioni();
 
-                // Se è Super Admin, carica utenti e logs
                 if (isSuperAdmin()) {
                     caricaUtenti();
                     caricaLogs();
@@ -524,7 +519,6 @@
             const utente = caricaUtenteLoggato();
             const ruolo = utente ? utente.ruolo : null;
             
-            // Verifica permessi per la vista
             const vistePermesse = {
                 'magazzino': ['super_admin', 'admin_negozio', 'responsabile_acquisti'],
                 'finanze': ['super_admin', 'admin_negozio', 'responsabile_acquisti', 'analista'],
@@ -551,7 +545,7 @@
             const titoli = {
                 magazzino: 'Gestione Magazzino',
                 finanze: 'Report Finanziario',
-                promozioni: 'Configurazione Offerte Flash',
+                promozioni: 'Gestione Offerte',
                 utenti: 'Gestione Utenti',
                 logs: 'Log di Sistema'
             };
@@ -608,7 +602,6 @@
                 const spazio      = Math.max(0, item.maxQty - item.qty);
                 const disabled    = spazio === 0 ? 'disabled' : '';
 
-                // Se è Analista, mostra solo visualizzazione
                 if (isAnalista) {
                     tbody.innerHTML += `
                         <tr>
@@ -631,7 +624,7 @@
                             <strong>${item.nome}</strong><br>
                             <small style="color:#777">${item.cat} › ${item.sub}</small>
                         </td>
-                        <td><span class="badge" style="background:${stato.colore}">${stato.testo} (${percentuale}%)</span></td>
+                        <td><span class="badge" style="background:${stato.colore}; white-space:nowrap;">${stato.testo} (${percentuale}%)</span></td>
                         <td><strong>${item.qty}</strong> / ${item.maxQty}</td>
                         <td>€ ${item.prezzo.toFixed(2)}</td>
                         <td>
@@ -676,7 +669,6 @@
 
         // ── Carrello manager ─────────────────────────────────────────────
         function aggiungiAlCarrelloManager(id) {
-            // Solo Super Admin e Admin Negozio possono usare il carrello
             if (!isSuperAdmin() && !isAdminNegozio()) {
                 showToast('❌ Non hai i permessi per questa azione', 'error');
                 return;
@@ -744,7 +736,6 @@
 
         // ── ACQUISTO MANAGER ─────────────────────────────────────────────
         function procCompraManager() {
-            // Solo Super Admin e Admin Negozio possono acquistare
             if (!isSuperAdmin() && !isAdminNegozio()) {
                 showToast('❌ Non hai i permessi per questa azione', 'error');
                 return;
@@ -833,7 +824,7 @@
             );
         }
 
-        // ── Promozioni ──────────────────────────────────────────────────
+        // ── Promozioni con timer ──────────────────────────────────────
         function renderPromozioni() {
             const select = document.getElementById('promo-prodotto-select');
             if (select) {
@@ -845,19 +836,56 @@
             const lista = document.getElementById('lista-promozioni-attive');
             if (!lista) return;
 
+            // Controlla scadenze
+            const now = new Date();
+            promozioniAttive = promozioniAttive.filter(p => {
+                if (p.scadenza) {
+                    const scadenza = new Date(p.scadenza);
+                    if (scadenza < now) {
+                        // Disattiva automaticamente
+                        supabaseClient
+                            .from('offerte_flash')
+                            .update({ attiva: false })
+                            .eq('prodotto_id', p.idProdotto)
+                            .catch(err => console.error('Errore disattivazione offerta:', err));
+                        return false;
+                    }
+                }
+                return true;
+            });
+
             if (promozioniAttive.length === 0) {
-                lista.innerHTML = '<em style="color:#aaa; display:block; padding:10px;">Nessuna promozione manuale attiva al momento.</em>';
+                lista.innerHTML = '<em style="color:#aaa; display:block; padding:10px;">Nessuna offerta attiva al momento.</em>';
             } else {
                 lista.innerHTML = promozioniAttive.map(p => {
                     const prod = inventario.find(i => i.id === p.idProdotto);
                     const prezzoScontato = prod ? (prod.prezzo * (1 - p.sconto / 100)).toFixed(2) : '—';
+                    
+                    let tempoRimanente = '⏰ Scaduta';
+                    let isScaduta = true;
+                    if (p.scadenza) {
+                        const scadenza = new Date(p.scadenza);
+                        const diff = Math.floor((scadenza - now) / 1000);
+                        if (diff > 0) {
+                            const min = Math.floor(diff / 60);
+                            const sec = diff % 60;
+                            tempoRimanente = `${min}m ${sec}s`;
+                            isScaduta = false;
+                        }
+                    }
+                    
                     return `
-                        <div style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc; padding:12px; border-radius:6px; border-left:4px solid #10b981; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+                        <div style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc; padding:12px; border-radius:6px; border-left:4px solid ${isScaduta ? '#ef4444' : '#10b981'}; box-shadow:0 1px 3px rgba(0,0,0,0.05); flex-wrap:wrap; gap:8px;">
                             <div>
                                 <strong>${prod ? prod.nome : 'Prodotto'}</strong>: Sconto del <span style="color:#10b981; font-weight:bold;">${p.sconto}%</span>
                                 <span style="font-size:0.85rem; color:#666; display:block; margin-top:2px;">Prezzo Scontato: € ${prezzoScontato}</span>
                             </div>
-                            <button onclick="rimuoviPromozione(${p.idProdotto})" style="background:#e74c3c; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; font-weight:bold; font-size:0.85rem;">Rimuovi</button>
+                            <div style="display:flex; align-items:center; gap:12px;">
+                                <span style="font-size:0.85rem; color:${isScaduta ? '#ef4444' : '#3b82f6'}; font-weight:600;">
+                                    ⏱️ ${tempoRimanente}
+                                </span>
+                                <button onclick="rimuoviPromozione(${p.idProdotto})" style="background:#e74c3c; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; font-weight:bold; font-size:0.85rem;">Rimuovi</button>
+                            </div>
                         </div>
                     `;
                 }).join('');
@@ -867,7 +895,6 @@
         async function attivaPromozioneManuale(e) {
             e.preventDefault();
 
-            // Solo Super Admin e Admin Negozio
             if (!isSuperAdmin() && !isAdminNegozio()) {
                 showToast('❌ Non hai i permessi per questa azione', 'error');
                 return;
@@ -875,14 +902,22 @@
 
             const idProdotto = parseInt(document.getElementById('promo-prodotto-select').value);
             const sconto     = parseInt(document.getElementById('promo-sconto-pct').value);
+            const durata     = parseInt(document.getElementById('promo-durata').value);
 
             if (isNaN(sconto) || sconto < 5 || sconto > 90) {
                 showToast('❌ Inserisci uno sconto valido tra il 5% e il 90%', 'error');
                 return;
             }
 
+            if (isNaN(durata) || durata < 5 || durata > 1440) {
+                showToast('❌ Inserisci una durata valida (5-1440 minuti)', 'error');
+                return;
+            }
+
             try {
                 setSpinner(true);
+
+                const scadenza = new Date(Date.now() + durata * 60000).toISOString();
 
                 const { error: updateError } = await supabaseClient
                     .from('offerte_flash')
@@ -893,16 +928,21 @@
 
                 const { data, error } = await supabaseClient
                     .from('offerte_flash')
-                    .insert([{ prodotto_id: idProdotto, sconto: sconto, attiva: true }])
+                    .insert([{ 
+                        prodotto_id: idProdotto, 
+                        sconto: sconto, 
+                        attiva: true,
+                        scadenza: scadenza
+                    }])
                     .select();
 
                 if (error) throw error;
 
                 promozioniAttive = promozioniAttive.filter(p => p.idProdotto !== idProdotto);
-                promozioniAttive.push({ idProdotto, sconto });
+                promozioniAttive.push({ idProdotto, sconto, scadenza });
 
                 renderPromozioni();
-                showToast(`⚡ Offerta del ${sconto}% attivata con successo!`, 'success');
+                showToast(`⚡ Offerta del ${sconto}% attivata per ${durata} minuti!`, 'success');
 
             } catch (err) {
                 console.error(err);
@@ -933,7 +973,6 @@
 
         // ── Editor Stock ─────────────────────────────────────────────────
         function apriEditorStock() {
-            // Solo Super Admin e Admin Negozio
             if (!isSuperAdmin() && !isAdminNegozio()) {
                 showToast('❌ Non hai i permessi per questa azione', 'error');
                 return;
@@ -1022,7 +1061,7 @@
             });
         }
 
-        // ── Esportazione Dati (Analista e Super Admin) ──────────────────
+        // ── Esportazione Dati ────────────────────────────────────────────
         function esportaDati() {
             if (!isAnalista() && !isSuperAdmin()) {
                 showToast('❌ Non hai i permessi per questa azione', 'error');
@@ -1187,7 +1226,7 @@
             );
         }
 
-        // ── Log Sistema (solo Super Admin) ─────────────────────────────
+        // ── Log Sistema ──────────────────────────────────────────────────
         async function caricaLogs() {
             if (!isSuperAdmin()) return;
             

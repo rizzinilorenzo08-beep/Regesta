@@ -32,7 +32,38 @@ body {
     min-height: 100vh; 
 }
 
-/* ── HEADER / NAVBAR COMPLETAMENTE AGGIORNATA ────────────────────────── */
+/* ── NASCONDI POPUP GOOGLE FASTIDIOSI ────────────────────────────────── */
+.grecaptcha-badge, 
+iframe[src*="google.com/recaptcha"],
+iframe[src*="consent.google.com"],
+.gm-style-cc,
+.google-consent,
+.cookie-consent-banner,
+#google_ads_iframe,
+.recaptcha-container {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    position: fixed !important;
+    bottom: -100px !important;
+    z-index: -1 !important;
+    width: 0 !important;
+    height: 0 !important;
+}
+
+/* ── NASCONDI FRECCIETTE DAI CAMPI NUMERO ────────────────────────────── */
+input[type="number"]::-webkit-inner-spin-button, 
+input[type="number"]::-webkit-outer-spin-button { 
+    -webkit-appearance: none; 
+    margin: 0; 
+}
+input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+/* ── HEADER / NAVBAR ──────────────────────────────────────────────────── */
 .navbar { 
     background: linear-gradient(135deg, var(--primary), var(--primary-light)); 
     color: white; 
@@ -119,7 +150,7 @@ body {
     transform: translateY(-2px); 
 }
 
-/* ── FOOTER STILE AUTOMATICO ───────────────────────────────────────── */
+/* ── FOOTER ───────────────────────────────────────────────────────────── */
 .footer {
     background: linear-gradient(135deg, var(--primary), var(--primary-light)); 
     color: white;
@@ -161,7 +192,7 @@ body {
     color: var(--text-muted);
 }
 
-/* ── BANNER / POPUP DEI COOKIE ─────────────────────────────────────── */
+/* ── BANNER / POPUP DEI COOKIE ──────────────────────────────────────── */
 .cookie-popup {
     position: fixed;
     bottom: 24px;
@@ -253,6 +284,6 @@ body {
     background-color: #CBD5E1;
 }
 
-/* ── APPLICAZIONI GENERALI UTILI ───────────────────────────────────── */
+/* ── TOAST ────────────────────────────────────────────────────────────── */
 .toast-container { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 1000; }
 .toast-message { display: none; background: rgba(45,55,72,0.95); color: white; padding: 14px 20px; border-radius: 14px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); font-weight: 700; }

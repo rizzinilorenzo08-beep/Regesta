@@ -3,49 +3,239 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Manager</title>
-    <style>
-        body { background-color: #f4f7f6; font-family: 'Segoe UI', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .login-card { background: white; padding: 40px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; }
-        h2 { color: #2c3e50; margin-bottom: 25px; }
-        input { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 6px; font-size: 1rem; }
-        button { width: 100%; padding: 12px; background-color: #2c3e50; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 1rem; font-weight: bold; }
-        button:hover { background-color: #34495e; }
-        .back-link { display: inline-block; margin-top: 15px; color: #777; text-decoration: none; font-size: 0.9rem; }
-    </style>
+    <title>Area Riservata - SinGo</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="db.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
+        body {
+            background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .login-container {
+            background: white;
+            padding: 45px;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            width: 100%;
+            max-width: 420px;
+        }
+        .login-header {
+            text-align: center;
+            margin-bottom: 35px;
+        }
+        .login-header h1 {
+            color: #1E293B;
+            font-size: 1.8rem;
+            margin-bottom: 8px;
+        }
+        .login-header p {
+            color: #64748B;
+            font-size: 0.95rem;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            color: #1E293B;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 0.95rem;
+        }
+        input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #E2E8F0;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+        input:focus {
+            outline: none;
+            border-color: #10B981;
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+        }
+        .btn-login {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #10B981, #059669);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(16, 185, 129, 0.3);
+        }
+        .btn-login:disabled {
+            background: #cbd5e1;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .form-links {
+            text-align: center;
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 1px solid #E2E8F0;
+        }
+        .form-links a {
+            color: #10B981;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .form-links a:hover {
+            color: #059669;
+        }
+        .message {
+            padding: 12px 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-weight: 600;
+            display: none;
+        }
+        .message.error {
+            background-color: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+        .message.success {
+            background-color: #dcfce7;
+            color: #166534;
+            border: 1px solid #86efac;
+        }
+        .message.show {
+            display: block;
+        }
+        .credential-box {
+            background: #f8fafc;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 15px;
+            font-size: 0.8rem;
+            border: 1px solid #e2e8f0;
+        }
+        .credential-box .title {
+            font-weight: 600;
+            color: #64748B;
+            margin-bottom: 8px;
+        }
+        .credential-box .row {
+            display: flex;
+            justify-content: space-between;
+            padding: 3px 0;
+            color: #334155;
+            font-family: monospace;
+            font-size: 0.75rem;
+        }
+        .credential-box .row .label {
+            color: #94a3b8;
+        }
+        .credential-box .row .value {
+            font-weight: 600;
+            color: #0F172A;
+        }
+    </style>
 </head>
 <body>
+    <div class="login-container">
+        <div class="login-header">
+            <h1>🔐 Area Riservata</h1>
+            <p>Accedi con le tue credenziali aziendali</p>
+        </div>
 
-    <div class="login-card">
-        <h2>Accesso Manager</h2>
+        <div id="messageBox" class="message"></div>
+
         <form id="loginForm">
-            <input type="text" id="username" placeholder="Username (Inserisci: admin)" required>
-            <input type="password" id="password" placeholder="Password (Inserisci: admin)" required>
-            <button type="submit">Accedi</button>
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" placeholder="tuo.nome@singo.it" required autocomplete="off">
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" placeholder="Inserisci la tua password" required autocomplete="off">
+            </div>
+
+            <button type="submit" class="btn-login">Accedi</button>
         </form>
-        <div id="login-status" style="min-height:20px; margin-top:12px; color:#b91c1c; font-weight:600;"></div>
-        <a href="index.html" class="back-link">← Torna allo Shop Cliente</a>
+
+        <div class="form-links">
+            <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 8px;">
+                💡 Credenziali di test:
+            </p>
+            <div class="credential-box">
+                <div class="row"><span class="label">Super Admin:</span><span class="value">superadmin@singo.it / SuperAdmin2024!</span></div>
+                <div class="row"><span class="label">Admin Negozio:</span><span class="value">admin@singo.it / AdminNegozio2024!</span></div>
+                <div class="row"><span class="label">Resp. Acquisti:</span><span class="value">acquisti@singo.it / Acquisti2024!</span></div>
+                <div class="row"><span class="label">Analista:</span><span class="value">analista@singo.it / Analista2024!</span></div>
+            </div>
+            <p style="margin-top: 15px; border-top: 1px solid #E2E8F0; padding-top: 15px;">
+                <a href="index.html">← Torna allo Shop</a>
+            </p>
+        </div>
     </div>
 
     <script>
-        document.getElementById('loginForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const user = document.getElementById('username').value;
-            const pass = document.getElementById('password').value;
+        const form = document.getElementById('loginForm');
+        const messageBox = document.getElementById('messageBox');
 
-            if (user === 'admin' && pass === 'admin') {
-                // IL SEGRETO È QUI: Salva l'autenticazione nel browser
-                sessionStorage.setItem('manager_autenticato', 'true');
-                window.location.href = 'manager.html';
-            } else {
-                const msg = document.getElementById('login-status');
-                if (msg) {
-                    msg.innerText = 'Credenziali errate! Usa admin / admin';
-                    msg.style.color = '#b91c1c';
+        form.addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+
+            if (!email || !password) {
+                mostraMessaggio('Compila tutti i campi', 'error');
+                return;
+            }
+
+            const btn = form.querySelector('.btn-login');
+            btn.disabled = true;
+            btn.textContent = 'Login in corso...';
+
+            try {
+                const result = await DB_UTENTI.loginUtente(email, password);
+
+                if (result.success) {
+                    mostraMessaggio(`✓ Benvenuto ${result.utente.nome}! Reindirizzamento...`, 'success');
+                    
+                    sessionStorage.setItem('utente_loggato', JSON.stringify(result.utente));
+                    sessionStorage.setItem('manager_autenticato', 'true');
+                    
+                    setTimeout(() => {
+                        window.location.href = 'manager.html';
+                    }, 1500);
+                } else {
+                    mostraMessaggio(result.error, 'error');
+                    btn.disabled = false;
+                    btn.textContent = 'Accedi';
                 }
+            } catch (error) {
+                console.error('Errore login:', error);
+                mostraMessaggio('Errore durante il login. Riprova.', 'error');
+                btn.disabled = false;
+                btn.textContent = 'Accedi';
             }
         });
+
+        function mostraMessaggio(testo, tipo) {
+            messageBox.textContent = testo;
+            messageBox.className = `message ${tipo} show`;
+            setTimeout(() => {
+                messageBox.classList.remove('show');
+            }, 4000);
+        }
     </script>
 </body>
 </html>
