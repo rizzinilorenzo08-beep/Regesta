@@ -85,7 +85,17 @@
         .btn-minus { background-color: #e74c3c; }
         .costo-info { font-size: 0.8rem; color: #777; display: block; margin-top: 5px; }
 
-        .chart-container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; height: 400px; }
+        .chart-container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; height: 300px; max-height: 350px; }
+        .finance-actions { display: flex; justify-content: flex-end; gap: 10px; margin: -4px 0 20px; flex-wrap: wrap; }
+        .finance-actions button { border: none; padding: 12px 18px; border-radius: 6px; cursor: pointer; font-weight: 700; color: white; }
+        .btn-simulate { background: #16a34a; }
+        .finance-grid { display: grid; grid-template-columns: repeat(2, minmax(280px, 1fr)); gap: 20px; }
+        .finance-chart-card { background: white; padding: 18px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); min-height: 300px; max-height: 380px; display: flex; flex-direction: column; overflow: hidden; }
+        .finance-chart-card h3 { color: var(--primary); font-size: 1rem; margin-bottom: 4px; }
+        .finance-chart-card .chart-note { color: #64748b; font-size: 0.82rem; margin-bottom: 12px; line-height: 1.4; }
+        .finance-chart-card canvas { flex: 1; min-height: 180px; max-height: 250px; }
+        .finance-chart-card.wide { grid-column: 1 / -1; max-height: 320px; }
+        .finance-chart-card.wide canvas { max-height: 220px; }
         .stats-cards { display: flex; gap: 20px; margin-bottom: 20px; flex-wrap: wrap; }
         .card { flex: 1; min-width: 200px; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center; border-bottom: 4px solid var(--secondary); }
         .card h3 { color: #777; font-size: 1rem; }
@@ -114,9 +124,33 @@
         .viaggio-card .destinazione { color: #64748B; }
         .viaggio-card .date { font-size: 0.85rem; color: #94a3b8; }
 
+        /* LIMITA ALTEZZA GRAFICI */
+        .finance-grid .finance-chart-card {
+            min-height: 280px;
+            max-height: 340px;
+        }
+        .finance-grid .finance-chart-card.wide {
+            max-height: 300px;
+        }
+        .finance-grid .finance-chart-card canvas {
+            max-height: 200px !important;
+        }
+        .finance-grid .finance-chart-card.wide canvas {
+            max-height: 180px !important;
+        }
+
+        /* SCROLL PER LA SEZIONE FINANZE */
+        #vista-finanze {
+            overflow-y: auto;
+            max-height: calc(100vh - 180px);
+            padding-right: 10px;
+        }
+
         @media (max-width: 1200px) {
             .manager-grid { grid-template-columns: 1fr; }
             .cart-panel { position: static; max-height: none; }
+            .finance-grid { grid-template-columns: 1fr; }
+            #vista-finanze { max-height: none; }
         }
     </style>
 </head>
@@ -219,8 +253,40 @@
                     <p id="spese-totali">€ 0.00</p>
                 </div>
             </div>
-            <div class="chart-container">
-                <canvas id="graficoVendite"></canvas>
+            <div class="finance-actions">
+                <button class="btn-simulate" onclick="simulaVenditeManager()">📊 Simula vendite</button>
+            </div>
+            <div class="finance-grid">
+                <div class="finance-chart-card wide">
+                    <h3>Andamento economico e vendite</h3>
+                    <div class="chart-note">Fatturato totale e margine nel tempo.</div>
+                    <canvas id="graficoAndamentoEconomico"></canvas>
+                </div>
+                <div class="finance-chart-card">
+                    <h3>AOV vs numero ordini</h3>
+                    <div class="chart-note">Valore medio ordine confrontato con il volume ordini.</div>
+                    <canvas id="graficoAovOrdini"></canvas>
+                </div>
+                <div class="finance-chart-card">
+                    <h3>Stato ordini in tempo reale</h3>
+                    <div class="chart-note">Conteggio ordini per stato di consegna.</div>
+                    <canvas id="graficoStatoOrdini"></canvas>
+                </div>
+                <div class="finance-chart-card">
+                    <h3>Tempi medi di consegna</h3>
+                    <div class="chart-note">Lead time medio in giorni, calcolato dalle consegne.</div>
+                    <canvas id="graficoLeadTime"></canvas>
+                </div>
+                <div class="finance-chart-card">
+                    <h3>Top categorie e prodotti</h3>
+                    <div class="chart-note">Valore stimato dai prodotti venduti e dallo stock residuo.</div>
+                    <canvas id="graficoTopProdotti"></canvas>
+                </div>
+                <div class="finance-chart-card">
+                    <h3>Clienti ricorrenti vs nuovi</h3>
+                    <div class="chart-note">Quota ordini da clienti al primo acquisto e clienti fedeli.</div>
+                    <canvas id="graficoClienti"></canvas>
+                </div>
             </div>
             <div id="btnEsporta" style="margin-top:20px; display:none;">
                 <button onclick="esportaDati()" style="background:#3b82f6; color:white; border:none; padding:12px 24px; border-radius:6px; cursor:pointer; font-weight:bold;">📊 Esporta Dati (CSV)</button>
@@ -508,6 +574,8 @@
         let budgetAziendale = 0;
         let categoriaAttuale = 'Tutte';
         let chartInstance   = null;
+        let financeCharts   = {};
+        let ordiniFinanze   = [];
         let managerCart     = [];
         let modalCallback   = null;
         let isProcessing    = false;
@@ -605,7 +673,6 @@
 
                 aggiornaUIBudget();
                 aggiornaTabella();
-                aggiornaFinanze();
                 renderManagerCart();
                 renderPromozioni();
 
@@ -620,6 +687,9 @@
                 }
 
                 caricaOrdini();
+                
+                // Aggiorna finanze dopo aver caricato gli ordini
+                await aggiornaFinanze();
 
             } catch (err) {
                 showToast('Errore caricamento: ' + err.message, 'error');
@@ -936,7 +1006,7 @@
                         aggiornaUIBudget();
                         aggiornaTabella();
                         renderManagerCart();
-                        aggiornaFinanze();
+                        await aggiornaFinanze();
 
                         showToast('✅ Rifornimento completato!', 'success');
 
@@ -1151,7 +1221,7 @@
         }
 
         // ── Finanze ──────────────────────────────────────────────────────
-        function aggiornaFinanze() {
+        function aggiornaFinanzeLegacy() {
             const incasso = vendite.reduce((s, v) => s + parseFloat(v.totale || 0), 0);
             const spese   = expenses.reduce((s, e) => s + parseFloat(e.totale || 0), 0);
 
@@ -1191,6 +1261,294 @@
         }
 
         // ── Esportazione Dati ────────────────────────────────────────────
+        async function aggiornaFinanze() {
+            const incasso = vendite.reduce((s, v) => s + parseFloat(v.totale || 0), 0);
+            const spese   = expenses.reduce((s, e) => s + parseFloat(e.totale || 0), 0);
+
+            document.getElementById('incasso-totale').innerHTML = `&euro; ${incasso.toFixed(2)}<br><small style="font-size:0.8rem;color:#999;">Totale vendite</small>`;
+            document.getElementById('spese-totali').innerHTML   = `&euro; ${spese.toFixed(2)}<br><small style="font-size:0.8rem;color:#999;">Totale acquisti</small>`;
+
+            try {
+                ordiniFinanze = await DB_ORDINI.getTuttiOrdini(500);
+            } catch (err) {
+                console.warn('Ordini non disponibili per i grafici finanze:', err);
+                ordiniFinanze = [];
+            }
+
+            renderGraficiFinanze();
+        }
+
+        function euroTick(value) {
+            return 'EUR ' + Number(value || 0).toFixed(0);
+        }
+
+        function dateKey(value) {
+            return value ? String(value).split('T')[0] : new Date().toISOString().split('T')[0];
+        }
+
+        function destroyFinanceCharts() {
+            Object.values(financeCharts).forEach(chart => {
+                try { chart.destroy(); } catch(e) {}
+            });
+            financeCharts = {};
+            if (chartInstance) {
+                try { chartInstance.destroy(); } catch(e) {}
+                chartInstance = null;
+            }
+        }
+
+        function createFinanceChart(canvasId, config) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+            try {
+                financeCharts[canvasId] = new Chart(canvas.getContext('2d'), config);
+            } catch(e) {
+                console.warn('Errore creazione grafico', canvasId, e);
+            }
+        }
+
+        function renderGraficiFinanze() {
+            destroyFinanceCharts();
+
+            const perData = {};
+            const dateConVendite = new Set(vendite.map(v => dateKey(v.data)));
+            vendite.forEach(v => {
+                const d = dateKey(v.data);
+                if (!perData[d]) perData[d] = { revenue: 0, costs: 0, orders: 0 };
+                perData[d].revenue += parseFloat(v.totale || 0);
+                if (ordiniFinanze.length === 0) perData[d].orders += 1;
+            });
+            expenses.forEach(e => {
+                const d = dateKey(e.data);
+                if (!perData[d]) perData[d] = { revenue: 0, costs: 0, orders: 0 };
+                perData[d].costs += parseFloat(e.totale || 0);
+            });
+            ordiniFinanze.forEach(o => {
+                const d = dateKey(o.data_ordine);
+                if (!perData[d]) perData[d] = { revenue: 0, costs: 0, orders: 0 };
+                if (!dateConVendite.has(d)) perData[d].revenue += parseFloat(o.totale || 0);
+                perData[d].orders += 1;
+            });
+
+            const labels = Object.keys(perData).sort();
+            // Limita i dati agli ultimi 30 giorni per evitare grafici troppo lunghi
+            const maxPoints = 30;
+            let slicedLabels = labels;
+            let slicedRevenue = labels.map(d => perData[d].revenue);
+            let slicedMargin = labels.map(d => perData[d].revenue - perData[d].costs);
+            let slicedOrders = labels.map(d => perData[d].orders);
+            let slicedAov = labels.map(d => perData[d].orders ? perData[d].revenue / perData[d].orders : 0);
+
+            if (labels.length > maxPoints) {
+                const start = labels.length - maxPoints;
+                slicedLabels = labels.slice(start);
+                slicedRevenue = slicedRevenue.slice(start);
+                slicedMargin = slicedMargin.slice(start);
+                slicedOrders = slicedOrders.slice(start);
+                slicedAov = slicedAov.slice(start);
+            }
+
+            createFinanceChart('graficoAndamentoEconomico', {
+                type: 'line',
+                data: {
+                    labels: slicedLabels,
+                    datasets: [
+                        { label: 'Fatturato (EUR)', data: slicedRevenue, borderColor: '#16a34a', backgroundColor: 'rgba(22,163,74,0.12)', tension: 0.35, fill: true, pointRadius: 2 },
+                        { label: 'Margine (EUR)', data: slicedMargin, borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,0.10)', tension: 0.35, fill: true, pointRadius: 2 }
+                    ]
+                },
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { callback: euroTick, maxTicksLimit: 8 } } }, plugins: { legend: { position: 'top' } } }
+            });
+
+            createFinanceChart('graficoAovOrdini', {
+                type: 'bar',
+                data: {
+                    labels: slicedLabels,
+                    datasets: [
+                        { label: 'AOV (EUR)', data: slicedAov, backgroundColor: '#0ea5e9', yAxisID: 'y' },
+                        { label: 'Ordini', data: slicedOrders, backgroundColor: '#f59e0b', yAxisID: 'y1' }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true, position: 'left', ticks: { callback: euroTick, maxTicksLimit: 6 } },
+                        y1: { beginAtZero: true, position: 'right', grid: { drawOnChartArea: false }, ticks: { precision: 0, maxTicksLimit: 6 } }
+                    },
+                    plugins: { legend: { position: 'top' } }
+                }
+            });
+
+            const stati = [
+                ['in_elaborazione', 'In lavorazione'],
+                ['spedito', 'Spedito'],
+                ['in_transito', 'In transito'],
+                ['in_consegna', 'In consegna'],
+                ['consegnato', 'Consegnato']
+            ];
+            const statoCounts = stati.map(([key]) => ordiniFinanze.filter(o => o.stato_consegna === key).length);
+            createFinanceChart('graficoStatoOrdini', {
+                type: 'bar',
+                data: {
+                    labels: stati.map(([, label]) => label),
+                    datasets: [{ label: 'Ordini', data: statoCounts, backgroundColor: ['#f59e0b', '#3b82f6', '#8b5cf6', '#ec4899', '#10b981'] }]
+                },
+                options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, scales: { x: { beginAtZero: true, ticks: { precision: 0 } } }, plugins: { legend: { display: false } } }
+            });
+
+            const leadByDate = {};
+            ordiniFinanze.forEach(o => {
+                const start = o.data_ordine ? new Date(o.data_ordine) : null;
+                const endValue = o.data_consegna_effettiva || (o.stato_consegna === 'consegnato' ? o.data_consegna_prevista : null);
+                const end = endValue ? new Date(endValue) : null;
+                if (!start || !end || isNaN(start) || isNaN(end)) return;
+                const d = dateKey(endValue);
+                if (!leadByDate[d]) leadByDate[d] = [];
+                leadByDate[d].push(Math.max(0, (end - start) / (1000 * 60 * 60 * 24)));
+            });
+            const leadLabels = Object.keys(leadByDate).sort();
+            let leadData = leadLabels.map(d => leadByDate[d].reduce((s, v) => s + v, 0) / leadByDate[d].length);
+            
+            // Limita i dati dei lead time
+            if (leadLabels.length > maxPoints) {
+                const start = leadLabels.length - maxPoints;
+                const slicedLeadLabels = leadLabels.slice(start);
+                leadData = leadData.slice(start);
+                createFinanceChart('graficoLeadTime', {
+                    type: 'line',
+                    data: {
+                        labels: slicedLeadLabels,
+                        datasets: [{ label: 'Giorni medi', data: leadData, borderColor: '#dc2626', backgroundColor: 'rgba(220,38,38,0.12)', fill: true, tension: 0.35, pointRadius: 2 }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { maxTicksLimit: 6 } } }, plugins: { legend: { position: 'top' } } }
+                });
+            } else {
+                createFinanceChart('graficoLeadTime', {
+                    type: 'line',
+                    data: {
+                        labels: leadLabels,
+                        datasets: [{ label: 'Giorni medi', data: leadData, borderColor: '#dc2626', backgroundColor: 'rgba(220,38,38,0.12)', fill: true, tension: 0.35, pointRadius: 2 }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } }, plugins: { legend: { position: 'top' } } }
+                });
+            }
+
+            const prodottiStimati = inventario
+                .map(p => {
+                    const venduti = Math.max(0, Number(p.maxQty || p.max_qty || 0) - Number(p.qty || 0));
+                    return { nome: p.nome, valore: venduti * Number(p.prezzo || 0) };
+                })
+                .sort((a, b) => b.valore - a.valore)
+                .slice(0, 6);
+            const topFallback = inventario
+                .slice()
+                .sort((a, b) => Number(b.prezzo || 0) - Number(a.prezzo || 0))
+                .slice(0, 6)
+                .map(p => ({ nome: p.nome, valore: Number(p.prezzo || 0) }));
+            const topProdotti = prodottiStimati.some(p => p.valore > 0) ? prodottiStimati : topFallback;
+            createFinanceChart('graficoTopProdotti', {
+                type: 'bar',
+                data: {
+                    labels: topProdotti.map(p => p.nome.length > 15 ? p.nome.substring(0, 15) + '...' : p.nome),
+                    datasets: [{ label: 'Valore (EUR)', data: topProdotti.map(p => p.valore), backgroundColor: '#14b8a6' }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { callback: euroTick, maxTicksLimit: 6 } } }, plugins: { legend: { display: false } } }
+            });
+
+            const firstOrderByCustomer = {};
+            const sortedOrders = ordiniFinanze
+                .filter(o => o.cliente_id)
+                .slice()
+                .sort((a, b) => new Date(a.data_ordine) - new Date(b.data_ordine));
+            let nuovi = 0;
+            let ricorrenti = 0;
+            sortedOrders.forEach(o => {
+                if (firstOrderByCustomer[o.cliente_id]) ricorrenti += 1;
+                else {
+                    firstOrderByCustomer[o.cliente_id] = true;
+                    nuovi += 1;
+                }
+            });
+            if (nuovi + ricorrenti === 0 && vendite.length > 0) nuovi = vendite.length;
+            if (nuovi + ricorrenti === 0) { nuovi = 1; ricorrenti = 1; }
+            createFinanceChart('graficoClienti', {
+                type: 'doughnut',
+                data: {
+                    labels: ['Nuovi clienti', 'Clienti ricorrenti'],
+                    datasets: [{ data: [nuovi, ricorrenti], backgroundColor: ['#38bdf8', '#22c55e'], borderWidth: 0 }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, cutout: '62%', plugins: { legend: { position: 'bottom' } } }
+            });
+        }
+
+        async function simulaVenditeManager() {
+            if (!isSuperAdmin() && !isAdminNegozio() && !isAnalista()) {
+                showToast('Non hai i permessi per simulare vendite', 'error');
+                return;
+            }
+
+            setSpinner(true);
+            try {
+                const disponibili = inventario.filter(p => Number(p.qty || 0) > 0);
+                if (disponibili.length === 0) {
+                    showToast('Nessun prodotto disponibile per la simulazione', 'info');
+                    return;
+                }
+
+                const numeroVendite = Math.floor(Math.random() * 7) + 8;
+                const nuoveVendite = [];
+                for (let i = 0; i < numeroVendite; i++) {
+                    const giorniFa = Math.floor(Math.random() * 14);
+                    const data = new Date();
+                    data.setDate(data.getDate() - giorniFa);
+
+                    const righe = Math.floor(Math.random() * 4) + 1;
+                    let totale = 0;
+                    for (let r = 0; r < righe; r++) {
+                        const prodotto = disponibili[Math.floor(Math.random() * disponibili.length)];
+                        const qty = Math.min(Number(prodotto.qty || 0), Math.floor(Math.random() * 3) + 1);
+                        if (qty <= 0) continue;
+                        prodotto.qty = Math.max(0, Number(prodotto.qty || 0) - qty);
+                        totale += Number(prodotto.prezzo || 0) * qty;
+                    }
+
+                    if (totale > 0) {
+                        nuoveVendite.push({
+                            totale: Number(totale.toFixed(2)),
+                            data: data.toISOString().split('T')[0]
+                        });
+                    }
+                }
+
+                if (nuoveVendite.length === 0) {
+                    showToast('Simulazione senza vendite generate', 'info');
+                    return;
+                }
+
+                const { data, error } = await supabaseClient
+                    .from('vendite')
+                    .insert(nuoveVendite)
+                    .select();
+                if (error) throw error;
+
+                await saveInventario(inventario);
+                const incassoSimulato = nuoveVendite.reduce((s, v) => s + v.totale, 0);
+                budgetAziendale += incassoSimulato;
+                await saveBudget(budgetAziendale);
+
+                vendite = await loadVendite();
+                aggiornaUIBudget();
+                aggiornaTabella();
+                await aggiornaFinanze();
+                showToast(`Vendite simulate: ${data.length} per EUR ${incassoSimulato.toFixed(2)}`, 'success');
+            } catch (err) {
+                showToast('Errore simulazione vendite: ' + err.message, 'error');
+            } finally {
+                setSpinner(false);
+            }
+        }
+
         function esportaDati() {
             if (!isAnalista() && !isSuperAdmin()) {
                 showToast('❌ Non hai i permessi per questa azione', 'error');
@@ -1641,11 +1999,15 @@
         // =============================================
         // 📦 ORDINI CLIENTI
         // =============================================
+        let ordiniLoading = false;
+
         async function caricaOrdini() {
+            if (ordiniLoading) return;
+            ordiniLoading = true;
+            
             const filtro = document.getElementById('filtroStatoOrdine').value;
             const container = document.getElementById('listaOrdini');
             
-            setSpinner(true);
             try {
                 let ordini = await DB_ORDINI.getTuttiOrdini(200);
                 
@@ -1713,7 +2075,7 @@
                 console.error('Errore caricamento ordini:', err);
                 container.innerHTML = '<p style="color:#ef4444; text-align:center; padding:30px;">Errore nel caricamento degli ordini.</p>';
             } finally {
-                setSpinner(false);
+                ordiniLoading = false;
             }
         }
 
@@ -1737,17 +2099,30 @@
         // ── Avvio ──────────────────────────────────────────────────────
         caricaDati();
 
-        // Simula avanzamento consegne ogni 30 secondi
-        setInterval(async () => {
+        // Simula avanzamento consegne ogni 60 secondi (non 30)
+        let consegnaInterval = setInterval(async () => {
             try {
                 await DB_ORDINI.simulaAvanzamentoConsegna();
+                // Ricarica solo se la vista ordini è attiva
                 if (document.getElementById('vista-ordini').classList.contains('active')) {
                     caricaOrdini();
+                }
+                // Ricarica i grafici finanziari se la vista finanze è attiva
+                if (document.getElementById('vista-finanze').classList.contains('active')) {
+                    await aggiornaFinanze();
                 }
             } catch (err) {
                 console.error('Errore simulazione consegna:', err);
             }
-        }, 30000);
+        }, 60000); // 60 secondi invece di 30
+
+        // Pulisci l'intervallo quando la pagina si chiude
+        window.addEventListener('beforeunload', function() {
+            if (consegnaInterval) {
+                clearInterval(consegnaInterval);
+                consegnaInterval = null;
+            }
+        });
     </script>
 </body>
 </html>
