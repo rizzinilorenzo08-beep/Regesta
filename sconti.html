@@ -18,6 +18,13 @@
             <a href="sconti.html">🔥 Offerte</a>
         </div>
         <div class="nav-right" style="gap:15px;">
+            <div class="user-section">
+                <span class="user-greeting" id="userGreeting"></span>
+                <a class="points-link" id="areaLink" href="area-personale.html" style="display:none;">Area personale</a>
+                <button class="btn-logout" id="logoutBtn" onclick="logoutUser()" style="display:none;">Logout</button>
+                <a class="register-link" id="registerLink" href="register.html" style="display:none;">Registrati</a>
+                <a class="login-link" id="loginLink" href="login-cliente.html" style="display:none;">Login</a>
+            </div>
             <a href="login-manager.html">🔐 Area Riservata</a>
         </div>
     </div>
@@ -64,6 +71,7 @@
             renderPromoBanner();
             renderProducts();
             renderCart();
+            updateUserUI();
             updateSaleTimer();
             clearInterval(saleTimer);
             saleTimer = setInterval(updateSaleTimer, 1000);
@@ -213,6 +221,22 @@
             localStorage.setItem('totaleCheckout', totale);
             localStorage.setItem('ultimoTotale', totale);
             window.location.href = 'checkout.html';
+        }
+        function updateUserUI() {
+            const cliente = caricaClienteLoggato();
+            document.getElementById('userGreeting').style.display = cliente ? 'inline-block' : 'none';
+            document.getElementById('userGreeting').textContent = cliente ? `Ciao ${cliente.nome}!` : '';
+            document.getElementById('areaLink').style.display = cliente ? 'inline-block' : 'none';
+            document.getElementById('logoutBtn').style.display = cliente ? 'inline-block' : 'none';
+            document.getElementById('registerLink').style.display = cliente ? 'none' : 'inline-block';
+            document.getElementById('loginLink').style.display = cliente ? 'none' : 'inline-block';
+        }
+
+        function logoutUser() {
+            if (confirm('Sei sicuro di voler fare il logout?')) {
+                logoutCliente();
+                updateUserUI();
+            }
         }
 
         initializeSalePage();

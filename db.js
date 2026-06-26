@@ -430,6 +430,34 @@ const DB_CLIENTI = {
         return { success: true, message: 'Password aggiornata con successo' };
     },
 
+    async cambiaPasswordCliente(clienteId, passwordAttuale, nuovaPassword) {
+        const { data: cliente, error: findError } = await supabaseClient
+            .from('clienti')
+            .select('id, password')
+            .eq('id', clienteId)
+            .single();
+
+        if (findError || !cliente) {
+            return { success: false, message: 'Cliente non trovato' };
+        }
+
+        if (atob(cliente.password) !== passwordAttuale) {
+            return { success: false, message: 'Password attuale non corretta' };
+        }
+
+        const { error: updateError } = await supabaseClient
+            .from('clienti')
+            .update({ password: btoa(nuovaPassword) })
+            .eq('id', clienteId);
+
+        if (updateError) {
+            console.error("Errore cambio password:", updateError);
+            return { success: false, message: updateError.message };
+        }
+
+        return { success: true, message: 'Password aggiornata con successo' };
+    },
+
     async getCliente(clienteId) {
         const { data, error } = await supabaseClient
             .from('clienti')

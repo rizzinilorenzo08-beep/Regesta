@@ -17,7 +17,7 @@
         <div class="nav-right">
             <div class="user-section">
                 <span class="user-greeting" id="userGreeting"></span>
-                <a class="points-link" id="puntiLink" href="points.html">⭐ I Miei Punti</a>
+                <a class="points-link" id="areaLink" href="area-personale.html" style="display:none;">Area personale</a>
                 <button class="btn-logout" id="logoutBtn" onclick="logoutUser()">Logout</button>
                 <a class="register-link" id="registerLink" href="register.html" style="display:none;">📝 Registrati</a>
                 <a class="login-link" id="loginLink" href="login-cliente.html" style="display:none;">🔓 Login</a>
@@ -114,16 +114,22 @@
             if (typeof caricaClienteLoggato === 'function') {
                 const cliente = caricaClienteLoggato();
                 const userGreeting = document.getElementById('userGreeting');
-                const puntiLink = document.getElementById('puntiLink');
+                const areaLink = document.getElementById('areaLink');
                 const logoutBtn = document.getElementById('logoutBtn');
                 const registerLink = document.getElementById('registerLink');
                 const loginLink = document.getElementById('loginLink');
                 if (cliente) {
                     if (userGreeting) { userGreeting.style.display = 'inline-block'; userGreeting.textContent = `👤 Ciao ${cliente.nome}!`; }
-                    if (puntiLink) puntiLink.style.display = 'inline-block';
+                    if (areaLink) areaLink.style.display = 'inline-block';
                     if (logoutBtn) logoutBtn.style.display = 'inline-block';
                     if (registerLink) registerLink.style.display = 'none';
                     if (loginLink) loginLink.style.display = 'none';
+                } else {
+                    if (userGreeting) userGreeting.style.display = 'none';
+                    if (areaLink) areaLink.style.display = 'none';
+                    if (logoutBtn) logoutBtn.style.display = 'none';
+                    if (registerLink) registerLink.style.display = 'inline-block';
+                    if (loginLink) loginLink.style.display = 'inline-block';
                 }
             }
         }

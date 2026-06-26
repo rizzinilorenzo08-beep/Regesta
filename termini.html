@@ -17,7 +17,7 @@
         <div class="nav-right">
             <div class="user-section">
                 <span class="user-greeting" id="userGreeting"></span>
-                <a class="points-link" id="puntiLink" href="points.html">⭐ I Miei Punti</a>
+                <a class="points-link" id="areaLink" href="area-personale.html" style="display:none;">Area personale</a>
                 <button class="btn-logout" id="logoutBtn" onclick="logoutUser()">Logout</button>
                 <a class="register-link" id="registerLink" href="register.html" style="display:none;">📝 Registrati</a>
                 <a class="login-link" id="loginLink" href="login-cliente.html" style="display:none;">🔓 Login</a>
@@ -99,8 +99,10 @@
             if (typeof caricaClienteLoggato === 'function') {
                 const cliente = caricaClienteLoggato();
                 const userGreeting = document.getElementById('userGreeting');
+                const areaLink = document.getElementById('areaLink');
                 if (cliente && userGreeting) {
                     userGreeting.style.display = 'inline-block';
+                    if (areaLink) areaLink.style.display = 'inline-block';
                     userGreeting.textContent = `👤 Ciao ${cliente.nome}!`;
                 }
             }

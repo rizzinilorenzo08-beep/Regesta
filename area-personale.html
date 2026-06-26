@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Area Personale - SinGo</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+    <script src="db.js"></script>
+    <style>
+        .account-container { max-width: 1200px; margin: 30px auto; padding: 0 20px; }
+        .account-header { margin-bottom: 24px; }
+        .account-header h1 { color: #1E293B; font-size: 2rem; margin-bottom: 6px; }
+        .account-header p { color: #64748B; }
+        .account-grid { display: grid; grid-template-columns: 320px 1fr; gap: 22px; align-items: start; }
+        .side-panel, .content-panel { background: white; border: 1px solid #E2E8F0; border-radius: 12px; padding: 22px; box-shadow: 0 4px 12px rgba(15,23,42,0.05); }
+        .profile-name { font-size: 1.3rem; font-weight: 700; color: #1E293B; }
+        .profile-email { color: #64748B; margin: 4px 0 18px; overflow-wrap: anywhere; }
+        .points-box { background: #ECFDF5; border: 1px solid #A7F3D0; border-radius: 10px; padding: 18px; margin-bottom: 16px; }
+        .points-box .value { color: #047857; font-size: 2.4rem; font-weight: 800; line-height: 1; }
+        .points-box .label { color: #065F46; font-weight: 600; margin-top: 6px; }
+        .account-actions { display: grid; gap: 10px; }
+        .account-actions a, .account-actions button, .btn-action { display: inline-block; text-align: center; border: none; border-radius: 8px; padding: 11px 14px; font-weight: 700; text-decoration: none; cursor: pointer; }
+        .btn-primary-account { background: #10B981; color: white; }
+        .btn-muted-account { background: #F1F5F9; color: #334155; }
+        .section-block { margin-bottom: 28px; }
+        .section-title { color: #1E293B; font-size: 1.35rem; margin-bottom: 14px; text-align: left; }
+        .summary-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 22px; }
+        .summary-item { background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 14px; }
+        .summary-item strong { display: block; color: #1E293B; font-size: 1.4rem; }
+        .summary-item span { color: #64748B; font-size: 0.9rem; }
+        .order-card { border: 1px solid #E2E8F0; border-radius: 10px; padding: 16px; margin-bottom: 12px; background: #fff; }
+        .order-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+        .order-id { font-weight: 800; color: #1E293B; }
+        .order-date, .order-address, .order-meta { color: #64748B; font-size: 0.9rem; margin-top: 5px; }
+        .order-total { color: #10B981; font-size: 1.15rem; font-weight: 800; text-align: right; }
+        .order-status { display: inline-block; color: white; padding: 4px 10px; border-radius: 999px; font-size: 0.8rem; font-weight: 700; margin-bottom: 6px; }
+        .empty-box, .login-required { text-align: center; padding: 36px 18px; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px; color: #64748B; }
+        .password-form { display: grid; gap: 14px; max-width: 520px; }
+        .form-group label { display: block; color: #1E293B; font-weight: 700; margin-bottom: 6px; }
+        .form-group input { width: 100%; padding: 11px 13px; border: 2px solid #E2E8F0; border-radius: 8px; font-size: 0.95rem; }
+        .form-group input:focus { outline: none; border-color: #10B981; box-shadow: 0 0 0 3px rgba(16,185,129,0.1); }
+        .message { padding: 12px 14px; border-radius: 8px; font-weight: 700; display: none; }
+        .message.show { display: block; }
+        .message.success { background: #DCFCE7; color: #166534; border: 1px solid #86EFAC; }
+        .message.error { background: #FEE2E2; color: #991B1B; border: 1px solid #FECACA; }
+        .reward-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+        .reward-card { background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 14px; }
+        .reward-card strong { color: #1E293B; display: block; margin-bottom: 6px; }
+        .reward-card span { color: #64748B; font-size: 0.9rem; }
+        @media (max-width: 860px) {
+            .account-grid, .summary-row { grid-template-columns: 1fr; }
+            .order-total { text-align: left; }
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <div class="nav-left">
+            <a href="home.html" class="nav-logo"><img src="logo.png" alt="SinGo" style="height: 40px; width: auto;"></a>
+            <a href="home.html">Home</a>
+            <a href="shop.html">Prodotti</a>
+            <a href="sconti.html">Offerte</a>
+        </div>
+        <div class="nav-right">
+            <div class="user-section">
+                <span class="user-greeting" id="userGreeting"></span>
+                <a class="points-link" id="areaLink" href="area-personale.html" style="display:none;">Area personale</a>
+                <button class="btn-logout" id="logoutBtn" onclick="logoutUser()" style="display:none;">Logout</button>
+                <a class="register-link" id="registerLink" href="register.html" style="display:none;">Registrati</a>
+                <a class="login-link" id="loginLink" href="login-cliente.html" style="display:none;">Login</a>
+            </div>
+            <a href="login-manager.html">Area Riservata</a>
+        </div>
+    </div>
+
+    <main class="account-container">
+        <div class="account-header">
+            <h1>Area personale</h1>
+            <p>Gestisci ordini, punti fedelta e sicurezza del tuo account.</p>
+        </div>
+
+        <div id="loginRequired" class="login-required" style="display:none;">
+            <h2>Accedi per entrare nella tua area personale</h2>
+            <p>Effettua il login per vedere ordini, punti e impostazioni del profilo.</p>
+            <div style="margin-top: 16px;">
+                <a href="login-cliente.html" class="btn-action btn-primary-account">Accedi</a>
+                <a href="register.html" class="btn-action btn-muted-account">Registrati</a>
+            </div>
+        </div>
+
+        <div id="accountContent" class="account-grid" style="display:none;">
+            <aside class="side-panel">
+                <div class="profile-name" id="profileName"></div>
+                <div class="profile-email" id="profileEmail"></div>
+                <div class="points-box">
+                    <div class="value" id="pointsValue">0</div>
+                    <div class="label">Punti disponibili</div>
+                </div>
+                <div class="account-actions">
+                    <a href="shop.html" class="btn-primary-account">Vai allo shop</a>
+                    <a href="gestione-indirizzi.html" class="btn-muted-account">Gestisci indirizzi</a>
+                    <button type="button" class="btn-muted-account" onclick="logoutUser()">Logout</button>
+                </div>
+            </aside>
+
+            <section class="content-panel">
+                <div class="summary-row">
+                    <div class="summary-item">
+                        <strong id="ordersCount">0</strong>
+                        <span>Ordini totali</span>
+                    </div>
+                    <div class="summary-item">
+                        <strong id="spentTotal">€ 0.00</strong>
+                        <span>Totale acquistato</span>
+                    </div>
+                    <div class="summary-item">
+                        <strong id="earnedPoints">0</strong>
+                        <span>Punti dagli ordini</span>
+                    </div>
+                </div>
+
+                <div class="section-block">
+                    <h2 class="section-title">I tuoi ordini</h2>
+                    <div id="ordersList"></div>
+                </div>
+
+                <div class="section-block">
+                    <h2 class="section-title">Premi riscattati</h2>
+                    <div id="rewardsList" class="reward-grid"></div>
+                </div>
+
+                <div class="section-block">
+                    <h2 class="section-title">Modifica password</h2>
+                    <div id="passwordMessage" class="message"></div>
+                    <form id="passwordForm" class="password-form">
+                        <div class="form-group">
+                            <label for="currentPassword">Password attuale</label>
+                            <input type="password" id="currentPassword" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="newPassword">Nuova password</label>
+                            <input type="password" id="newPassword" minlength="6" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="confirmPassword">Conferma nuova password</label>
+                            <input type="password" id="confirmPassword" minlength="6" required>
+                        </div>
+                        <button type="button" class="btn-action btn-primary-account" id="sendCodeBtn">Invia codice di verifica</button>
+                        <div class="form-group" id="codeGroup" style="display:none;">
+                            <label for="verificationCode">Codice ricevuto via email</label>
+                            <input type="text" id="verificationCode" inputmode="numeric" maxlength="6" placeholder="6 cifre">
+                        </div>
+                        <button type="submit" class="btn-action btn-primary-account" id="changePasswordBtn" style="display:none;">Aggiorna password</button>
+                    </form>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <div class="footer">
+        <div class="footer-content">
+            <div class="footer-links">
+                <a href="privacy.html">Privacy Policy</a>
+                <a href="termini.html">Termini e Condizioni</a>
+            </div>
+            <div class="footer-copy">© 2026 SinGo - Shop Online. Tutti i diritti riservati.</div>
+        </div>
+    </div>
+
+    <script>
+        emailjs.init("nLywcTRnXOOUYsDtW");
+
+        const SERVICE_ID = "service_70i2s1t";
+        const PASSWORD_TEMPLATE_ID = "template_33lrsza";
+        const CODE_EXPIRY_MS = 15 * 60 * 1000;
+        let cliente = null;
+        let passwordCodeState = null;
+
+        const statoLabels = {
+            in_elaborazione: 'In elaborazione',
+            spedito: 'Spedito',
+            in_transito: 'In transito',
+            in_consegna: 'In consegna',
+            consegnato: 'Consegnato'
+        };
+
+        const statoColors = {
+            in_elaborazione: '#f59e0b',
+            spedito: '#3b82f6',
+            in_transito: '#8b5cf6',
+            in_consegna: '#ec4899',
+            consegnato: '#10b981'
+        };
+
+        async function initPage() {
+            updateUserUI();
+            cliente = caricaClienteLoggato();
+
+            if (!cliente) {
+                document.getElementById('loginRequired').style.display = 'block';
+                document.getElementById('accountContent').style.display = 'none';
+                return;
+            }
+
+            const clienteAggiornato = await DB_CLIENTI.getCliente(cliente.id);
+            if (clienteAggiornato) {
+                cliente = clienteAggiornato;
+                salvaClienteLoggato(cliente);
+            }
+
+            document.getElementById('loginRequired').style.display = 'none';
+            document.getElementById('accountContent').style.display = 'grid';
+            document.getElementById('profileName').textContent = cliente.nome || 'Cliente';
+            document.getElementById('profileEmail').textContent = cliente.email;
+            document.getElementById('pointsValue').textContent = cliente.punti_spesa || 0;
+
+            await Promise.all([caricaOrdini(), caricaPremiRiscattati()]);
+        }
+
+        function updateUserUI() {
+            const current = caricaClienteLoggato();
+            document.getElementById('userGreeting').style.display = current ? 'inline-block' : 'none';
+            document.getElementById('userGreeting').textContent = current ? `Ciao ${current.nome}!` : '';
+            document.getElementById('areaLink').style.display = current ? 'inline-block' : 'none';
+            document.getElementById('logoutBtn').style.display = current ? 'inline-block' : 'none';
+            document.getElementById('registerLink').style.display = current ? 'none' : 'inline-block';
+            document.getElementById('loginLink').style.display = current ? 'none' : 'inline-block';
+        }
+
+        async function caricaOrdini() {
+            const ordini = await DB_ORDINI.getOrdiniCliente(cliente.id);
+            const ordersList = document.getElementById('ordersList');
+            const totaleSpeso = ordini.reduce((sum, ordine) => sum + Number(ordine.totale || 0), 0);
+            const puntiOrdini = ordini.reduce((sum, ordine) => sum + Number(ordine.punti_guadagnati || 0), 0);
+
+            document.getElementById('ordersCount').textContent = ordini.length;
+            document.getElementById('spentTotal').textContent = `€ ${totaleSpeso.toFixed(2)}`;
+            document.getElementById('earnedPoints').textContent = puntiOrdini;
+
+            if (ordini.length === 0) {
+                ordersList.innerHTML = '<div class="empty-box">Non hai ancora effettuato ordini.</div>';
+                return;
+            }
+
+            ordersList.innerHTML = ordini.map(ordine => `
+                <article class="order-card">
+                    <div class="order-top">
+                        <div>
+                            <div class="order-id">Ordine #${ordine.id}</div>
+                            <div class="order-date">${new Date(ordine.data_ordine).toLocaleString('it-IT')}</div>
+                            <div class="order-address">${ordine.indirizzo_via}, ${ordine.indirizzo_cap} ${ordine.indirizzo_citta} (${ordine.indirizzo_provincia})</div>
+                            <div class="order-meta">Pagamento: ${ordine.metodo_pagamento || 'Non indicato'} · Punti: ${ordine.punti_guadagnati || 0}</div>
+                        </div>
+                        <div>
+                            <div class="order-status" style="background:${statoColors[ordine.stato_consegna] || '#64748B'}">${statoLabels[ordine.stato_consegna] || ordine.stato_consegna}</div>
+                            <div class="order-total">€ ${Number(ordine.totale || 0).toFixed(2)}</div>
+                        </div>
+                    </div>
+                </article>
+            `).join('');
+        }
+
+        async function caricaPremiRiscattati() {
+            const rewardsList = document.getElementById('rewardsList');
+            const riscattati = await DB_PREMI.getPremiRiscattati(cliente.id);
+
+            if (!riscattati || riscattati.length === 0) {
+                rewardsList.innerHTML = '<div class="empty-box">Non hai ancora riscattato premi.</div>';
+                return;
+            }
+
+            rewardsList.innerHTML = riscattati.map(item => {
+                const premio = item.premio || {};
+                return `
+                    <div class="reward-card">
+                        <strong>${premio.nome || 'Premio'}</strong>
+                        <span>${item.punti_utilizzati || 0} punti utilizzati</span><br>
+                        <span>Riscattato il ${new Date(item.data_riscatto).toLocaleDateString('it-IT')}</span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        document.getElementById('sendCodeBtn').addEventListener('click', async function() {
+            const currentPassword = document.getElementById('currentPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            if (!validaRichiestaPassword(currentPassword, newPassword, confirmPassword)) return;
+
+            this.disabled = true;
+            this.textContent = 'Invio codice...';
+
+            try {
+                const loginCheck = await DB_CLIENTI.loginCliente(cliente.email, currentPassword);
+                if (!loginCheck.success) {
+                    mostraPasswordMessage('Password attuale non corretta.', 'error');
+                    return;
+                }
+
+                const codice = generaCodice();
+                await emailjs.send(SERVICE_ID, PASSWORD_TEMPLATE_ID, {
+                    to_email: cliente.email,
+                    customer_name: cliente.nome || 'Cliente',
+                    recovery_code: codice,
+                    code: codice,
+                    expiry_time: '15 minuti',
+                    message: 'Il codice per modificare la password SinGo e: ' + codice
+                });
+
+                passwordCodeState = {
+                    code: codice,
+                    expiresAt: Date.now() + CODE_EXPIRY_MS
+                };
+
+                document.getElementById('codeGroup').style.display = 'block';
+                document.getElementById('changePasswordBtn').style.display = 'inline-block';
+                document.getElementById('verificationCode').focus();
+                mostraPasswordMessage('Codice inviato alla tua email.', 'success');
+            } catch (error) {
+                console.error('Errore invio codice cambio password:', error);
+                mostraPasswordMessage('Impossibile inviare il codice. Controlla EmailJS.', 'error');
+            } finally {
+                this.disabled = false;
+                this.textContent = 'Invia codice di verifica';
+            }
+        });
+
+        document.getElementById('passwordForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
+
+            const currentPassword = document.getElementById('currentPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            const verificationCode = document.getElementById('verificationCode').value.trim();
+
+            if (!validaRichiestaPassword(currentPassword, newPassword, confirmPassword)) return;
+
+            if (!passwordCodeState) {
+                mostraPasswordMessage('Invia prima il codice di verifica.', 'error');
+                return;
+            }
+
+            if (Date.now() > passwordCodeState.expiresAt) {
+                passwordCodeState = null;
+                mostraPasswordMessage('Codice scaduto. Richiedine uno nuovo.', 'error');
+                return;
+            }
+
+            if (verificationCode !== passwordCodeState.code) {
+                mostraPasswordMessage('Codice di verifica non corretto.', 'error');
+                return;
+            }
+
+            const changeBtn = document.getElementById('changePasswordBtn');
+            changeBtn.disabled = true;
+            changeBtn.textContent = 'Aggiornamento...';
+
+            try {
+                const result = await DB_CLIENTI.cambiaPasswordCliente(cliente.id, currentPassword, newPassword);
+                if (!result.success) {
+                    mostraPasswordMessage(result.message || 'Impossibile aggiornare la password.', 'error');
+                    return;
+                }
+
+                passwordCodeState = null;
+                document.getElementById('passwordForm').reset();
+                document.getElementById('codeGroup').style.display = 'none';
+                changeBtn.style.display = 'none';
+                mostraPasswordMessage('Password aggiornata con successo.', 'success');
+            } catch (error) {
+                console.error('Errore cambio password:', error);
+                mostraPasswordMessage('Errore durante il cambio password.', 'error');
+            } finally {
+                changeBtn.disabled = false;
+                changeBtn.textContent = 'Aggiorna password';
+            }
+        });
+
+        document.getElementById('verificationCode').addEventListener('input', function() {
+            this.value = this.value.replace(/\D/g, '').slice(0, 6);
+        });
+
+        function validaRichiestaPassword(currentPassword, newPassword, confirmPassword) {
+            if (!currentPassword || !newPassword || !confirmPassword) {
+                mostraPasswordMessage('Compila password attuale, nuova password e conferma.', 'error');
+                return false;
+            }
+            if (newPassword.length < 6) {
+                mostraPasswordMessage('La nuova password deve avere almeno 6 caratteri.', 'error');
+                return false;
+            }
+            if (newPassword !== confirmPassword) {
+                mostraPasswordMessage('Le nuove password non coincidono.', 'error');
+                return false;
+            }
+            return true;
+        }
+
+        function generaCodice() {
+            return String(Math.floor(100000 + Math.random() * 900000));
+        }
+
+        function mostraPasswordMessage(message, type) {
+            const box = document.getElementById('passwordMessage');
+            box.textContent = message;
+            box.className = `message ${type} show`;
+        }
+
+        function logoutUser() {
+            if (confirm('Sei sicuro di voler fare il logout?')) {
+                logoutCliente();
+                window.location.href = 'home.html';
+            }
+        }
+
+        initPage();
+    </script>
+</body>
+</html>
