@@ -13,7 +13,7 @@
 <body>
     <div class="login-container">
         <div class="login-header">
-            <h1>👋 Benvenuto!</h1>
+            <h1>Benvenuto!</h1>
             <p>Accedi al tuo profilo e ai tuoi punti spesa</p>
         </div>
 
@@ -36,24 +36,45 @@
             <button type="submit" class="btn-login">Accedi</button>
         </form>
 
+        <div id="recoveryPanel" style="display: none; margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border);">
+            <form id="recoveryCodeForm">
+                <div class="form-group">
+                    <label for="recoveryCode">Codice ricevuto via email</label>
+                    <input type="text" id="recoveryCode" inputmode="numeric" maxlength="6" placeholder="Inserisci il codice a 6 cifre">
+                    <small style="color: #64748B; display: block; margin-top: 6px;">Il codice scade dopo 15 minuti.</small>
+                </div>
+
+                <button type="submit" class="btn-login" id="btnVerificaCodice">Verifica codice</button>
+                <button type="button" class="btn-login" id="btnAnnullaRecupero" style="margin-top: 10px; background: #64748B;">Annulla</button>
+            </form>
+        </div>
+
         <div class="form-links">
             <p>Non hai ancora un account?</p>
             <a href="register.html">Registrati ora</a>
             <p style="margin-top: 15px; border-top: 1px solid var(--border); padding-top: 15px;">
-                <a href="home.html">← Torna alla Home</a>
+                <a href="home.html">&lt;- Torna alla Home</a>
             </p>
         </div>
     </div>
 
     <script>
-        // =========================================================================
-        // 🛑 CONFIGURAZIONE EMAILJS: INSERISCI QUI LA TUA PUBLIC KEY 🛑
-        // =========================================================================
-        emailjs.init("LA_TUA_PUBLIC_KEY_DI_EMAILJS");
+        emailjs.init("nLywcTRnXOOUYsDtW");
 
         const form = document.getElementById('loginForm');
         const messageBox = document.getElementById('messageBox');
         const btnRecupero = document.getElementById('btnRecupero');
+        const recoveryPanel = document.getElementById('recoveryPanel');
+        const recoveryCodeForm = document.getElementById('recoveryCodeForm');
+        const recoveryCodeInput = document.getElementById('recoveryCode');
+        const btnVerificaCodice = document.getElementById('btnVerificaCodice');
+        const btnAnnullaRecupero = document.getElementById('btnAnnullaRecupero');
+
+        const RECOVERY_CODE_EXPIRY_MS = 15 * 60 * 1000;
+        const SERVICE_ID = "service_70i2s1t";
+        const CODE_TEMPLATE_ID = "template_33lrsza";
+        const TEMP_PASSWORD_TEMPLATE_ID = "template_33lrsza";
+        let recoveryState = null;
 
         form.addEventListener('submit', async function (e) {
             e.preventDefault();
@@ -72,7 +93,7 @@
             try {
                 const result = await DB_CLIENTI.loginCliente(email, password);
                 if (result.success) {
-                    mostraMessaggio('✓ Login riuscito! Reindirizzamento...', 'success');
+                    mostraMessaggio('Login riuscito! Reindirizzamento...', 'success');
                     salvaClienteLoggato(result.cliente);
                     setTimeout(() => { window.location.href = 'home.html'; }, 1500);
                 } else {
@@ -88,7 +109,6 @@
             }
         });
 
-        // Recupero Password con EmailJS
         btnRecupero.addEventListener('click', async function(e) {
             e.preventDefault();
             const email = document.getElementById('email').value.trim();
@@ -98,36 +118,146 @@
                 return;
             }
 
-            mostraMessaggio('Verifica in corso...', 'success');
+            btnRecupero.style.pointerEvents = 'none';
+            btnRecupero.textContent = 'Invio codice...';
+            mostraMessaggio('Invio del codice di verifica in corso...', 'success');
 
             try {
-                // Generiamo il link sicuro per cambiare password inviando l'email come parametro
-                const linkReset = window.location.origin + "/nuova-password.html?email=" + encodeURIComponent(email);
+                const verifica = await DB_CLIENTI.verificaEmailCliente(email);
+                if (!verifica.success) {
+                    mostraMessaggio(verifica.message || 'Email non trovata.', 'error');
+                    return;
+                }
 
-                // =========================================================================
-                // ✅ SERVIZIO EMAILJS - USA I TUOI DATI ESISTENTI
-                // =========================================================================
-                const SERVICE_ID = "service_70i2s1t";  // Stesso service che usi per gli scontrini
-                const TEMPLATE_ID = "template_PASSWORD_RESET";  // 👈 CREA questo template su EmailJS
-
+                const codice = generaCodiceRecupero();
+                const nomeCliente = verifica.cliente.nome || email.split('@')[0] || 'Cliente';
                 const templateParams = {
                     to_email: email,
-                    reset_link: linkReset,
-                    expiry_time: '15 minuti'
+                    customer_name: nomeCliente,
+                    recovery_code: codice,
+                    code: codice,
+                    reset_link: 'Codice di verifica: ' + codice,
+                    expiry_time: '15 minuti',
+                    message: 'Il tuo codice di verifica SinGo e: ' + codice
                 };
 
-                const emailResponse = await emailjs.send(SERVICE_ID, TEMPLATE_ID, templateParams);
-                
-                if(emailResponse.status === 200) {
-                    mostraMessaggio('✓ Mail di recupero inviata! Controlla il tuo email (controlla anche SPAM).', 'success');
+                const emailResponse = await emailjs.send(SERVICE_ID, CODE_TEMPLATE_ID, templateParams);
+
+                if (emailResponse.status === 200) {
+                    recoveryState = {
+                        email,
+                        nome: nomeCliente,
+                        codice,
+                        expiresAt: Date.now() + RECOVERY_CODE_EXPIRY_MS
+                    };
+                    recoveryPanel.style.display = 'block';
+                    recoveryCodeInput.value = '';
+                    recoveryCodeInput.focus();
+                    mostraMessaggio('Codice inviato! Controlla la tua email e inserisci le 6 cifre.', 'success');
                 } else {
-                    mostraMessaggio('Errore nell\'invio della mail. Riprova.', 'error');
+                    mostraMessaggio('Errore nell\'invio del codice. Riprova.', 'error');
                 }
             } catch (error) {
                 console.error('Errore recupero password:', error);
-                mostraMessaggio('Impossibile completare l\'operazione di recupero.', 'error');
+                mostraMessaggio('Impossibile inviare l\'email. Controlla la configurazione EmailJS.', 'error');
+            } finally {
+                btnRecupero.style.pointerEvents = '';
+                btnRecupero.textContent = 'Password dimenticata?';
             }
         });
+
+        recoveryCodeForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const codiceInserito = recoveryCodeInput.value.trim();
+
+            if (!recoveryState) {
+                mostraMessaggio('Richiedi prima un codice di recupero.', 'error');
+                return;
+            }
+
+            if (!/^\d{6}$/.test(codiceInserito)) {
+                mostraMessaggio('Inserisci un codice valido di 6 cifre.', 'error');
+                recoveryCodeInput.focus();
+                return;
+            }
+
+            if (Date.now() > recoveryState.expiresAt) {
+                recoveryState = null;
+                mostraMessaggio('Codice scaduto. Richiedine uno nuovo.', 'error');
+                return;
+            }
+
+            if (codiceInserito !== recoveryState.codice) {
+                mostraMessaggio('Codice non corretto. Controlla la mail e riprova.', 'error');
+                recoveryCodeInput.focus();
+                return;
+            }
+
+            btnVerificaCodice.disabled = true;
+            btnVerificaCodice.textContent = 'Genero password...';
+
+            try {
+                const passwordTemporanea = generaPasswordTemporanea();
+                const resetResult = await DB_CLIENTI.resetPasswordCliente(recoveryState.email, passwordTemporanea);
+
+                if (!resetResult.success) {
+                    mostraMessaggio(resetResult.message || 'Errore durante l\'aggiornamento della password.', 'error');
+                    return;
+                }
+
+                const templateParams = {
+                    to_email: recoveryState.email,
+                    customer_name: recoveryState.nome,
+                    temp_password: passwordTemporanea,
+                    temporary_password: passwordTemporanea,
+                    password: passwordTemporanea,
+                    reset_link: 'Password temporanea: ' + passwordTemporanea,
+                    message: 'La tua nuova password temporanea SinGo e: ' + passwordTemporanea
+                };
+
+                const emailResponse = await emailjs.send(SERVICE_ID, TEMP_PASSWORD_TEMPLATE_ID, templateParams);
+
+                if (emailResponse.status === 200) {
+                    recoveryState = null;
+                    recoveryPanel.style.display = 'none';
+                    document.getElementById('password').value = '';
+                    mostraMessaggio('Password temporanea inviata! Usala per accedere.', 'success');
+                } else {
+                    mostraMessaggio('Password aggiornata, ma invio email non riuscito. Riprova il recupero.', 'error');
+                }
+            } catch (error) {
+                console.error('Errore verifica codice:', error);
+                mostraMessaggio('Errore durante l\'invio della password temporanea. Controlla EmailJS.', 'error');
+            } finally {
+                btnVerificaCodice.disabled = false;
+                btnVerificaCodice.textContent = 'Verifica codice';
+            }
+        });
+
+        btnAnnullaRecupero.addEventListener('click', function() {
+            recoveryState = null;
+            recoveryPanel.style.display = 'none';
+            recoveryCodeInput.value = '';
+            mostraMessaggio('Recupero password annullato.', 'success');
+        });
+
+        recoveryCodeInput.addEventListener('input', function() {
+            recoveryCodeInput.value = recoveryCodeInput.value.replace(/\D/g, '').slice(0, 6);
+        });
+
+        function generaCodiceRecupero() {
+            return String(Math.floor(100000 + Math.random() * 900000));
+        }
+
+        function generaPasswordTemporanea() {
+            const caratteri = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%';
+            let password = 'Sg-';
+            for (let i = 0; i < 9; i++) {
+                password += caratteri.charAt(Math.floor(Math.random() * caratteri.length));
+            }
+            return password;
+        }
 
         function mostraMessaggio(testo, tipo) {
             messageBox.textContent = testo;

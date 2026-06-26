@@ -390,10 +390,10 @@ const DB_CLIENTI = {
         return { success: true, cliente: data };
     },
 
-    async resetPasswordCliente(email, nuovaPassword) {
+    async verificaEmailCliente(email) {
         const { data, error } = await supabaseClient
             .from('clienti')
-            .select('id')
+            .select('id, email, nome')
             .eq('email', email)
             .single();
 
@@ -401,17 +401,33 @@ const DB_CLIENTI = {
             return { success: false, message: 'Email non trovata' };
         }
 
+        return { success: true, cliente: data };
+    },
+
+    async resetPasswordCliente(email, nuovaPassword) {
+        // Cerca il cliente per email
+        const { data: cliente, error: findError } = await supabaseClient
+            .from('clienti')
+            .select('id')
+            .eq('email', email)
+            .single();
+
+        if (findError || !cliente) {
+            return { success: false, message: 'Email non trovata' };
+        }
+
+        // Aggiorna la password
         const { error: updateError } = await supabaseClient
             .from('clienti')
             .update({ password: btoa(nuovaPassword) })
-            .eq('id', data.id);
+            .eq('id', cliente.id);
 
         if (updateError) {
             console.error("Errore reset password:", updateError);
             return { success: false, message: updateError.message };
         }
 
-        return { success: true };
+        return { success: true, message: 'Password aggiornata con successo' };
     },
 
     async getCliente(clienteId) {
@@ -586,14 +602,12 @@ const DB_VIAGGI = {
         return { success: true };
     },
 
-    // Scegli un viaggio casuale per una vincita
     async scegliViaggioCasuale() {
         const viaggi = await this.getViaggiAttivi();
         if (viaggi.length === 0) return null;
         return viaggi[Math.floor(Math.random() * viaggi.length)];
     },
 
-    // Registra una vincita
     async registraVincita(clienteId, viaggioId, ordineId = null) {
         const codice = 'VIN-' + Date.now() + '-' + Math.random().toString(36).substring(2, 8).toUpperCase();
         
@@ -615,12 +629,10 @@ const DB_VIAGGI = {
         return { success: true, vincita: data[0] };
     },
 
-    // Verifica se un cliente ha vinto (1 su 1000)
     async verificaVincita() {
         return Math.random() < 0.001; // 1 su 1000
     },
 
-    // Ottieni le vincite di un cliente
     async getVinciteCliente(clienteId) {
         const { data, error } = await supabaseClient
             .from('vincite_viaggi')
@@ -635,7 +647,6 @@ const DB_VIAGGI = {
         return data || [];
     },
 
-    // Riscatta una vincita
     async riscattaVincita(vincitaId) {
         const { data, error } = await supabaseClient
             .from('vincite_viaggi')
