@@ -537,6 +537,12 @@ Per riscattare il premio, rispondi a questa email o contatta il nostro servizio 
             `;
         }
 
+        function getMessaggioConcorso(totaleOrdine) {
+            if (!cliente) return 'registrati per provare a vincere';
+            if (totaleOrdine < SPESA_MINIMA_CONCORSO) return 'fai una spesa minima di 40€ per provare a vincere';
+            return 'non hai vinto';
+        }
+
         // ==========================================
         // CONFERMA ORDINE
         // ==========================================

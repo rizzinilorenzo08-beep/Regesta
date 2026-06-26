@@ -14,7 +14,11 @@
         .account-header { margin-bottom: 24px; }
         .account-header h1 { color: #1E293B; font-size: 2rem; margin-bottom: 6px; }
         .account-header p { color: #64748B; }
-        .account-grid { display: grid; grid-template-columns: 320px 1fr; gap: 22px; align-items: start; }
+        .account-grid { display: grid; grid-template-columns: minmax(260px, 320px) minmax(0, 1fr); gap: 22px; align-items: start; }
+        .account-nav { display: grid; gap: 8px; margin-bottom: 14px; }
+        .account-nav button { width: 100%; text-align: left; border: 1px solid #E2E8F0; background: #F8FAFC; color: #334155; border-radius: 8px; padding: 11px 12px; font-weight: 700; cursor: pointer; }
+        .account-nav button.active { background: #10B981; border-color: #10B981; color: white; }
+        .account-nav button[hidden] { display: none; }
         .side-panel, .content-panel { background: white; border: 1px solid #E2E8F0; border-radius: 12px; padding: 22px; box-shadow: 0 4px 12px rgba(15,23,42,0.05); }
         .profile-name { font-size: 1.3rem; font-weight: 700; color: #1E293B; }
         .profile-email { color: #64748B; margin: 4px 0 18px; overflow-wrap: anywhere; }
@@ -25,7 +29,9 @@
         .account-actions a, .account-actions button, .btn-action { display: inline-block; text-align: center; border: none; border-radius: 8px; padding: 11px 14px; font-weight: 700; text-decoration: none; cursor: pointer; }
         .btn-primary-account { background: #10B981; color: white; }
         .btn-muted-account { background: #F1F5F9; color: #334155; }
-        .section-block { margin-bottom: 28px; }
+        .section-block { display: none; margin-bottom: 0; }
+        .section-block[hidden] { display: none !important; }
+        .section-block.active { display: block; }
         .section-title { color: #1E293B; font-size: 1.35rem; margin-bottom: 14px; text-align: left; }
         .summary-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 22px; }
         .summary-item { background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 14px; }
@@ -50,7 +56,9 @@
         .reward-card { background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 14px; }
         .reward-card strong { color: #1E293B; display: block; margin-bottom: 6px; }
         .reward-card span { color: #64748B; font-size: 0.9rem; }
-        .trip-winner-panel { display: none; background: #FFF7ED; border: 1px solid #FDBA74; border-radius: 12px; padding: 18px; }
+        .reward-card button { width: 100%; margin-top: 12px; border: none; border-radius: 8px; padding: 10px 12px; background: #10B981; color: white; font-weight: 700; cursor: pointer; }
+        .reward-card button:disabled { opacity: 0.6; cursor: not-allowed; }
+        .trip-winner-panel { background: #FFF7ED; border: 1px solid #FDBA74; border-radius: 12px; padding: 18px; }
         .trip-card { background: white; border: 1px solid #FED7AA; border-radius: 10px; padding: 16px; margin-bottom: 12px; }
         .trip-card strong { display: block; color: #9A3412; font-size: 1.05rem; margin-bottom: 6px; }
         .trip-card p { color: #64748B; margin: 4px 0 12px; }
@@ -58,10 +66,25 @@
         .trip-form label { display: block; color: #1E293B; font-weight: 700; margin-bottom: 6px; }
         .trip-form select { width: 100%; padding: 11px 13px; border: 2px solid #FED7AA; border-radius: 8px; background: white; }
         .trip-saved { margin-top: 10px; color: #166534; font-weight: 700; display: none; }
-        @media (max-width: 860px) {
+        @media (max-width: 920px) {
+            .account-container { margin: 18px auto; padding: 0 14px; }
             .account-grid, .summary-row { grid-template-columns: 1fr; }
+            .side-panel, .content-panel { padding: 16px; }
+            .navbar, .nav-left, .nav-right, .user-section { flex-wrap: wrap; }
+            .navbar { gap: 10px; padding: 12px 14px; }
+            .account-nav { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; scroll-snap-type: x proximity; }
+            .account-nav button { min-width: 160px; text-align: center; scroll-snap-align: start; }
             .order-total { text-align: left; }
             .trip-form { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 560px) {
+            .account-header h1 { font-size: 1.55rem; }
+            .reward-grid { grid-template-columns: 1fr; }
+            .order-card, .trip-card, .reward-card { padding: 12px; }
+            .account-actions a, .account-actions button, .btn-action { width: 100%; }
+            .profile-name { font-size: 1.1rem; }
+            .points-box .value { font-size: 2rem; }
+            .section-title { font-size: 1.15rem; }
         }
     </style>
 </head>
@@ -108,6 +131,13 @@
                     <div class="value" id="pointsValue">0</div>
                     <div class="label">Punti disponibili</div>
                 </div>
+                <nav class="account-nav" aria-label="Sezioni area personale">
+                    <button type="button" class="active" data-section="overview" onclick="showAccountSection('overview', this)">Riepilogo</button>
+                    <button type="button" data-section="orders" onclick="showAccountSection('orders', this)">I tuoi ordini</button>
+                    <button type="button" data-section="trips" id="tripNavBtn" onclick="showAccountSection('trips', this)" hidden>I tuoi viaggi</button>
+                    <button type="button" data-section="rewards" onclick="showAccountSection('rewards', this)">Premi riscattati</button>
+                    <button type="button" data-section="password" onclick="showAccountSection('password', this)">Gestisci psw</button>
+                </nav>
                 <div class="account-actions">
                     <a href="shop.html" class="btn-primary-account">Vai allo shop</a>
                     <a href="gestione-indirizzi.html" class="btn-muted-account">Gestisci indirizzi</a>
@@ -116,7 +146,9 @@
             </aside>
 
             <section class="content-panel">
-                <div class="summary-row">
+                <div class="section-block active" data-account-section="overview">
+                    <h2 class="section-title">Riepilogo</h2>
+                    <div class="summary-row">
                     <div class="summary-item">
                         <strong id="ordersCount">0</strong>
                         <span>Ordini totali</span>
@@ -129,24 +161,26 @@
                         <strong id="earnedPoints">0</strong>
                         <span>Punti dagli ordini</span>
                     </div>
+                    </div>
                 </div>
 
-                <div class="section-block">
+                <div class="section-block" data-account-section="orders">
                     <h2 class="section-title">I tuoi ordini</h2>
                     <div id="ordersList"></div>
                 </div>
 
-                <div class="section-block trip-winner-panel" id="tripWinnerPanel">
+                <div class="section-block trip-winner-panel" id="tripWinnerPanel" data-account-section="trips">
                     <h2 class="section-title">Dettagli viaggio vinto</h2>
                     <div id="tripWinnerList"></div>
                 </div>
 
-                <div class="section-block">
+                <div class="section-block" data-account-section="rewards">
                     <h2 class="section-title">Premi riscattati</h2>
+                    <div id="rewardMessage" class="message"></div>
                     <div id="rewardsList" class="reward-grid"></div>
                 </div>
 
-                <div class="section-block">
+                <div class="section-block" data-account-section="password">
                     <h2 class="section-title">Modifica password</h2>
                     <div id="passwordMessage" class="message"></div>
                     <form id="passwordForm" class="password-form">
@@ -192,6 +226,7 @@
         const CODE_EXPIRY_MS = 15 * 60 * 1000;
         let cliente = null;
         let passwordCodeState = null;
+        let premiRiscattatiCache = [];
 
         const statoLabels = {
             in_elaborazione: 'In elaborazione',
@@ -242,6 +277,18 @@
             document.getElementById('logoutBtn').style.display = current ? 'inline-block' : 'none';
             document.getElementById('registerLink').style.display = current ? 'none' : 'inline-block';
             document.getElementById('loginLink').style.display = current ? 'none' : 'inline-block';
+        }
+
+        function showAccountSection(sectionName, btn = null) {
+            document.querySelectorAll('[data-account-section]').forEach(section => {
+                section.classList.toggle('active', section.dataset.accountSection === sectionName);
+            });
+
+            document.querySelectorAll('.account-nav button').forEach(button => {
+                button.classList.toggle('active', button.dataset.section === sectionName);
+            });
+
+            if (btn) btn.classList.add('active');
         }
 
         async function caricaOrdini() {
@@ -296,15 +343,19 @@
         async function caricaVinciteViaggi() {
             const panel = document.getElementById('tripWinnerPanel');
             const list = document.getElementById('tripWinnerList');
+            const navBtn = document.getElementById('tripNavBtn');
 
             try {
                 const vincite = await DB_VIAGGI.getVinciteCliente(cliente.id);
                 if (!vincite || vincite.length === 0) {
-                    panel.style.display = 'none';
+                    panel.hidden = true;
+                    navBtn.hidden = true;
+                    if (panel.classList.contains('active')) showAccountSection('overview');
                     return;
                 }
 
-                panel.style.display = 'block';
+                panel.hidden = false;
+                navBtn.hidden = false;
                 list.innerHTML = vincite.map(vincita => {
                     const viaggio = vincita.viaggi_in_palio || {};
                     const saved = getSceltaViaggio(vincita.id);
@@ -338,7 +389,8 @@
                 }).join('');
             } catch (error) {
                 console.error('Errore caricamento vincite viaggio:', error);
-                panel.style.display = 'none';
+                panel.hidden = true;
+                navBtn.hidden = true;
             }
         }
 
@@ -386,22 +438,100 @@
         async function caricaPremiRiscattati() {
             const rewardsList = document.getElementById('rewardsList');
             const riscattati = await DB_PREMI.getPremiRiscattati(cliente.id);
+            premiRiscattatiCache = riscattati || [];
 
             if (!riscattati || riscattati.length === 0) {
                 rewardsList.innerHTML = '<div class="empty-box">Non hai ancora riscattato premi.</div>';
                 return;
             }
 
-            rewardsList.innerHTML = riscattati.map(item => {
+            rewardsList.innerHTML = riscattati.map((item, index) => {
                 const premio = item.premio || {};
+                const prezzo = Number(premio.prezzo_aggiuntivo || 0);
                 return `
                     <div class="reward-card">
                         <strong>${premio.nome || 'Premio'}</strong>
                         <span>${item.punti_utilizzati || 0} punti utilizzati</span><br>
                         <span>Riscattato il ${new Date(item.data_riscatto).toLocaleDateString('it-IT')}</span>
+                        <button type="button" onclick="acquistaPremioRiscattato(${index}, this)">
+                            Acquista${prezzo > 0 ? ` - € ${prezzo.toFixed(2)}` : ' gratis'}
+                        </button>
                     </div>
                 `;
             }).join('');
+        }
+
+        async function acquistaPremioRiscattato(index, btn) {
+            const item = premiRiscattatiCache[index];
+            const premio = item ? item.premio : null;
+            if (!premio) {
+                mostraRewardMessage('Premio non disponibile.', 'error');
+                return;
+            }
+
+            const originalText = btn ? btn.textContent : '';
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = 'Acquisto...';
+            }
+
+            try {
+                const indirizzi = await DB_INDIRIZZI.getIndirizziCliente(cliente.id);
+                const indirizzo = indirizzi.find(i => i.preferito) || indirizzi[0];
+
+                if (!indirizzo) {
+                    mostraRewardMessage('Aggiungi un indirizzo prima di acquistare un premio.', 'error');
+                    setTimeout(() => window.location.href = 'gestione-indirizzi.html', 1200);
+                    return;
+                }
+
+                const totale = Number(premio.prezzo_aggiuntivo || 0);
+                const result = await DB_ORDINI.creaOrdine(
+                    cliente.id,
+                    {
+                        via: indirizzo.via,
+                        cap: indirizzo.cap,
+                        citta: indirizzo.citta,
+                        provincia: indirizzo.provincia
+                    },
+                    'Premio riscattato',
+                    totale,
+                    indirizzo.email || cliente.email
+                );
+
+                if (!result.success) {
+                    mostraRewardMessage(result.error || 'Impossibile completare acquisto premio.', 'error');
+                    return;
+                }
+
+                if (totale > 0) {
+                    try {
+                        await registraVendita(totale);
+                        const budget = await loadBudget();
+                        await saveBudget(budget + totale);
+                    } catch (venditaErr) {
+                        console.error('Errore registrazione vendita premio:', venditaErr);
+                    }
+                }
+
+                mostraRewardMessage(`Acquisto completato: ${premio.nome || 'Premio'}.`, 'success');
+                await caricaOrdini();
+                showAccountSection('orders');
+            } catch (error) {
+                console.error('Errore acquisto premio:', error);
+                mostraRewardMessage('Errore durante acquisto premio.', 'error');
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = originalText;
+                }
+            }
+        }
+
+        function mostraRewardMessage(message, type) {
+            const box = document.getElementById('rewardMessage');
+            box.textContent = message;
+            box.className = `message show ${type}`;
         }
 
         document.getElementById('sendCodeBtn').addEventListener('click', async function() {
