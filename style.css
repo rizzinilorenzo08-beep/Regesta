@@ -114,6 +114,12 @@ input[type="number"] {
     align-items: center;
 }
 
+.nav-links {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
 .navbar a, .navbar button { 
     color: white; 
     text-decoration: none; 

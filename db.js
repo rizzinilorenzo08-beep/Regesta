@@ -658,7 +658,13 @@ const DB_VIAGGI = {
     },
 
     async verificaVincita() {
-        return Math.random() < 0.001; // 1 su 1000
+        // ============================================================
+        // TEST VINCITA - MODIFICA QUI IL "1000"
+        // Produzione: 1000 = vince 1 ordine su 1000.
+        // Test rapido: metti 1 per far vincere sempre, 2 per 1 su 2.
+        // ============================================================
+        const PROBABILITA_VINCITA_UNO_SU = 2;
+        return Math.random() < (1 / PROBABILITA_VINCITA_UNO_SU);
     },
 
     async getVinciteCliente(clienteId) {

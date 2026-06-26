@@ -474,9 +474,9 @@
             document.getElementById('btnOrdini').style.display = (ruolo !== 'analista') ? 'block' : 'none';
             
             document.getElementById('btnEditorStock').style.display = (ruolo !== 'analista') ? 'inline-block' : 'none';
-            document.getElementById('btnToggleCart').style.display = (ruolo === 'super_admin' || ruolo === 'admin_negozio') ? 'inline-block' : 'none';
+            document.getElementById('btnToggleCart').style.display = (ruolo === 'super_admin' || ruolo === 'admin_negozio' || ruolo === 'responsabile_acquisti') ? 'inline-block' : 'none';
             
-            document.getElementById('manager-cart').style.display = (ruolo === 'super_admin' || ruolo === 'admin_negozio') ? 'block' : 'none';
+            document.getElementById('manager-cart').style.display = (ruolo === 'super_admin' || ruolo === 'admin_negozio' || ruolo === 'responsabile_acquisti') ? 'block' : 'none';
             document.getElementById('btnEsporta').style.display = (ruolo === 'analista' || ruolo === 'super_admin') ? 'block' : 'none';
             
             if (ruolo === 'analista') {
@@ -800,7 +800,7 @@
 
         // ── Carrello manager ─────────────────────────────────────────────
         function aggiungiAlCarrelloManager(id) {
-            if (!isSuperAdmin() && !isAdminNegozio()) {
+            if (!isSuperAdmin() && !isAdminNegozio() && !isResponsabileAcquisti()) {
                 showToast('❌ Non hai i permessi per questa azione', 'error');
                 return;
             }
@@ -867,7 +867,7 @@
 
         // ── ACQUISTO MANAGER ─────────────────────────────────────────────
         function procCompraManager() {
-            if (!isSuperAdmin() && !isAdminNegozio()) {
+            if (!isSuperAdmin() && !isAdminNegozio() && !isResponsabileAcquisti()) {
                 showToast('❌ Non hai i permessi per questa azione', 'error');
                 return;
             }

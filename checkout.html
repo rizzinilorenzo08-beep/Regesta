@@ -254,6 +254,7 @@
         let buoniSelezionati = [];
         let totaleFinale = totaleOrigine;
         let indirizzoSelezionatoId = null;
+        const SPESA_MINIMA_CONCORSO = 40;
 
         debugLog(`Totale iniziale: €${totaleOrigine}, Articoli: ${cartToUse.length}`);
 
@@ -465,7 +466,7 @@
         }
 
         // SEND EMAIL
-        async function sendReceiptEmail({ toEmail, customerName, orderTotal, orderDate, paymentMethod, address, itemsText, puntiGuadagnati, viaggioVinto }) {
+        async function sendReceiptEmail({ toEmail, customerName, orderTotal, orderDate, paymentMethod, address, itemsText, puntiGuadagnati, viaggioVinto, premioMessaggio, premioLink, premioLinkText }) {
             if (typeof emailjs === 'undefined') {
                 return { success: false };
             }
@@ -493,6 +494,10 @@ Per riscattare il premio, rispondi a questa email o contatta il nostro servizio 
                 puntiMessaggio = `⭐ Hai guadagnato ${puntiGuadagnati} punti spesa!`;
             }
 
+            const viaggioTitolo = viaggioVinto ? (viaggioVinto.titolo || 'Viaggio premio') : '';
+            const viaggioDestinazione = viaggioVinto ? (viaggioVinto.destinazione || '') : '';
+            const viaggioDescrizione = viaggioVinto ? (viaggioVinto.descrizione || '') : '';
+
             const templateParams = {
                 to_email: toEmail,
                 customer_name: customerName,
@@ -500,7 +505,14 @@ Per riscattare il premio, rispondi a questa email o contatta il nostro servizio 
                 order_date: orderDate,
                 payment_method: paymentMethod,
                 delivery_address: address,
-                items_list: itemsText + (viaggioMessaggio ? '\n\n' + viaggioMessaggio : '') + (puntiMessaggio ? '\n\n' + puntiMessaggio : '')
+                items_list: itemsText,
+                points_message: puntiMessaggio,
+                prize_result: premioMessaggio,
+                prize_link: premioLink,
+                prize_link_text: premioLinkText,
+                trip_title: viaggioTitolo,
+                trip_destination: viaggioDestinazione,
+                trip_description: viaggioDescrizione
             };
 
             try {
@@ -604,17 +616,36 @@ Per riscattare il premio, rispondi a questa email o contatta il nostro servizio 
                     }
                 }
 
-                // ---- VERIFICA VINCITA (1 su 1000) ----
+                // ---- CREA L'ORDINE ----
+                let ordineCreato = null;
+                if (cliente) {
+                    try {
+                        const resultOrdine = await DB_ORDINI.creaOrdine(
+                            cliente.id,
+                            { via: indirizzoVia, cap: indirizzoCap, citta: indirizzoCitta, provincia: indirizzoProvincia },
+                            metodoSelezionato,
+                            totaleFinale,
+                            checkoutEmail
+                        );
+                        if (resultOrdine.success) {
+                            ordineCreato = resultOrdine.ordine;
+                        }
+                    } catch (ordErr) {
+                        console.error('Errore creazione ordine:', ordErr);
+                    }
+                }
+
+                // ---- VERIFICA VINCITA (solo clienti registrati con spesa minima) ----
                 let haVinto = false;
                 let viaggio = null;
-                if (cliente) {
+                if (cliente && totaleFinale >= SPESA_MINIMA_CONCORSO) {
                     try {
                         haVinto = await DB_VIAGGI.verificaVincita();
                         if (haVinto) {
                             viaggio = await DB_VIAGGI.scegliViaggioCasuale();
                             if (viaggio) {
                                 // Registra la vincita
-                                await DB_VIAGGI.registraVincita(cliente.id, viaggio.id, null);
+                                await DB_VIAGGI.registraVincita(cliente.id, viaggio.id, ordineCreato ? ordineCreato.id : null);
                                 viaggioVinto = viaggio;
                                 
                                 // Mostra nella UI
@@ -652,33 +683,6 @@ Per riscattare il premio, rispondi a questa email o contatta il nostro servizio 
                     }
                 }
 
-                // ---- CREA L'ORDINE ----
-                let ordineCreato = null;
-                if (cliente) {
-                    try {
-                        const resultOrdine = await DB_ORDINI.creaOrdine(
-                            cliente.id,
-                            { via: indirizzoVia, cap: indirizzoCap, citta: indirizzoCitta, provincia: indirizzoProvincia },
-                            metodoSelezionato,
-                            totaleFinale,
-                            checkoutEmail
-                        );
-                        if (resultOrdine.success) {
-                            ordineCreato = resultOrdine.ordine;
-                            
-                            // Se ha vinto, aggiorna l'ordine
-                            if (viaggioVinto && ordineCreato.id) {
-                                await supabaseClient
-                                    .from('ordini')
-                                    .update({ viaggio_vincente_id: viaggioVinto.id })
-                                    .eq('id', ordineCreato.id);
-                            }
-                        }
-                    } catch (ordErr) {
-                        console.error('Errore creazione ordine:', ordErr);
-                    }
-                }
-
                 // ---- PREPARA EMAIL ----
                 let itemsText = cartToUse.map(item => {
                     const unitPrice = isProductOnSale(item) ? getDiscountedPrice(item.prezzo, item) : item.prezzo;
@@ -686,7 +690,7 @@ Per riscattare il premio, rispondi a questa email o contatta il nostro servizio 
                 }).join('\n');
 
                 // Aggiungi info vincita nell'email
-                if (viaggioVinto) {
+                if (false && viaggioVinto) {
                     itemsText += `
 
 ━━━━━━━━━━━━━━━━━━━━
@@ -701,13 +705,16 @@ ${viaggioVinto.data_ritorno ? `📅 Ritorno: ${new Date(viaggioVinto.data_ritorn
 Per riscattare il premio, rispondi a questa email o contatta il nostro servizio clienti.`;
                 }
 
-                if (puntiGuadagnati > 0) {
+                if (false && puntiGuadagnati > 0) {
                     itemsText += `\n\n⭐ Hai guadagnato ${puntiGuadagnati} punti spesa!`;
                 }
 
                 const orderDate = new Date().toLocaleDateString('it-IT');
                 const deliveryAddress = `${indirizzoVia}, ${indirizzoCap} ${indirizzoCitta} (${indirizzoProvincia})`;
                 const customerName = cliente?.nome || 'Cliente';
+                const premioMessaggio = viaggioVinto
+                    ? 'hai vinto, vai nella tua area personale per scoprire di piu'
+                    : getMessaggioConcorso(totaleFinale);
 
                 await sendReceiptEmail({
                     toEmail: checkoutEmail,
@@ -718,7 +725,10 @@ Per riscattare il premio, rispondi a questa email o contatta il nostro servizio 
                     address: deliveryAddress,
                     itemsText: itemsText,
                     puntiGuadagnati: puntiGuadagnati,
-                    viaggioVinto: viaggioVinto
+                    viaggioVinto: viaggioVinto,
+                    premioMessaggio: premioMessaggio,
+                    premioLink: '',
+                    premioLinkText: ''
                 });
 
                 localStorage.removeItem('carrelloCheckout');

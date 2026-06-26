@@ -50,9 +50,18 @@
         .reward-card { background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 14px; }
         .reward-card strong { color: #1E293B; display: block; margin-bottom: 6px; }
         .reward-card span { color: #64748B; font-size: 0.9rem; }
+        .trip-winner-panel { display: none; background: #FFF7ED; border: 1px solid #FDBA74; border-radius: 12px; padding: 18px; }
+        .trip-card { background: white; border: 1px solid #FED7AA; border-radius: 10px; padding: 16px; margin-bottom: 12px; }
+        .trip-card strong { display: block; color: #9A3412; font-size: 1.05rem; margin-bottom: 6px; }
+        .trip-card p { color: #64748B; margin: 4px 0 12px; }
+        .trip-form { display: grid; grid-template-columns: repeat(2, minmax(180px, 1fr)); gap: 12px; }
+        .trip-form label { display: block; color: #1E293B; font-weight: 700; margin-bottom: 6px; }
+        .trip-form select { width: 100%; padding: 11px 13px; border: 2px solid #FED7AA; border-radius: 8px; background: white; }
+        .trip-saved { margin-top: 10px; color: #166534; font-weight: 700; display: none; }
         @media (max-width: 860px) {
             .account-grid, .summary-row { grid-template-columns: 1fr; }
             .order-total { text-align: left; }
+            .trip-form { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -125,6 +134,11 @@
                 <div class="section-block">
                     <h2 class="section-title">I tuoi ordini</h2>
                     <div id="ordersList"></div>
+                </div>
+
+                <div class="section-block trip-winner-panel" id="tripWinnerPanel">
+                    <h2 class="section-title">Dettagli viaggio vinto</h2>
+                    <div id="tripWinnerList"></div>
                 </div>
 
                 <div class="section-block">
@@ -217,7 +231,7 @@
             document.getElementById('profileEmail').textContent = cliente.email;
             document.getElementById('pointsValue').textContent = cliente.punti_spesa || 0;
 
-            await Promise.all([caricaOrdini(), caricaPremiRiscattati()]);
+            await Promise.all([caricaOrdini(), caricaPremiRiscattati(), caricaVinciteViaggi()]);
         }
 
         function updateUserUI() {
@@ -261,6 +275,112 @@
                     </div>
                 </article>
             `).join('');
+        }
+
+        const aeroportiItalia = [
+            'Roma Fiumicino (FCO)',
+            'Milano Malpensa (MXP)',
+            'Milano Linate (LIN)',
+            'Bergamo Orio al Serio (BGY)',
+            'Venezia Marco Polo (VCE)',
+            'Bologna Guglielmo Marconi (BLQ)',
+            'Napoli Capodichino (NAP)',
+            'Torino Caselle (TRN)',
+            'Pisa Galileo Galilei (PSA)',
+            'Catania Fontanarossa (CTA)',
+            'Palermo Falcone Borsellino (PMO)',
+            'Bari Karol Wojtyla (BRI)',
+            'Cagliari Elmas (CAG)'
+        ];
+
+        async function caricaVinciteViaggi() {
+            const panel = document.getElementById('tripWinnerPanel');
+            const list = document.getElementById('tripWinnerList');
+
+            try {
+                const vincite = await DB_VIAGGI.getVinciteCliente(cliente.id);
+                if (!vincite || vincite.length === 0) {
+                    panel.style.display = 'none';
+                    return;
+                }
+
+                panel.style.display = 'block';
+                list.innerHTML = vincite.map(vincita => {
+                    const viaggio = vincita.viaggi_in_palio || {};
+                    const saved = getSceltaViaggio(vincita.id);
+                    const dateDisponibili = getDatePartenzaDisponibili(vincita.id);
+                    return `
+                        <article class="trip-card">
+                            <strong>${viaggio.titolo || 'Viaggio premio'}</strong>
+                            <p>${viaggio.destinazione ? `Destinazione: ${viaggio.destinazione}` : 'Scegli aeroporto e data per completare la richiesta.'}</p>
+                            ${viaggio.descrizione ? `<p>${viaggio.descrizione}</p>` : ''}
+                            <div class="trip-form">
+                                <div>
+                                    <label for="airport-${vincita.id}">Aeroporto di partenza</label>
+                                    <select id="airport-${vincita.id}" onchange="salvaSceltaViaggio('${vincita.id}')">
+                                        <option value="">Scegli aeroporto</option>
+                                        ${aeroportiItalia.map(a => `<option value="${a}" ${saved.aeroporto === a ? 'selected' : ''}>${a}</option>`).join('')}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="date-${vincita.id}">Data di partenza</label>
+                                    <select id="date-${vincita.id}" onchange="salvaSceltaViaggio('${vincita.id}')">
+                                        <option value="">Scegli data</option>
+                                        ${dateDisponibili.map(d => `<option value="${d}" ${saved.data === d ? 'selected' : ''}>${formatDateIT(d)}</option>`).join('')}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="trip-saved" id="trip-saved-${vincita.id}" style="${saved.aeroporto && saved.data ? 'display:block;' : ''}">
+                                Scelta salvata: ${saved.aeroporto || ''}${saved.aeroporto && saved.data ? ' - ' : ''}${saved.data ? formatDateIT(saved.data) : ''}
+                            </div>
+                        </article>
+                    `;
+                }).join('');
+            } catch (error) {
+                console.error('Errore caricamento vincite viaggio:', error);
+                panel.style.display = 'none';
+            }
+        }
+
+        function getDatePartenzaDisponibili(vincitaId) {
+            const key = `date_viaggio_${cliente.id}_${vincitaId}`;
+            const salvate = JSON.parse(localStorage.getItem(key) || 'null');
+            if (salvate && Array.isArray(salvate) && salvate.length > 0) return salvate;
+
+            const date = [];
+            const usate = new Set();
+            while (date.length < 6) {
+                const d = new Date();
+                d.setDate(d.getDate() + 1 + Math.floor(Math.random() * 30));
+                const iso = d.toISOString().split('T')[0];
+                if (!usate.has(iso)) {
+                    usate.add(iso);
+                    date.push(iso);
+                }
+            }
+            date.sort();
+            localStorage.setItem(key, JSON.stringify(date));
+            return date;
+        }
+
+        function getSceltaViaggio(vincitaId) {
+            return JSON.parse(localStorage.getItem(`scelta_viaggio_${cliente.id}_${vincitaId}`) || '{"aeroporto":"","data":""}');
+        }
+
+        function salvaSceltaViaggio(vincitaId) {
+            const aeroporto = document.getElementById(`airport-${vincitaId}`).value;
+            const data = document.getElementById(`date-${vincitaId}`).value;
+            localStorage.setItem(`scelta_viaggio_${cliente.id}_${vincitaId}`, JSON.stringify({ aeroporto, data }));
+
+            const saved = document.getElementById(`trip-saved-${vincitaId}`);
+            if (saved) {
+                saved.style.display = aeroporto && data ? 'block' : 'none';
+                saved.textContent = aeroporto && data ? `Scelta salvata: ${aeroporto} - ${formatDateIT(data)}` : '';
+            }
+        }
+
+        function formatDateIT(isoDate) {
+            return new Date(isoDate + 'T00:00:00').toLocaleDateString('it-IT');
         }
 
         async function caricaPremiRiscattati() {
