@@ -1386,6 +1386,27 @@ PRODOTTI DISPONIBILI:
             context += `SPESE TOTALI: €${spese.toFixed(2)}\n`;
         }
 
+        const serie = this.getSerieEconomiche(vendite, expenses, ordini || []);
+        const trendFatturato = this.descriviTrend(serie.revenue);
+        const trendMargine = this.descriviTrend(serie.margin);
+        const trendOrdini = this.descriviTrend(serie.orders);
+        const trendAov = this.descriviTrend(serie.aov);
+        const statiOrdini = this.getStatoOrdini(ordini || []);
+        const leadTimeMedio = this.getLeadTimeMedio(ordini || []);
+        const consigliPrezzo = this.getConsigliPrezzo(inventario);
+
+        context += `\nDATI GRAFICI E TREND:
+- Fatturato: ${trendFatturato.testo} (${trendFatturato.delta.toFixed(1)}%)
+- Margine: ${trendMargine.testo} (${trendMargine.delta.toFixed(1)}%)
+- Ordini: ${trendOrdini.testo} (${trendOrdini.delta.toFixed(1)}%)
+- AOV: ${trendAov.testo} (${trendAov.delta.toFixed(1)}%)
+- Lead time medio: ${leadTimeMedio.toFixed(1)} giorni
+- Stato ordini: ${statiOrdini.map(s => `${s.label} ${s.count}`).join(', ')}
+
+CONSIGLI PREZZO CALCOLATI:
+${consigliPrezzo.slice(0, 8).map(p => `- ${p.nome}: ${p.tipo}, prezzo attuale €${p.prezzo.toFixed(2)}, suggerito €${p.nuovoPrezzo.toFixed(2)}, stock ${p.percentuale}%, domanda stimata ${Math.round(p.domanda * 100)}%`).join('\n')}
+`;
+
         const prodottiCritici = inventario.filter(p => (p.qty / p.maxQty) * 100 < 20);
         if (prodottiCritici.length > 0) {
             context += `\n⚠️ PRODOTTI IN ESAURIMENTO:\n`;
@@ -1499,6 +1520,144 @@ REGOLE: 1 punto ogni 15€, margine consigliato 45%. Rispondi in ITALIANO, usa e
             .sort((a, b) => b.valoreStimato - a.valoreStimato);
     },
 
+    dateKey(data) {
+        if (!data) return new Date().toISOString().slice(0, 10);
+        const parsed = new Date(data);
+        if (isNaN(parsed)) return String(data).slice(0, 10);
+        return parsed.toISOString().slice(0, 10);
+    },
+
+    mediaValori(valori) {
+        if (!valori.length) return 0;
+        return valori.reduce((s, v) => s + Number(v || 0), 0) / valori.length;
+    },
+
+    descriviTrend(valori) {
+        if (valori.length < 2) return { testo: 'stabile', delta: 0, ultimo: valori[0] || 0 };
+        const meta = Math.max(1, Math.floor(valori.length / 2));
+        const prima = this.mediaValori(valori.slice(0, meta));
+        const dopo = this.mediaValori(valori.slice(-meta));
+        const delta = prima > 0 ? ((dopo - prima) / prima) * 100 : (dopo > 0 ? 100 : 0);
+        let testo = 'stabile';
+        if (delta > 8) testo = 'in crescita';
+        if (delta < -8) testo = 'in calo';
+        return { testo, delta, ultimo: valori[valori.length - 1] || 0 };
+    },
+
+    getSerieEconomiche(vendite, expenses, ordini = []) {
+        const perData = {};
+        const dateConVendite = new Set(vendite.map(v => this.dateKey(v.data)));
+
+        vendite.forEach(v => {
+            const d = this.dateKey(v.data);
+            if (!perData[d]) perData[d] = { revenue: 0, costs: 0, orders: 0 };
+            perData[d].revenue += Number(v.totale || 0);
+            if (!ordini.length) perData[d].orders += 1;
+        });
+
+        expenses.forEach(e => {
+            const d = this.dateKey(e.data);
+            if (!perData[d]) perData[d] = { revenue: 0, costs: 0, orders: 0 };
+            perData[d].costs += Number(e.totale || 0);
+        });
+
+        ordini.forEach(o => {
+            const d = this.dateKey(o.data_ordine);
+            if (!perData[d]) perData[d] = { revenue: 0, costs: 0, orders: 0 };
+            if (!dateConVendite.has(d)) perData[d].revenue += Number(o.totale || 0);
+            perData[d].orders += 1;
+        });
+
+        const labels = Object.keys(perData).sort();
+        return {
+            labels,
+            revenue: labels.map(d => perData[d].revenue),
+            margin: labels.map(d => perData[d].revenue - perData[d].costs),
+            orders: labels.map(d => perData[d].orders),
+            aov: labels.map(d => perData[d].orders ? perData[d].revenue / perData[d].orders : 0)
+        };
+    },
+
+    getStatoOrdini(ordini = []) {
+        const labels = {
+            in_elaborazione: 'in elaborazione',
+            spedito: 'spediti',
+            in_transito: 'in transito',
+            in_consegna: 'in consegna',
+            consegnato: 'consegnati'
+        };
+        return Object.keys(labels).map(key => ({
+            key,
+            label: labels[key],
+            count: ordini.filter(o => o.stato_consegna === key).length
+        }));
+    },
+
+    getLeadTimeMedio(ordini = []) {
+        const giorni = ordini
+            .map(o => {
+                const start = o.data_ordine ? new Date(o.data_ordine) : null;
+                const endValue = o.data_consegna_effettiva || (o.stato_consegna === 'consegnato' ? o.data_consegna_prevista : null);
+                const end = endValue ? new Date(endValue) : null;
+                if (!start || !end || isNaN(start) || isNaN(end)) return null;
+                return Math.max(0, (end - start) / (1000 * 60 * 60 * 24));
+            })
+            .filter(v => v !== null);
+        return this.mediaValori(giorni);
+    },
+
+    getConsigliPrezzo(inventario) {
+        const categorie = {};
+        inventario.forEach(p => {
+            const cat = p.cat || 'Altro';
+            if (!categorie[cat]) categorie[cat] = [];
+            categorie[cat].push(Number(p.prezzo || 0));
+        });
+        const prezzoMedioCategoria = {};
+        Object.keys(categorie).forEach(cat => {
+            prezzoMedioCategoria[cat] = this.mediaValori(categorie[cat]);
+        });
+
+        return inventario
+            .map(p => {
+                const maxQty = this.getMaxQty(p);
+                const qty = Number(p.qty || 0);
+                const prezzo = Number(p.prezzo || 0);
+                const percentuale = this.getPercentualeScorta(p);
+                const vendutiStimati = Math.max(0, maxQty - qty);
+                const domanda = maxQty > 0 ? vendutiStimati / maxQty : 0;
+                const mediaCat = prezzoMedioCategoria[p.cat || 'Altro'] || prezzo;
+                const tensione = domanda * 100 - percentuale;
+                let tipo = 'mantieni';
+                let variazione = 0;
+
+                if (domanda >= 0.65 && percentuale <= 35) {
+                    tipo = 'alza';
+                    variazione = percentuale <= 15 ? 0.12 : 0.08;
+                } else if (domanda <= 0.30 && percentuale >= 65) {
+                    tipo = 'abbassa';
+                    variazione = -0.10;
+                } else if (domanda >= 0.50 && prezzo < mediaCat * 0.9) {
+                    tipo = 'alza';
+                    variazione = 0.06;
+                }
+
+                return {
+                    ...p,
+                    prezzo,
+                    percentuale,
+                    vendutiStimati,
+                    domanda,
+                    mediaCat,
+                    tensione,
+                    tipo,
+                    nuovoPrezzo: Number((prezzo * (1 + variazione)).toFixed(2)),
+                    variazione
+                };
+            })
+            .sort((a, b) => b.tensione - a.tensione);
+    },
+
     generaRispostaFallback(messaggio, inventario, vendite, expenses, ordini = []) {
         const msg = this.normalizzaTesto(messaggio);
         const incasso = vendite.reduce((s, v) => s + Number(v.totale || 0), 0);
@@ -1507,14 +1666,109 @@ REGOLE: 1 punto ogni 15€, margine consigliato 45%. Rispondi in ITALIANO, usa e
         const scorteTotali = inventario.reduce((s, p) => s + Number(p.qty || 0), 0);
         const prodottiBassi = this.getProdottiBassi(inventario);
         const topStimati = this.getTopProdottiStimati(inventario);
+        const serie = this.getSerieEconomiche(vendite, expenses, ordini);
+        const trendFatturato = this.descriviTrend(serie.revenue);
+        const trendMargine = this.descriviTrend(serie.margin);
+        const trendOrdini = this.descriviTrend(serie.orders);
+        const trendAov = this.descriviTrend(serie.aov);
+        const statiOrdini = this.getStatoOrdini(ordini);
+        const leadTimeMedio = this.getLeadTimeMedio(ordini);
+        const consigliPrezzo = this.getConsigliPrezzo(inventario);
 
         const chiedeSaluto = /^(ciao|buongiorno|buonasera|salve|hey)\b/.test(msg);
         const chiedeAcquisti = this.contieneUno(msg, ['comprare', 'acquistare', 'rifornire', 'ordinare', 'cosa dovrei comprare', 'cosa comprare']);
         const chiedeScorte = this.contieneUno(msg, ['scorte', 'stock', 'giacenze', 'esaurimento', 'scarsi', 'basse', 'manca', 'mancano']);
-        const chiedePrezzi = this.contieneUno(msg, ['prezzo', 'prezzi', 'margine', 'margini', 'analisi prezzi', 'analizza']);
+        const chiedePrezzi = this.contieneUno(msg, ['prezzo', 'prezzi', 'margine', 'margini', 'analisi prezzi', 'analizza', 'alzare', 'abbassare', 'a quanto']);
+        const chiedePrezzoSpecifico = this.contieneUno(msg, ['alzare', 'abbassare', 'a quanto', 'modificare il prezzo', 'cambiare il prezzo']);
         const chiedeVendite = this.contieneUno(msg, ['vendono', 'vendite', 'venduti', 'top', 'migliori', 'meglio', 'richiesti']);
         const chiedeSituazione = this.contieneUno(msg, ['riassunto', 'situazione', 'come va', 'andamento', 'negozio', 'bilancio', 'incasso']);
+        const chiedeGrafici = this.contieneUno(msg, ['grafico', 'grafici', 'dedurre', 'capire', 'previsione', 'futuro', 'trend']);
+        const chiedeOrdini = this.contieneUno(msg, ['ordine', 'ordini', 'consegna', 'consegne', 'spediti', 'transito', 'elaborazione']);
         const chiedeOfferte = this.contieneUno(msg, ['offerte', 'promozioni', 'sconti', 'promo']);
+
+        if (chiedeOrdini) {
+            const totaleOrdini = ordini ? ordini.length : 0;
+            const nonConsegnati = statiOrdini
+                .filter(s => s.key !== 'consegnato' && s.count > 0)
+                .map(s => `${s.count} ${s.label}`);
+
+            let risposta = `🚚 **Stato ordini**\n\n`;
+            risposta += `• Ordini totali analizzati: ${totaleOrdini}\n`;
+            statiOrdini.forEach(s => {
+                risposta += `• ${s.label}: ${s.count}\n`;
+            });
+            if (leadTimeMedio > 0) {
+                risposta += `• Tempo medio di consegna stimato: ${leadTimeMedio.toFixed(1)} giorni\n`;
+            }
+            risposta += `\nCosa deduco:\n`;
+            if (nonConsegnati.length > 0) {
+                risposta += `• Hai ancora ordini aperti: ${nonConsegnati.join(', ')}.\n`;
+                risposta += `• Priorita: controlla prima quelli in elaborazione e in transito, per evitare ritardi percepiti dal cliente.\n`;
+            } else if (totaleOrdini > 0) {
+                risposta += `• Gli ordini risultano tutti consegnati: bene per affidabilita e servizio.\n`;
+            } else {
+                risposta += `• Non vedo ordini da analizzare in questo momento.\n`;
+            }
+            return risposta.trim();
+        }
+
+        if (chiedeGrafici) {
+            let risposta = `📈 **Lettura dei grafici**\n\n`;
+            risposta += `• Fatturato: ${trendFatturato.testo} (${trendFatturato.delta.toFixed(1)}%).\n`;
+            risposta += `• Margine: ${trendMargine.testo} (${trendMargine.delta.toFixed(1)}%).\n`;
+            risposta += `• Numero ordini: ${trendOrdini.testo} (${trendOrdini.delta.toFixed(1)}%).\n`;
+            risposta += `• Valore medio ordine: ${trendAov.testo} (${trendAov.delta.toFixed(1)}%).\n`;
+            if (leadTimeMedio > 0) risposta += `• Lead time medio: ${leadTimeMedio.toFixed(1)} giorni.\n`;
+
+            risposta += `\nCosa puoi dedurre:\n`;
+            if (trendFatturato.delta > 8 && trendMargine.delta > 8) {
+                risposta += `• La crescita sembra sana: vendite e margine si muovono insieme.\n`;
+            } else if (trendFatturato.delta > 8 && trendMargine.delta <= 0) {
+                risposta += `• Stai vendendo di piu, ma il margine non segue: controlla sconti e costi di rifornimento.\n`;
+            } else if (trendFatturato.delta < -8) {
+                risposta += `• Il fatturato e in calo: servono promo mirate sui prodotti con scorta alta e recupero dei prodotti sotto stock.\n`;
+            } else {
+                risposta += `• L'andamento e abbastanza stabile: puoi ottimizzare prezzi e scorte senza mosse aggressive.\n`;
+            }
+
+            risposta += `\nPrevisione semplice:\n`;
+            if (trendFatturato.delta > 8) {
+                risposta += `• Se il trend continua, il prossimo periodo dovrebbe chiudere sopra la media recente. Rischio principale: rottura stock sui prodotti piu richiesti.\n`;
+            } else if (trendFatturato.delta < -8) {
+                risposta += `• Se non intervieni, il prossimo periodo potrebbe restare sotto media. Azione: promo su scorte alte e rifornimento immediato dei prodotti critici.\n`;
+            } else {
+                risposta += `• Mi aspetto un periodo simile all'attuale. Azione: piccoli test prezzo, non cambi drastici.\n`;
+            }
+            return risposta.trim();
+        }
+
+        if (chiedePrezzoSpecifico) {
+            const daAlzare = consigliPrezzo.filter(p => p.tipo === 'alza' && p.prezzo > 0).slice(0, 5);
+            const daAbbassare = consigliPrezzo.filter(p => p.tipo === 'abbassa' && p.prezzo > 0).slice(0, 3);
+
+            if (daAlzare.length === 0 && daAbbassare.length === 0) {
+                return `💰 **Prezzi: nessuna modifica forte**\n\nNon vedo un prodotto con segnali abbastanza chiari per un aumento netto. Per ora mantieni i prezzi e lavora su rifornimento e promozioni mirate.`;
+            }
+
+            let risposta = `💰 **Prezzi consigliati**\n\n`;
+            if (daAlzare.length > 0) {
+                risposta += `Prodotti da aumentare con priorita:\n`;
+                daAlzare.forEach(p => {
+                    const variazione = Math.round(p.variazione * 100);
+                    risposta += `• ${p.nome}: da €${p.prezzo.toFixed(2)} a €${p.nuovoPrezzo.toFixed(2)} (+${variazione}%). Stock ${p.percentuale}%, domanda stimata ${Math.round(p.domanda * 100)}%.\n`;
+                });
+            }
+
+            if (daAbbassare.length > 0) {
+                risposta += `\nProdotti da abbassare o mettere in promo:\n`;
+                daAbbassare.forEach(p => {
+                    risposta += `• ${p.nome}: da €${p.prezzo.toFixed(2)} a €${p.nuovoPrezzo.toFixed(2)}. Stock ${p.percentuale}%, domanda stimata ${Math.round(p.domanda * 100)}%.\n`;
+                });
+            }
+
+            risposta += `\nRegola pratica: aumenta solo 5-12% e poi osserva vendite e scorte per qualche giorno.`;
+            return risposta.trim();
+        }
 
         if (chiedePrezzi) {
             const prezzoMedio = inventario.length > 0
@@ -1544,6 +1798,18 @@ REGOLE: 1 punto ogni 15€, margine consigliato 45%. Rispondi in ITALIANO, usa e
                 risposta += `\nAzioni consigliate:\n`;
                 risposta += `• Fai promo leggere sui prodotti con molte scorte: ${prodottiDaSpingere.map(p => p.nome).join(', ')}.\n`;
                 risposta += `• Non abbassare i prezzi dei prodotti sotto scorta: prima riforniscili.\n`;
+            }
+
+            const primoAumento = consigliPrezzo.find(p => p.tipo === 'alza' && p.prezzo > 0);
+            const primoRibasso = consigliPrezzo.find(p => p.tipo === 'abbassa' && p.prezzo > 0);
+            if (primoAumento || primoRibasso) {
+                risposta += `\nModifiche prezzo specifiche:\n`;
+                if (primoAumento) {
+                    risposta += `• Alza ${primoAumento.nome}: €${primoAumento.prezzo.toFixed(2)} -> €${primoAumento.nuovoPrezzo.toFixed(2)}.\n`;
+                }
+                if (primoRibasso) {
+                    risposta += `• Promo su ${primoRibasso.nome}: €${primoRibasso.prezzo.toFixed(2)} -> €${primoRibasso.nuovoPrezzo.toFixed(2)}.\n`;
+                }
             }
 
             return risposta.trim();
@@ -1587,6 +1853,8 @@ REGOLE: 1 punto ogni 15€, margine consigliato 45%. Rispondi in ITALIANO, usa e
             risposta += `• Ordini registrati: ${ordini ? ordini.length : 0}\n`;
             risposta += `• Scorte totali: ${scorteTotali} unita\n`;
             risposta += `• Prodotti sotto soglia: ${prodottiBassi.length}\n`;
+            risposta += `• Trend fatturato: ${trendFatturato.testo} (${trendFatturato.delta.toFixed(1)}%)\n`;
+            risposta += `• Trend ordini: ${trendOrdini.testo} (${trendOrdini.delta.toFixed(1)}%)\n`;
 
             if (prodottiBassi.length > 0) {
                 risposta += `\nPrima azione consigliata: rifornisci ${prodottiBassi.slice(0, 3).map(p => p.nome).join(', ')}.`;
