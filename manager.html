@@ -29,7 +29,7 @@
         .cart-actions { display: flex; gap: 10px; margin-top: 12px; justify-content: flex-end; }
         .cart-actions button { flex: 1; }
 
-        .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: none; align-items: center; justify-content: center; z-index: 999; padding: 20px; }
+        .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: none; align-items: center; justify-content: center; z-indexx: 999; padding: 20px; }
         .modal-card { background: white; border-radius: 18px; width: 100%; max-width: 520px; padding: 30px; box-shadow: 0 20px 45px rgba(0,0,0,0.2); text-align: center; }
         .modal-card h2 { margin-bottom: 16px; font-size: 1.4rem; }
         .modal-card p { color: #4a5568; margin-bottom: 24px; line-height: 1.6; white-space: pre-line; }
@@ -38,10 +38,10 @@
         .modal-confirm { background: #10b981; color: white; }
         .modal-cancel { background: #e2e8f0; color: #2d3748; }
 
-        .toast { position: fixed; bottom: 24px; right: 24px; background: rgba(45,55,72,0.95); color: white; padding: 14px 20px; border-radius: 14px; box-shadow: 0 16px 40px rgba(0,0,0,0.2); opacity: 0; transform: translateY(16px); transition: opacity 0.25s ease, transform 0.25s ease; z-index: 1000; max-width: 340px; }
+        .toast { position: fixed; bottom: 24px; right: 24px; background: rgba(45,55,72,0.95); color: white; padding: 14px 20px; border-radius: 14px; box-shadow: 0 16px 40px rgba(0,0,0,0.2); opacity: 0; transform: translateY(16px); transition: opacity 0.25s ease, transform 0.25s ease; z-indexx: 1000; max-width: 340px; }
         .toast.show { opacity: 1; transform: translateY(0); }
 
-        .spinner-overlay { position: fixed; inset: 0; background: rgba(255,255,255,0.7); display: none; align-items: center; justify-content: center; z-index: 1100; }
+        .spinner-overlay { position: fixed; inset: 0; background: rgba(255,255,255,0.7); display: none; align-items: center; justify-content: center; z-indexx: 1100; }
         .spinner { width: 48px; height: 48px; border: 5px solid #e2e8f0; border-top-color: #27ae60; border-radius: 50%; animation: spin 0.7s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
 
@@ -224,13 +224,13 @@
 
     <div class="main">
         <div class="manager-topbar">
-            <a href="home.html" class="nav-logo"><img src="logo.png" alt="SinGo"></a>
+            <a href="index.html" class="nav-logo"><img src="logo.png" alt="SinGo"></a>
             <div class="manager-topbar-title">
                 <span>SinGo</span>
                 <strong>Area Riservata</strong>
             </div>
             <div class="manager-topbar-links">
-                <a href="home.html">Vista cliente</a>
+                <a href="index.html">Vista cliente</a>
                 <a href="shop.html">Shop</a>
             </div>
         </div>
@@ -667,7 +667,7 @@
             if (confirm('Sei sicuro di voler uscire?')) {
                 sessionStorage.removeItem('manager_autenticato');
                 sessionStorage.removeItem('utente_loggato');
-                window.location.href = 'home.html';
+                window.location.href = 'index.html';
             }
         }
 
@@ -1462,7 +1462,7 @@
                     labels: stati.map(([, label]) => label),
                     datasets: [{ label: 'Ordini', data: statoCounts, backgroundColor: ['#f59e0b', '#3b82f6', '#8b5cf6', '#ec4899', '#10b981'] }]
                 },
-                options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, scales: { x: { beginAtZero: true, ticks: { precision: 0 } } }, plugins: { legend: { display: false } } }
+                options: { indexxAxis: 'y', responsive: true, maintainAspectRatio: false, scales: { x: { beginAtZero: true, ticks: { precision: 0 } } }, plugins: { legend: { display: false } } }
             });
 
             const leadByDate = {};

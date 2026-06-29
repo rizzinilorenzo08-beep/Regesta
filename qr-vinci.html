@@ -18,8 +18,8 @@
         .qr-card .result.error { background: #FEE2E2; border: 1px solid #FECACA; color: #991B1B; }
         .qr-card .result .viaggio-title { font-weight: 700; font-size: 1.2rem; color: #1E293B; }
         .qr-card .result .viaggio-dest { color: #475569; }
-        .qr-card .btn-home { display: inline-block; background: #10B981; color: white; padding: 12px 30px; border-radius: 10px; text-decoration: none; font-weight: 600; margin-top: 10px; }
-        .qr-card .btn-home:hover { background: #059669; }
+        .qr-card .btn-index { display: inline-block; background: #10B981; color: white; padding: 12px 30px; border-radius: 10px; text-decoration: none; font-weight: 600; margin-top: 10px; }
+        .qr-card .btn-index:hover { background: #059669; }
         .spinner { width: 40px; height: 40px; border: 4px solid #E2E8F0; border-top-color: #10B981; border-radius: 50%; animation: spin 0.7s linear infinite; margin: 20px auto; }
         @keyframes spin { to { transform: rotate(360deg); } }
     </style>
@@ -28,8 +28,8 @@
 
     <div class="navbar">
         <div class="nav-left">
-            <a href="home.html" class="nav-logo"><img src="logo.png" alt="SinGo" style="height: 40px; width: auto;"></a>
-            <a href="home.html">🏠 Home</a>
+            <a href="index.html" class="nav-logo"><img src="logo.png" alt="SinGo" style="height: 40px; width: auto;"></a>
+            <a href="index.html">🏠 index</a>
             <a href="shop.html">📦 Prodotti</a>
             <a href="sconti.html">🔥 Offerte</a>
         </div>
@@ -48,7 +48,7 @@
             
             <div id="result" style="display:none;"></div>
             
-            <a href="home.html" class="btn-home" style="display:none;" id="btnHome">🏠 Torna alla Home</a>
+            <a href="index.html" class="btn-index" style="display:none;" id="btnindex">🏠 Torna alla index</a>
         </div>
     </div>
 
@@ -69,7 +69,7 @@
             
             const loading = document.getElementById('loading');
             const result = document.getElementById('result');
-            const btnHome = document.getElementById('btnHome');
+            const btnindex = document.getElementById('btnindex');
 
             if (!codice) {
                 loading.style.display = 'none';
@@ -80,7 +80,7 @@
                     <p><strong>Codice QR non valido</strong></p>
                     <p>Il link che hai utilizzato non contiene un codice valido.</p>
                 `;
-                btnHome.style.display = 'inline-block';
+                btnindex.style.display = 'inline-block';
                 return;
             }
 
@@ -89,7 +89,7 @@
                 
                 loading.style.display = 'none';
                 result.style.display = 'block';
-                btnHome.style.display = 'inline-block';
+                btnindex.style.display = 'inline-block';
 
                 if (response.success) {
                     if (response.viaggio) {
@@ -128,7 +128,7 @@
                 console.error('Errore verifica QR:', err);
                 loading.style.display = 'none';
                 result.style.display = 'block';
-                btnHome.style.display = 'inline-block';
+                btnindex.style.display = 'inline-block';
                 result.className = 'result error';
                 result.innerHTML = `
                     <div style="font-size:2rem; margin-bottom:10px;">❌</div>

@@ -89,7 +89,7 @@
             '<div class="footer-links">',
             '<a href="privacy.html">Privacy Policy</a>',
             '<a href="termini.html">Termini e Condizioni</a>',
-            '<a href="home.html">Home</a>',
+            '<a href="index.html">index</a>',
             '</div>',
             '<div class="footer-copy">© 2026 SinGo - La Boutique della Spesa. Tutti i diritti riservati.</div>',
             '</div>'

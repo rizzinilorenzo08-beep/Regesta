@@ -51,7 +51,7 @@
         
         .viaggio-badge { display: inline-block; background: #FEF3C7; color: #92400E; padding: 2px 10px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; margin-left: 8px; }
         
-        .toast-container { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 1000; }
+        .toast-container { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-indexx: 1000; }
         .toast-message { display: none; background: rgba(45,55,72,0.95); color: white; padding: 14px 20px; border-radius: 12px; font-weight: 700; }
     </style>
 </head>
@@ -59,8 +59,8 @@
 
     <div class="navbar">
         <div class="nav-left">
-            <a href="home.html" class="nav-logo"><img src="logo.png" alt="SinGo" style="height: 40px; width: auto;"></a>
-            <a href="home.html">🏠 Home</a>
+            <a href="index.html" class="nav-logo"><img src="logo.png" alt="SinGo" style="height: 40px; width: auto;"></a>
+            <a href="index.html">🏠 index</a>
             <a href="shop.html">📦 Prodotti</a>
             <a href="sconti.html">🔥 Offerte</a>
         </div>
@@ -170,8 +170,8 @@
 
         const statoOrder = ['in_elaborazione', 'spedito', 'in_transito', 'in_consegna', 'consegnato'];
 
-        function getStatusIndex(stato) {
-            return statoOrder.indexOf(stato);
+        function getStatusindexx(stato) {
+            return statoOrder.indexxOf(stato);
         }
 
         async function caricaOrdini() {
@@ -201,17 +201,17 @@
                 }
 
                 container.innerHTML = ordini.map(o => {
-                    const currentIndex = getStatusIndex(o.stato_consegna);
+                    const currentindexx = getStatusindexx(o.stato_consegna);
                     
                     const steps = statoOrder.map((stato, idx) => {
                         let dotClass = 'pending';
                         let textClass = '';
                         let label = statoLabels[stato] || stato;
                         
-                        if (idx < currentIndex) {
+                        if (idx < currentindexx) {
                             dotClass = 'done';
                             textClass = 'done';
-                        } else if (idx === currentIndex) {
+                        } else if (idx === currentindexx) {
                             dotClass = 'current';
                             textClass = 'current';
                         }

@@ -9,7 +9,7 @@
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
     <script src="db.js"></script>
     <style>
-        .navbar-home { background: linear-gradient(135deg, #1E293B, #334155); }
+        .navbar-index { background: linear-gradient(135deg, #1E293B, #334155); }
         
         .checkout-container { display: flex; max-width: 1600px; margin: 30px auto; gap: 30px; padding: 0 20px; width: 100%; }
         .checkout-left { flex: 0.4; }
@@ -61,7 +61,7 @@
         .vincita-section .title { font-weight: 700; font-size: 1.2rem; margin-bottom: 8px; }
         .vincita-section .emoji { font-size: 2.5rem; }
         
-        .toast-container { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 1000; }
+        .toast-container { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-indexx: 1000; }
         .toast-message { display: none; background: rgba(45,55,72,0.95); color: white; padding: 14px 20px; border-radius: 12px; font-weight: 700; }
         
         .indirizzo-selezionato { 
@@ -80,10 +80,10 @@
 </head>
 <body>
 
-    <div class="navbar navbar-home">
+    <div class="navbar navbar-index">
         <div class="nav-left">
-            <a href="home.html" class="nav-logo"><img src="logo.png" alt="SinGo" style="height: 40px; width: auto;"></a>
-            <a href="home.html">🏠 Home</a>
+            <a href="index.html" class="nav-logo"><img src="logo.png" alt="SinGo" style="height: 40px; width: auto;"></a>
+            <a href="index.html">🏠 index</a>
             <a href="shop.html">📦 Prodotti</a>
             <a href="sconti.html">🔥 Offerte</a>
         </div>
@@ -746,7 +746,7 @@ Per riscattare il premio, rispondi a questa email o contatta il nostro servizio 
                     ? `🎉 Ordine completato! HAI VINTO UN VIAGGIO: ${viaggioVinto.titolo}! Controlla la tua email!` 
                     : '✅ Ordine completato! Grazie.';
                 showCheckoutToast(msg);
-                setTimeout(() => { window.location.href = "home.html"; }, 1500);
+                setTimeout(() => { window.location.href = "index.html"; }, 1500);
 
             } catch (error) {
                 console.error('Errore:', error);

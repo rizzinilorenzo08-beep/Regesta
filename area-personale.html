@@ -91,8 +91,8 @@
 <body>
     <div class="navbar">
         <div class="nav-left">
-            <a href="home.html" class="nav-logo"><img src="logo.png" alt="SinGo" style="height: 40px; width: auto;"></a>
-            <a href="home.html">Home</a>
+            <a href="index.html" class="nav-logo"><img src="logo.png" alt="SinGo" style="height: 40px; width: auto;"></a>
+            <a href="index.html">index</a>
             <a href="shop.html">Prodotti</a>
             <a href="sconti.html">Offerte</a>
         </div>
@@ -445,7 +445,7 @@
                 return;
             }
 
-            rewardsList.innerHTML = riscattati.map((item, index) => {
+            rewardsList.innerHTML = riscattati.map((item, indexx) => {
                 const premio = item.premio || {};
                 const prezzo = Number(premio.prezzo_aggiuntivo || 0);
                 return `
@@ -453,7 +453,7 @@
                         <strong>${premio.nome || 'Premio'}</strong>
                         <span>${item.punti_utilizzati || 0} punti utilizzati</span><br>
                         <span>Riscattato il ${new Date(item.data_riscatto).toLocaleDateString('it-IT')}</span>
-                        <button type="button" onclick="acquistaPremioRiscattato(${index}, this)">
+                        <button type="button" onclick="acquistaPremioRiscattato(${indexx}, this)">
                             Acquista${prezzo > 0 ? ` - € ${prezzo.toFixed(2)}` : ' gratis'}
                         </button>
                     </div>
@@ -461,8 +461,8 @@
             }).join('');
         }
 
-        async function acquistaPremioRiscattato(index, btn) {
-            const item = premiRiscattatiCache[index];
+        async function acquistaPremioRiscattato(indexx, btn) {
+            const item = premiRiscattatiCache[indexx];
             const premio = item ? item.premio : null;
             if (!premio) {
                 mostraRewardMessage('Premio non disponibile.', 'error');
@@ -663,7 +663,7 @@
         function logoutUser() {
             if (confirm('Sei sicuro di voler fare il logout?')) {
                 logoutCliente();
-                window.location.href = 'home.html';
+                window.location.href = 'index.html';
             }
         }
 

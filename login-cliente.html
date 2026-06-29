@@ -53,7 +53,7 @@
             <p>Non hai ancora un account?</p>
             <a href="register.html">Registrati ora</a>
             <p style="margin-top: 15px; border-top: 1px solid var(--border); padding-top: 15px;">
-                <a href="home.html">&lt;- Torna alla Home</a>
+                <a href="index.html">&lt;- Torna alla index</a>
             </p>
         </div>
     </div>
@@ -95,7 +95,7 @@
                 if (result.success) {
                     mostraMessaggio('Login riuscito! Reindirizzamento...', 'success');
                     salvaClienteLoggato(result.cliente);
-                    setTimeout(() => { window.location.href = 'home.html'; }, 1500);
+                    setTimeout(() => { window.location.href = 'index.html'; }, 1500);
                 } else {
                     mostraMessaggio(result.error, 'error');
                     btn.disabled = false;

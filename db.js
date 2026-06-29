@@ -1159,7 +1159,7 @@ function logoutUtente() {
     }
     sessionStorage.removeItem('utente_loggato');
     sessionStorage.removeItem('manager_autenticato');
-    window.location.href = 'home.html';
+    window.location.href = 'index.html';
 }
 
 // ==========================================

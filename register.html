@@ -56,7 +56,7 @@
             <p>Hai già un account?</p>
             <a href="login-cliente.html">Accedi al tuo profilo</a>
             <p style="margin-top: 15px; border-top: 1px solid var(--border); padding-top: 15px;">
-                <a href="home.html">← Torna alla Home</a>
+                <a href="index.html">← Torna alla index</a>
             </p>
         </div>
     </div>
@@ -100,7 +100,7 @@
                     salvaClienteLoggato(result.cliente);
                     
                     setTimeout(() => {
-                        window.location.href = 'home.html';
+                        window.location.href = 'index.html';
                     }, 1500);
                 } else {
                     mostraMessaggio(result.error, 'error');
