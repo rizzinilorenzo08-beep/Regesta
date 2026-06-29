@@ -964,6 +964,40 @@ const DB_UTENTI = {
         return { success: true, utente: data };
     },
 
+    async verificaEmailUtente(email) {
+        const { data, error } = await supabaseClient
+            .from('utenti')
+            .select('id, nome, email, attivo')
+            .eq('email', email)
+            .single();
+
+        if (error || !data) {
+            return { success: false, message: 'Email aziendale non trovata.' };
+        }
+
+        if (!data.attivo) {
+            return { success: false, message: 'Account disattivato. Contatta un amministratore.' };
+        }
+
+        return { success: true, utente: data };
+    },
+
+    async resetPasswordUtente(email, nuovaPassword) {
+        const { data, error } = await supabaseClient
+            .from('utenti')
+            .update({ password: btoa(nuovaPassword) })
+            .eq('email', email)
+            .select('id, nome, email')
+            .single();
+
+        if (error || !data) {
+            return { success: false, message: error ? error.message : 'Utente non trovato.' };
+        }
+
+        await this.registraLog(data.id, 'reset_password_manager', { email: data.email });
+        return { success: true, utente: data };
+    },
+
     async registraLog(utenteId, azione, dettagli = {}) {
         const { error } = await supabaseClient
             .from('log_sistema')

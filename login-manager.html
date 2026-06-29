@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login Manager - SinGo</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
     <script src="db.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
@@ -129,6 +130,7 @@
         .ruolo-responsabile_acquisti { background: #f59e0b; color: white; }
         .ruolo-analista { background: #06b6d4; color: white; }
     </style>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="login-container">
@@ -148,10 +150,26 @@
             <div class="form-group">
                 <label for="password">Password</label>
                 <input type="password" id="password" placeholder="Inserisci la tua password" required>
+                <div class="forgot-password-link">
+                    <a href="#" id="btnRecuperoManager">Password dimenticata?</a>
+                </div>
             </div>
 
             <button type="submit" class="btn-login">Accedi</button>
         </form>
+
+        <div id="recoveryPanelManager" style="display: none; margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border);">
+            <form id="recoveryCodeFormManager">
+                <div class="form-group">
+                    <label for="recoveryCodeManager">Codice ricevuto via email</label>
+                    <input type="text" id="recoveryCodeManager" inputmode="numeric" maxlength="6" placeholder="Codice a 6 cifre">
+                    <small style="color: var(--text-muted); display: block; margin-top: 6px;">Il codice resta valido per 15 minuti.</small>
+                </div>
+
+                <button type="submit" class="btn-login" id="btnVerificaCodiceManager">Verifica codice</button>
+                <button type="button" class="btn-login btn-muted-account" id="btnAnnullaRecuperoManager" style="margin-top: 10px;">Annulla</button>
+            </form>
+        </div>
 
         <div class="form-links">
             <p style="margin-top: 15px; padding-top: 15px;">
@@ -161,8 +179,22 @@
     </div>
 
     <script>
+        emailjs.init("nLywcTRnXOOUYsDtW");
+
         const form = document.getElementById('loginForm');
         const messageBox = document.getElementById('messageBox');
+        const btnRecuperoManager = document.getElementById('btnRecuperoManager');
+        const recoveryPanelManager = document.getElementById('recoveryPanelManager');
+        const recoveryCodeFormManager = document.getElementById('recoveryCodeFormManager');
+        const recoveryCodeManager = document.getElementById('recoveryCodeManager');
+        const btnVerificaCodiceManager = document.getElementById('btnVerificaCodiceManager');
+        const btnAnnullaRecuperoManager = document.getElementById('btnAnnullaRecuperoManager');
+
+        const RECOVERY_CODE_EXPIRY_MS = 15 * 60 * 1000;
+        const SERVICE_ID = "service_70i2s1t";
+        const CODE_TEMPLATE_ID = "template_33lrsza";
+        const TEMP_PASSWORD_TEMPLATE_ID = "template_33lrsza";
+        let recoveryStateManager = null;
 
         form.addEventListener('submit', async function (e) {
             e.preventDefault();
@@ -207,6 +239,153 @@
             }
         });
 
+        btnRecuperoManager.addEventListener('click', async function(e) {
+            e.preventDefault();
+            const email = document.getElementById('email').value.trim();
+
+            if (!email) {
+                mostraMessaggio('Inserisci prima la tua email aziendale.', 'error');
+                return;
+            }
+
+            btnRecuperoManager.style.pointerEvents = 'none';
+            btnRecuperoManager.textContent = 'Invio codice...';
+            mostraMessaggio('Invio del codice di verifica in corso...', 'success');
+
+            try {
+                const verifica = await DB_UTENTI.verificaEmailUtente(email);
+                if (!verifica.success) {
+                    mostraMessaggio(verifica.message || 'Email aziendale non trovata.', 'error');
+                    return;
+                }
+
+                const codice = generaCodiceRecupero();
+                const nomeUtente = verifica.utente.nome || email.split('@')[0] || 'Utente';
+                const templateParams = {
+                    to_email: email,
+                    customer_name: nomeUtente,
+                    recovery_code: codice,
+                    code: codice,
+                    reset_link: 'Codice di verifica: ' + codice,
+                    expiry_time: '15 minuti',
+                    message: 'Il tuo codice di verifica SinGo Manager e: ' + codice
+                };
+
+                const emailResponse = await emailjs.send(SERVICE_ID, CODE_TEMPLATE_ID, templateParams);
+
+                if (emailResponse.status === 200) {
+                    recoveryStateManager = {
+                        email,
+                        nome: nomeUtente,
+                        codice,
+                        expiresAt: Date.now() + RECOVERY_CODE_EXPIRY_MS
+                    };
+                    recoveryPanelManager.style.display = 'block';
+                    recoveryCodeManager.value = '';
+                    recoveryCodeManager.focus();
+                    mostraMessaggio('Codice inviato. Controlla la tua email aziendale.', 'success');
+                } else {
+                    mostraMessaggio('Invio del codice non riuscito. Riprova.', 'error');
+                }
+            } catch (error) {
+                console.error('Errore recupero manager:', error);
+                mostraMessaggio('Impossibile inviare l\'email di recupero.', 'error');
+            } finally {
+                btnRecuperoManager.style.pointerEvents = '';
+                btnRecuperoManager.textContent = 'Password dimenticata?';
+            }
+        });
+
+        recoveryCodeFormManager.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const codiceInserito = recoveryCodeManager.value.trim();
+
+            if (!recoveryStateManager) {
+                mostraMessaggio('Richiedi prima un codice di recupero.', 'error');
+                return;
+            }
+
+            if (!/^\d{6}$/.test(codiceInserito)) {
+                mostraMessaggio('Inserisci un codice valido di 6 cifre.', 'error');
+                return;
+            }
+
+            if (Date.now() > recoveryStateManager.expiresAt) {
+                recoveryStateManager = null;
+                mostraMessaggio('Codice scaduto. Richiedine uno nuovo.', 'error');
+                return;
+            }
+
+            if (codiceInserito !== recoveryStateManager.codice) {
+                mostraMessaggio('Codice non corretto.', 'error');
+                return;
+            }
+
+            btnVerificaCodiceManager.disabled = true;
+            btnVerificaCodiceManager.textContent = 'Genero password...';
+
+            try {
+                const passwordTemporanea = generaPasswordTemporanea();
+                const resetResult = await DB_UTENTI.resetPasswordUtente(recoveryStateManager.email, passwordTemporanea);
+
+                if (!resetResult.success) {
+                    mostraMessaggio(resetResult.message || 'Aggiornamento password non riuscito.', 'error');
+                    return;
+                }
+
+                const templateParams = {
+                    to_email: recoveryStateManager.email,
+                    customer_name: recoveryStateManager.nome,
+                    temp_password: passwordTemporanea,
+                    temporary_password: passwordTemporanea,
+                    password: passwordTemporanea,
+                    reset_link: 'Password temporanea: ' + passwordTemporanea,
+                    message: 'La tua nuova password temporanea SinGo Manager e: ' + passwordTemporanea
+                };
+
+                const emailResponse = await emailjs.send(SERVICE_ID, TEMP_PASSWORD_TEMPLATE_ID, templateParams);
+
+                if (emailResponse.status === 200) {
+                    recoveryStateManager = null;
+                    recoveryPanelManager.style.display = 'none';
+                    document.getElementById('password').value = '';
+                    mostraMessaggio('Password temporanea inviata. Usala per accedere.', 'success');
+                } else {
+                    mostraMessaggio('Password aggiornata, ma invio email non riuscito.', 'error');
+                }
+            } catch (error) {
+                console.error('Errore verifica manager:', error);
+                mostraMessaggio('Errore durante il recupero password.', 'error');
+            } finally {
+                btnVerificaCodiceManager.disabled = false;
+                btnVerificaCodiceManager.textContent = 'Verifica codice';
+            }
+        });
+
+        btnAnnullaRecuperoManager.addEventListener('click', function() {
+            recoveryStateManager = null;
+            recoveryPanelManager.style.display = 'none';
+            recoveryCodeManager.value = '';
+            mostraMessaggio('Recupero password annullato.', 'success');
+        });
+
+        recoveryCodeManager.addEventListener('input', function() {
+            recoveryCodeManager.value = recoveryCodeManager.value.replace(/\D/g, '').slice(0, 6);
+        });
+
+        function generaCodiceRecupero() {
+            return String(Math.floor(100000 + Math.random() * 900000));
+        }
+
+        function generaPasswordTemporanea() {
+            const caratteri = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%';
+            let password = 'Sg-';
+            for (let i = 0; i < 9; i++) {
+                password += caratteri.charAt(Math.floor(Math.random() * caratteri.length));
+            }
+            return password;
+        }
+
         function mostraMessaggio(testo, tipo) {
             messageBox.textContent = testo;
             messageBox.className = `message ${tipo} show`;
@@ -215,5 +394,6 @@
             }, 4000);
         }
     </script>
+    <script src="theme.js"></script>
 </body>
 </html>

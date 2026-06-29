@@ -192,8 +192,9 @@
             #vista-finanze { max-height: none; }
         }
     </style>
+    <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body class="manager-page">
 
     <div class="sidebar">
         <h2>🛠️ Pannello Manager</h2>
@@ -222,6 +223,18 @@
     </div>
 
     <div class="main">
+        <div class="manager-topbar">
+            <a href="home.html" class="nav-logo"><img src="logo.png" alt="SinGo"></a>
+            <div class="manager-topbar-title">
+                <span>SinGo</span>
+                <strong>Area Riservata</strong>
+            </div>
+            <div class="manager-topbar-links">
+                <a href="home.html">Vista cliente</a>
+                <a href="shop.html">Shop</a>
+            </div>
+        </div>
+
         <div class="header">
             <div>
                 <h1 id="titolo-sezione">Gestione Magazzino</h1>
@@ -2293,5 +2306,6 @@
             }
         });
     </script>
+    <script src="theme.js"></script>
 </body>
 </html>
