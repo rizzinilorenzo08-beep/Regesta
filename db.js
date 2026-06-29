@@ -390,74 +390,6 @@ const DB_CLIENTI = {
         return { success: true, cliente: data };
     },
 
-    async verificaEmailCliente(email) {
-        const { data, error } = await supabaseClient
-            .from('clienti')
-            .select('id, email, nome')
-            .eq('email', email)
-            .single();
-
-        if (error || !data) {
-            return { success: false, message: 'Email non trovata' };
-        }
-
-        return { success: true, cliente: data };
-    },
-
-    async resetPasswordCliente(email, nuovaPassword) {
-        // Cerca il cliente per email
-        const { data: cliente, error: findError } = await supabaseClient
-            .from('clienti')
-            .select('id')
-            .eq('email', email)
-            .single();
-
-        if (findError || !cliente) {
-            return { success: false, message: 'Email non trovata' };
-        }
-
-        // Aggiorna la password
-        const { error: updateError } = await supabaseClient
-            .from('clienti')
-            .update({ password: btoa(nuovaPassword) })
-            .eq('id', cliente.id);
-
-        if (updateError) {
-            console.error("Errore reset password:", updateError);
-            return { success: false, message: updateError.message };
-        }
-
-        return { success: true, message: 'Password aggiornata con successo' };
-    },
-
-    async cambiaPasswordCliente(clienteId, passwordAttuale, nuovaPassword) {
-        const { data: cliente, error: findError } = await supabaseClient
-            .from('clienti')
-            .select('id, password')
-            .eq('id', clienteId)
-            .single();
-
-        if (findError || !cliente) {
-            return { success: false, message: 'Cliente non trovato' };
-        }
-
-        if (atob(cliente.password) !== passwordAttuale) {
-            return { success: false, message: 'Password attuale non corretta' };
-        }
-
-        const { error: updateError } = await supabaseClient
-            .from('clienti')
-            .update({ password: btoa(nuovaPassword) })
-            .eq('id', clienteId);
-
-        if (updateError) {
-            console.error("Errore cambio password:", updateError);
-            return { success: false, message: updateError.message };
-        }
-
-        return { success: true, message: 'Password aggiornata con successo' };
-    },
-
     async getCliente(clienteId) {
         const { data, error } = await supabaseClient
             .from('clienti')
@@ -658,13 +590,7 @@ const DB_VIAGGI = {
     },
 
     async verificaVincita() {
-        // ============================================================
-        // TEST VINCITA - MODIFICA QUI IL "1000"
-        // Produzione: 1000 = vince 1 ordine su 1000.
-        // Test rapido: metti 1 per far vincere sempre, 2 per 1 su 2.
-        // ============================================================
-        const PROBABILITA_VINCITA_UNO_SU = 2;
-        return Math.random() < (1 / PROBABILITA_VINCITA_UNO_SU);
+        return Math.random() < 0.001; // 1 su 1000
     },
 
     async getVinciteCliente(clienteId) {
@@ -1419,5 +1345,279 @@ const DB_PREMI = {
             return [];
         }
         return data || [];
+    }
+};
+
+// ==========================================
+// 14. AI CHATBOT CON GOOGLE GEMINI
+// ==========================================
+
+const AI_CHATBOT = {
+    model: 'gemini-2.0-flash-exp',
+    
+    getApiKey() {
+        return localStorage.getItem('gemini_api_key') || '';
+    },
+    
+    buildContext(inventario, vendite, expenses, ordini) {
+        let context = `Sei un assistente AI per un supermercato chiamato SinGo. 
+Devi aiutare il manager con consigli su acquisti, prezzi, scorte e offerte.
+
+DATI ATUALI DEL NEGOZIO:
+- Prodotti in inventario: ${inventario.length}
+- Vendite totali: ${vendite.length}
+- Ordini totali: ${ordini ? ordini.length : 0}
+
+PRODOTTI DISPONIBILI:
+`;
+
+        inventario.forEach(p => {
+            const perc = Math.round((p.qty / p.maxQty) * 100);
+            context += `- ${p.nome} (${p.cat}): ${p.qty}/${p.maxQty} unità (${perc}%), prezzo €${p.prezzo.toFixed(2)}\n`;
+        });
+
+        if (vendite.length > 0) {
+            const incasso = vendite.reduce((s, v) => s + v.totale, 0);
+            context += `\nINCASSO TOTALE: €${incasso.toFixed(2)}\n`;
+        }
+
+        if (expenses.length > 0) {
+            const spese = expenses.reduce((s, e) => s + e.totale, 0);
+            context += `SPESE TOTALI: €${spese.toFixed(2)}\n`;
+        }
+
+        const prodottiCritici = inventario.filter(p => (p.qty / p.maxQty) * 100 < 20);
+        if (prodottiCritici.length > 0) {
+            context += `\n⚠️ PRODOTTI IN ESAURIMENTO:\n`;
+            prodottiCritici.forEach(p => {
+                context += `- ${p.nome}: ${p.qty}/${p.maxQty}\n`;
+            });
+        }
+
+        context += `
+REGOLE: 1 punto ogni 15€, margine consigliato 45%. Rispondi in ITALIANO, usa emoji.
+`;
+
+        return context;
+    },
+
+    async chat(messaggio, inventario, vendite, expenses, ordini) {
+        const apiKey = this.getApiKey();
+        
+        if (!apiKey) {
+            return {
+                success: false,
+                error: '❌ Configura la chiave Gemini nelle impostazioni AI.',
+                fallback: this.generaRispostaFallback(messaggio, inventario, vendite, expenses, ordini)
+            };
+        }
+
+        const context = this.buildContext(inventario, vendite, expenses, ordini);
+
+        try {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${this.model}:generateContent?key=${apiKey}`;
+            
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{
+                        parts: [
+                            { text: context },
+                            { text: `Domanda del manager: ${messaggio}` }
+                        ]
+                    }],
+                    generationConfig: {
+                        temperature: 0.7,
+                        maxOutputTokens: 600
+                    }
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error?.message || 'Errore API Gemini');
+            }
+
+            const data = await response.json();
+            const risposta = data.candidates?.[0]?.content?.parts?.[0]?.text || '⚠️ Nessuna risposta.';
+
+            return { success: true, risposta };
+
+        } catch (error) {
+            console.error('Gemini Error:', error);
+            return {
+                success: false,
+                error: error.message,
+                fallback: this.generaRispostaFallback(messaggio, inventario, vendite, expenses, ordini)
+            };
+        }
+    },
+
+    normalizzaTesto(testo) {
+        return String(testo || '')
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '');
+    },
+
+    contieneUno(testo, parole) {
+        return parole.some(parola => testo.includes(parola));
+    },
+
+    getMaxQty(prodotto) {
+        return Number(prodotto.maxQty || prodotto.max_qty || 0);
+    },
+
+    getPercentualeScorta(prodotto) {
+        const maxQty = this.getMaxQty(prodotto);
+        if (maxQty <= 0) return 0;
+        return Math.round((Number(prodotto.qty || 0) / maxQty) * 100);
+    },
+
+    getProdottiBassi(inventario, soglia = 25) {
+        return inventario
+            .map(p => ({ ...p, percentuale: this.getPercentualeScorta(p), maxQtyNormalizzato: this.getMaxQty(p) }))
+            .filter(p => p.maxQtyNormalizzato > 0 && p.percentuale <= soglia)
+            .sort((a, b) => a.percentuale - b.percentuale);
+    },
+
+    getTopProdottiStimati(inventario) {
+        return inventario
+            .map(p => {
+                const maxQty = this.getMaxQty(p);
+                const qty = Number(p.qty || 0);
+                const vendutiStimati = Math.max(0, maxQty - qty);
+                return {
+                    ...p,
+                    vendutiStimati,
+                    valoreStimato: vendutiStimati * Number(p.prezzo || 0),
+                    percentuale: this.getPercentualeScorta(p)
+                };
+            })
+            .filter(p => p.vendutiStimati > 0)
+            .sort((a, b) => b.valoreStimato - a.valoreStimato);
+    },
+
+    generaRispostaFallback(messaggio, inventario, vendite, expenses, ordini = []) {
+        const msg = this.normalizzaTesto(messaggio);
+        const incasso = vendite.reduce((s, v) => s + Number(v.totale || 0), 0);
+        const spese = expenses.reduce((s, e) => s + Number(e.totale || 0), 0);
+        const margine = incasso - spese;
+        const scorteTotali = inventario.reduce((s, p) => s + Number(p.qty || 0), 0);
+        const prodottiBassi = this.getProdottiBassi(inventario);
+        const topStimati = this.getTopProdottiStimati(inventario);
+
+        const chiedeSaluto = /^(ciao|buongiorno|buonasera|salve|hey)\b/.test(msg);
+        const chiedeAcquisti = this.contieneUno(msg, ['comprare', 'acquistare', 'rifornire', 'ordinare', 'cosa dovrei comprare', 'cosa comprare']);
+        const chiedeScorte = this.contieneUno(msg, ['scorte', 'stock', 'giacenze', 'esaurimento', 'scarsi', 'basse', 'manca', 'mancano']);
+        const chiedePrezzi = this.contieneUno(msg, ['prezzo', 'prezzi', 'margine', 'margini', 'analisi prezzi', 'analizza']);
+        const chiedeVendite = this.contieneUno(msg, ['vendono', 'vendite', 'venduti', 'top', 'migliori', 'meglio', 'richiesti']);
+        const chiedeSituazione = this.contieneUno(msg, ['riassunto', 'situazione', 'come va', 'andamento', 'negozio', 'bilancio', 'incasso']);
+        const chiedeOfferte = this.contieneUno(msg, ['offerte', 'promozioni', 'sconti', 'promo']);
+
+        if (chiedePrezzi) {
+            const prezzoMedio = inventario.length > 0
+                ? inventario.reduce((s, p) => s + Number(p.prezzo || 0), 0) / inventario.length
+                : 0;
+            const prodottiCostosi = [...inventario]
+                .sort((a, b) => Number(b.prezzo || 0) - Number(a.prezzo || 0))
+                .slice(0, 5);
+            const prodottiDaSpingere = inventario
+                .filter(p => this.getPercentualeScorta(p) > 60)
+                .sort((a, b) => Number(b.qty || 0) - Number(a.qty || 0))
+                .slice(0, 4);
+
+            let risposta = `💰 **Analisi prezzi**\n\n`;
+            risposta += `• Prezzo medio catalogo: €${prezzoMedio.toFixed(2)}\n`;
+            risposta += `• Margine attuale stimato: €${margine.toFixed(2)}\n`;
+            risposta += `• Regola consigliata: mantieni circa il 45% di margine sugli acquisti.\n\n`;
+
+            if (prodottiCostosi.length > 0) {
+                risposta += `Prodotti con prezzo piu alto:\n`;
+                prodottiCostosi.forEach(p => {
+                    risposta += `• ${p.nome}: €${Number(p.prezzo || 0).toFixed(2)}\n`;
+                });
+            }
+
+            if (prodottiDaSpingere.length > 0) {
+                risposta += `\nAzioni consigliate:\n`;
+                risposta += `• Fai promo leggere sui prodotti con molte scorte: ${prodottiDaSpingere.map(p => p.nome).join(', ')}.\n`;
+                risposta += `• Non abbassare i prezzi dei prodotti sotto scorta: prima riforniscili.\n`;
+            }
+
+            return risposta.trim();
+        }
+
+        if (chiedeAcquisti || chiedeScorte) {
+            if (prodottiBassi.length === 0) {
+                return `✅ **Scorte sotto controllo**\n\nNon vedo prodotti sotto la soglia critica. Puoi rimandare gli acquisti urgenti e concentrarti su offerte o analisi prezzi.`;
+            }
+
+            let risposta = chiedeAcquisti ? `📦 **Consiglio rifornimento**\n\n` : `⚠️ **Prodotti con scorte basse**\n\n`;
+            risposta += `Priorita da gestire:\n`;
+            prodottiBassi.slice(0, 8).forEach(p => {
+                const daComprare = Math.max(0, p.maxQtyNormalizzato - Number(p.qty || 0));
+                risposta += `• ${p.nome}: ${p.qty}/${p.maxQtyNormalizzato} (${p.percentuale}%), compra circa ${daComprare} unita\n`;
+            });
+
+            risposta += `\nAzione: parti dai prodotti sotto il 20%, poi completa quelli tra 20% e 25%.`;
+            return risposta;
+        }
+
+        if (chiedeVendite) {
+            if (topStimati.length === 0) {
+                return `🏆 **Top vendite**\n\nNon ho abbastanza storico per capire quali prodotti vendono meglio. Al momento posso stimarlo solo dal consumo dello stock.`;
+            }
+
+            let risposta = `🏆 **Prodotti che sembrano vendere meglio**\n\n`;
+            risposta += `Stima basata su stock consumato, non su righe ordine dettagliate:\n`;
+            topStimati.slice(0, 6).forEach(p => {
+                risposta += `• ${p.nome}: circa ${p.vendutiStimati} pezzi venduti, valore stimato €${p.valoreStimato.toFixed(2)}\n`;
+            });
+            risposta += `\nSuggerimento: tieni questi prodotti sempre disponibili e valuta promo solo se la scorta e alta.`;
+            return risposta;
+        }
+
+        if (chiedeSituazione) {
+            let risposta = `📊 **Riassunto negozio**\n\n`;
+            risposta += `• Incasso: €${incasso.toFixed(2)}\n`;
+            risposta += `• Spese: €${spese.toFixed(2)}\n`;
+            risposta += `• Margine: €${margine.toFixed(2)}\n`;
+            risposta += `• Ordini registrati: ${ordini ? ordini.length : 0}\n`;
+            risposta += `• Scorte totali: ${scorteTotali} unita\n`;
+            risposta += `• Prodotti sotto soglia: ${prodottiBassi.length}\n`;
+
+            if (prodottiBassi.length > 0) {
+                risposta += `\nPrima azione consigliata: rifornisci ${prodottiBassi.slice(0, 3).map(p => p.nome).join(', ')}.`;
+            }
+
+            return risposta;
+        }
+
+        if (chiedeOfferte) {
+            const candidatiPromo = inventario
+                .filter(p => this.getPercentualeScorta(p) >= 60)
+                .sort((a, b) => this.getPercentualeScorta(b) - this.getPercentualeScorta(a))
+                .slice(0, 5);
+
+            if (candidatiPromo.length === 0) {
+                return `🎁 **Offerte e promozioni**\n\nNon vedo prodotti con scorte molto alte. Prima sistema il rifornimento, poi conviene creare promo mirate.`;
+            }
+
+            let risposta = `🎁 **Idee promozione**\n\n`;
+            risposta += `Puoi spingere prodotti con scorta alta:\n`;
+            candidatiPromo.forEach(p => {
+                risposta += `• ${p.nome}: ${p.qty}/${this.getMaxQty(p)} (${this.getPercentualeScorta(p)}%)\n`;
+            });
+            risposta += `\nSconto consigliato: 10-15%, evitando i prodotti sotto scorta.`;
+            return risposta;
+        }
+
+        if (chiedeSaluto) {
+            return `🤖 **Ciao! Sono l'assistente AI di SinGo.**\n\nChiedimi pure cose tipo: "analisi prezzi", "scorte basse", "top vendite", "cosa dovrei comprare" o "come va il negozio".`;
+        }
+
+        return `🤖 **Posso aiutarti sui dati del negozio.**\n\nNon ho capito bene la richiesta, ma posso rispondere su acquisti, prezzi, scorte, offerte, vendite e situazione generale.\n\nEsempi: "Quali prodotti hanno scorte basse?", "Fammi un'analisi dei prezzi", "Quali prodotti vendono meglio?".`;
     }
 };
