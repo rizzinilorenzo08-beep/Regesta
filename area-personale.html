@@ -29,6 +29,8 @@
         .account-actions a, .account-actions button, .btn-action { display: inline-block; text-align: center; border: none; border-radius: 8px; padding: 11px 14px; font-weight: 700; text-decoration: none; cursor: pointer; }
         .btn-primary-account { background: #10B981; color: white; }
         .btn-muted-account { background: #F1F5F9; color: #334155; }
+        .btn-danger-account { background: #DC2626; color: white; }
+        .btn-danger-account:disabled { background: #FCA5A5; cursor: not-allowed; }
         .section-block { display: none; margin-bottom: 0; }
         .section-block[hidden] { display: none !important; }
         .section-block.active { display: block; }
@@ -66,6 +68,7 @@
         .trip-form label { display: block; color: #1E293B; font-weight: 700; margin-bottom: 6px; }
         .trip-form select { width: 100%; padding: 11px 13px; border: 2px solid #FED7AA; border-radius: 8px; background: white; }
         .trip-saved { margin-top: 10px; color: #166534; font-weight: 700; display: none; }
+        .danger-text { color: #991B1B; margin-bottom: 14px; }
         @media (max-width: 920px) {
             .account-container { margin: 18px auto; padding: 0 14px; }
             .account-grid, .summary-row { grid-template-columns: 1fr; }
@@ -137,6 +140,7 @@
                     <button type="button" data-section="trips" id="tripNavBtn" onclick="showAccountSection('trips', this)" hidden>I tuoi viaggi</button>
                     <button type="button" data-section="rewards" onclick="showAccountSection('rewards', this)">Premi riscattati</button>
                     <button type="button" data-section="password" onclick="showAccountSection('password', this)">Gestisci psw</button>
+                    <button type="button" data-section="security" onclick="showAccountSection('security', this)">Sicurezza</button>
                 </nav>
                 <div class="account-actions">
                     <a href="shop.html" class="btn-primary-account">Vai allo shop</a>
@@ -205,6 +209,20 @@
                         <button type="submit" class="btn-action btn-primary-account" id="changePasswordBtn" style="display:none;">Aggiorna password</button>
                     </form>
                 </div>
+
+                <div class="section-block" data-account-section="security">
+                    <h2 class="section-title">Sicurezza account</h2>
+                    <div id="deleteAccountMessage" class="message"></div>
+                    <p class="danger-text">L'eliminazione dell'account rimuove profilo, indirizzi, ordini, premi riscattati e punti spesa. L'operazione non puo essere annullata.</p>
+                    <form id="deleteAccountForm" class="password-form">
+                        <button type="button" class="btn-action btn-danger-account" id="sendDeleteCodeBtn">Invia codice per eliminare account</button>
+                        <div class="form-group" id="deleteCodeGroup" style="display:none;">
+                            <label for="deleteVerificationCode">Codice ricevuto via email</label>
+                            <input type="text" id="deleteVerificationCode" inputmode="numeric" maxlength="6" placeholder="6 cifre">
+                        </div>
+                        <button type="submit" class="btn-action btn-danger-account" id="confirmDeleteAccountBtn" style="display:none;">Elimina definitivamente account</button>
+                    </form>
+                </div>
             </section>
         </div>
     </main>
@@ -227,6 +245,7 @@
         const CODE_EXPIRY_MS = 15 * 60 * 1000;
         let cliente = null;
         let passwordCodeState = null;
+        let deleteAccountCodeState = null;
         let premiRiscattatiCache = [];
 
         const statoLabels = {
@@ -631,7 +650,97 @@
             }
         });
 
+        document.getElementById('sendDeleteCodeBtn').addEventListener('click', async function() {
+            this.disabled = true;
+            this.textContent = 'Invio codice...';
+
+            try {
+                const codice = generaCodice();
+                await emailjs.send(SERVICE_ID, PASSWORD_TEMPLATE_ID, {
+                    to_email: cliente.email,
+                    customer_name: cliente.nome || 'Cliente',
+                    recovery_code: codice,
+                    code: codice,
+                    expiry_time: '15 minuti',
+                    message: 'Il codice per eliminare definitivamente il tuo account SinGo e: ' + codice
+                });
+
+                deleteAccountCodeState = {
+                    code: codice,
+                    expiresAt: Date.now() + CODE_EXPIRY_MS
+                };
+
+                document.getElementById('deleteCodeGroup').style.display = 'block';
+                document.getElementById('confirmDeleteAccountBtn').style.display = 'inline-block';
+                document.getElementById('deleteVerificationCode').value = '';
+                document.getElementById('deleteVerificationCode').focus();
+                mostraDeleteAccountMessage('Codice inviato alla tua email.', 'success');
+            } catch (error) {
+                console.error('Errore invio codice eliminazione account:', error);
+                mostraDeleteAccountMessage('Impossibile inviare il codice. Controlla EmailJS.', 'error');
+            } finally {
+                this.disabled = false;
+                this.textContent = 'Invia codice per eliminare account';
+            }
+        });
+
+        document.getElementById('deleteAccountForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
+
+            const verificationCode = document.getElementById('deleteVerificationCode').value.trim();
+
+            if (!deleteAccountCodeState) {
+                mostraDeleteAccountMessage('Invia prima il codice di verifica.', 'error');
+                return;
+            }
+
+            if (!/^\d{6}$/.test(verificationCode)) {
+                mostraDeleteAccountMessage('Inserisci un codice valido di 6 cifre.', 'error');
+                return;
+            }
+
+            if (Date.now() > deleteAccountCodeState.expiresAt) {
+                deleteAccountCodeState = null;
+                mostraDeleteAccountMessage('Codice scaduto. Richiedine uno nuovo.', 'error');
+                return;
+            }
+
+            if (verificationCode !== deleteAccountCodeState.code) {
+                mostraDeleteAccountMessage('Codice di verifica non corretto.', 'error');
+                return;
+            }
+
+            const confirmBtn = document.getElementById('confirmDeleteAccountBtn');
+            confirmBtn.disabled = true;
+            confirmBtn.textContent = 'Eliminazione...';
+
+            try {
+                const result = await DB_CLIENTI.eliminaAccountCliente(cliente.id);
+                if (!result.success) {
+                    mostraDeleteAccountMessage(result.error || 'Impossibile eliminare account.', 'error');
+                    return;
+                }
+
+                deleteAccountCodeState = null;
+                logoutCliente();
+                mostraDeleteAccountMessage('Account eliminato. Reindirizzamento...', 'success');
+                setTimeout(() => {
+                    window.location.href = 'index.html';
+                }, 1200);
+            } catch (error) {
+                console.error('Errore eliminazione account:', error);
+                mostraDeleteAccountMessage('Errore durante eliminazione account.', 'error');
+            } finally {
+                confirmBtn.disabled = false;
+                confirmBtn.textContent = 'Elimina definitivamente account';
+            }
+        });
+
         document.getElementById('verificationCode').addEventListener('input', function() {
+            this.value = this.value.replace(/\D/g, '').slice(0, 6);
+        });
+
+        document.getElementById('deleteVerificationCode').addEventListener('input', function() {
             this.value = this.value.replace(/\D/g, '').slice(0, 6);
         });
 
@@ -658,6 +767,12 @@
 
         function mostraPasswordMessage(message, type) {
             const box = document.getElementById('passwordMessage');
+            box.textContent = message;
+            box.className = `message ${type} show`;
+        }
+
+        function mostraDeleteAccountMessage(message, type) {
+            const box = document.getElementById('deleteAccountMessage');
             box.textContent = message;
             box.className = `message ${type} show`;
         }

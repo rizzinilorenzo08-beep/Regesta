@@ -362,6 +362,21 @@ function getDiscountedPrice(prezzo, item) {
 // ==========================================
 
 const DB_CLIENTI = {
+    async emailClienteRegistrata(email) {
+        const { data, error } = await supabaseClient
+            .from('clienti')
+            .select('id')
+            .eq('email', email)
+            .maybeSingle();
+
+        if (error) {
+            console.error("Errore verifica email cliente:", error);
+            return { success: false, error: error.message };
+        }
+
+        return { success: true, exists: !!data };
+    },
+
     async registraCliente(email, password, nome) {
         const validazionePassword = validaPasswordSicura(password);
         if (!validazionePassword.valid) {
@@ -486,6 +501,62 @@ const DB_CLIENTI = {
         if (error) {
             console.error("Errore nel cambio password cliente:", error);
             return { success: false, message: error.message };
+        }
+
+        return { success: true };
+    },
+
+    async eliminaAccountCliente(clienteId) {
+        const { data: ordini, error: ordiniError } = await supabaseClient
+            .from('ordini')
+            .select('id')
+            .eq('cliente_id', clienteId);
+
+        if (ordiniError) {
+            console.error("Errore caricamento ordini per eliminazione account:", ordiniError);
+            return { success: false, error: ordiniError.message };
+        }
+
+        const ordineIds = (ordini || []).map(ordine => ordine.id);
+        if (ordineIds.length > 0) {
+            const { error: storicoError } = await supabaseClient
+                .from('storico_stato_ordini')
+                .delete()
+                .in('ordine_id', ordineIds);
+
+            if (storicoError) {
+                console.error("Errore eliminazione storico ordini cliente:", storicoError);
+                return { success: false, error: storicoError.message };
+            }
+        }
+
+        const tabelleCollegate = [
+            'indirizzi_cliente',
+            'premi_riscattati',
+            'vincite_viaggi',
+            'ordini'
+        ];
+
+        for (const tabella of tabelleCollegate) {
+            const { error } = await supabaseClient
+                .from(tabella)
+                .delete()
+                .eq('cliente_id', clienteId);
+
+            if (error) {
+                console.error(`Errore eliminazione dati cliente da ${tabella}:`, error);
+                return { success: false, error: error.message };
+            }
+        }
+
+        const { error } = await supabaseClient
+            .from('clienti')
+            .delete()
+            .eq('id', clienteId);
+
+        if (error) {
+            console.error("Errore eliminazione account cliente:", error);
+            return { success: false, error: error.message };
         }
 
         return { success: true };

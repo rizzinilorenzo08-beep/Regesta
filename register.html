@@ -6,21 +6,22 @@
     <title>Registrazione - SuperStore Premium</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
     <script src="db.js"></script>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="register-container">
         <div class="register-header">
-            <h1>🎉 Iscriviti Ora</h1>
-            <p>Entra nel programma fedeltà SuperStore Premium</p>
+            <h1>Iscriviti Ora</h1>
+            <p>Entra nel programma fedelta SuperStore Premium</p>
         </div>
 
         <div id="messageBox" class="message"></div>
 
         <div class="benefits">
             <ul>
-                <li>1 punto spesa ogni 15€ acquistati</li>
+                <li>1 punto spesa ogni 15 euro acquistati</li>
                 <li>Accedi a offerte esclusive</li>
                 <li>Gestisci i tuoi punti facilmente</li>
             </ul>
@@ -49,21 +50,40 @@
                 <input type="password" id="confermaPassword" placeholder="Ripeti la password" required>
             </div>
 
-            <button type="submit" class="btn-register">Registrati</button>
+            <div id="otpPanel" style="display: none;">
+                <div class="form-group">
+                    <label for="otpCode">Codice OTP ricevuto via email</label>
+                    <input type="text" id="otpCode" inputmode="numeric" maxlength="6" placeholder="Inserisci il codice a 6 cifre">
+                    <small>Il codice scade dopo 15 minuti.</small>
+                </div>
+                <button type="button" class="btn-register" id="btnModificaDati" style="margin-bottom: 10px; background: #64748B;">Modifica dati</button>
+            </div>
+
+            <button type="submit" class="btn-register" id="registerBtn">Registrati</button>
         </form>
 
         <div class="form-links">
-            <p>Hai già un account?</p>
+            <p>Hai gia un account?</p>
             <a href="login-cliente.html">Accedi al tuo profilo</a>
             <p style="margin-top: 15px; border-top: 1px solid var(--border); padding-top: 15px;">
-                <a href="index.html">← Torna alla index</a>
+                <a href="index.html">&lt;- Torna alla index</a>
             </p>
         </div>
     </div>
 
     <script>
+        emailjs.init("nLywcTRnXOOUYsDtW");
+
         const form = document.getElementById('registerForm');
         const messageBox = document.getElementById('messageBox');
+        const otpPanel = document.getElementById('otpPanel');
+        const otpCodeInput = document.getElementById('otpCode');
+        const btnModificaDati = document.getElementById('btnModificaDati');
+        const registerBtn = document.getElementById('registerBtn');
+        const SERVICE_ID = "service_70i2s1t";
+        const REGISTRATION_TEMPLATE_ID = "template_33lrsza";
+        const OTP_EXPIRY_MS = 15 * 60 * 1000;
+        let registrationState = null;
 
         form.addEventListener('submit', async function (e) {
             e.preventDefault();
@@ -73,7 +93,7 @@
             const password = document.getElementById('password').value;
             const confermaPassword = document.getElementById('confermaPassword').value;
 
-            if (!nome || !email || !password) {
+            if (!nome || !email || !password || !confermaPassword) {
                 mostraMessaggio('Compila tutti i campi', 'error');
                 return;
             }
@@ -89,32 +109,137 @@
                 return;
             }
 
-            const btn = form.querySelector('.btn-register');
-            btn.disabled = true;
-            btn.textContent = 'Registrazione in corso...';
+            if (!registrationState) {
+                await inviaOtpRegistrazione(nome, email, password);
+                return;
+            }
+
+            await confermaRegistrazione();
+        });
+
+        btnModificaDati.addEventListener('click', function() {
+            registrationState = null;
+            otpCodeInput.value = '';
+            otpPanel.style.display = 'none';
+            registerBtn.textContent = 'Registrati';
+            bloccaCampiRegistrazione(false);
+            mostraMessaggio('Puoi modificare i dati e richiedere un nuovo codice OTP.', 'success');
+        });
+
+        otpCodeInput.addEventListener('input', function() {
+            otpCodeInput.value = otpCodeInput.value.replace(/\D/g, '').slice(0, 6);
+        });
+
+        async function inviaOtpRegistrazione(nome, email, password) {
+            registerBtn.disabled = true;
+            registerBtn.textContent = 'Invio codice...';
 
             try {
-                const result = await DB_CLIENTI.registraCliente(email, password, nome);
+                const verificaEmail = await DB_CLIENTI.emailClienteRegistrata(email);
+                if (!verificaEmail.success) {
+                    mostraMessaggio('Errore durante la verifica email. Riprova.', 'error');
+                    return;
+                }
+                if (verificaEmail.exists) {
+                    mostraMessaggio('Email gia registrata', 'error');
+                    return;
+                }
+
+                const codice = generaCodiceOtp();
+                await emailjs.send(SERVICE_ID, REGISTRATION_TEMPLATE_ID, {
+                    to_email: email,
+                    customer_name: nome,
+                    recovery_code: codice,
+                    code: codice,
+                    expiry_time: '15 minuti',
+                    message: 'Il tuo codice OTP di conferma iscrizione SinGo e: ' + codice
+                });
+
+                registrationState = {
+                    nome,
+                    email,
+                    password,
+                    codice,
+                    expiresAt: Date.now() + OTP_EXPIRY_MS
+                };
+
+                bloccaCampiRegistrazione(true);
+                otpPanel.style.display = 'block';
+                otpCodeInput.value = '';
+                otpCodeInput.focus();
+                registerBtn.textContent = 'Conferma iscrizione';
+                mostraMessaggio('Codice OTP inviato! Controlla la tua email per confermare l\'iscrizione.', 'success');
+            } catch (error) {
+                console.error('Errore invio OTP registrazione:', error);
+                mostraMessaggio('Impossibile inviare il codice OTP. Controlla la configurazione EmailJS.', 'error');
+            } finally {
+                registerBtn.disabled = false;
+                if (!registrationState) registerBtn.textContent = 'Registrati';
+            }
+        }
+
+        async function confermaRegistrazione() {
+            const otpInserito = otpCodeInput.value.trim();
+            if (!/^\d{6}$/.test(otpInserito)) {
+                mostraMessaggio('Inserisci un codice OTP valido di 6 cifre', 'error');
+                otpCodeInput.focus();
+                return;
+            }
+
+            if (Date.now() > registrationState.expiresAt) {
+                registrationState = null;
+                otpPanel.style.display = 'none';
+                bloccaCampiRegistrazione(false);
+                registerBtn.textContent = 'Registrati';
+                mostraMessaggio('Codice OTP scaduto. Richiedi una nuova registrazione.', 'error');
+                return;
+            }
+
+            if (otpInserito !== registrationState.codice) {
+                mostraMessaggio('Codice OTP non corretto', 'error');
+                otpCodeInput.focus();
+                return;
+            }
+
+            registerBtn.disabled = true;
+            registerBtn.textContent = 'Registrazione in corso...';
+
+            try {
+                const result = await DB_CLIENTI.registraCliente(
+                    registrationState.email,
+                    registrationState.password,
+                    registrationState.nome
+                );
 
                 if (result.success) {
-                    mostraMessaggio('✓ Registrazione completata! Reindirizzamento...', 'success');
+                    mostraMessaggio('Registrazione completata! Reindirizzamento...', 'success');
                     salvaClienteLoggato(result.cliente);
-                    
+
                     setTimeout(() => {
                         window.location.href = 'index.html';
                     }, 1500);
                 } else {
                     mostraMessaggio(result.error, 'error');
-                    btn.disabled = false;
-                    btn.textContent = 'Registrati';
+                    registerBtn.disabled = false;
+                    registerBtn.textContent = 'Conferma iscrizione';
                 }
             } catch (error) {
                 console.error('Errore durante la registrazione:', error);
                 mostraMessaggio('Errore durante la registrazione. Riprova.', 'error');
-                btn.disabled = false;
-                btn.textContent = 'Registrati';
+                registerBtn.disabled = false;
+                registerBtn.textContent = 'Conferma iscrizione';
             }
-        });
+        }
+
+        function generaCodiceOtp() {
+            return String(Math.floor(100000 + Math.random() * 900000));
+        }
+
+        function bloccaCampiRegistrazione(blocca) {
+            ['nome', 'email', 'password', 'confermaPassword'].forEach(id => {
+                document.getElementById(id).disabled = blocca;
+            });
+        }
 
         function mostraMessaggio(testo, tipo) {
             messageBox.textContent = testo;
