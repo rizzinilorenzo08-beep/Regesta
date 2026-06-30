@@ -40,8 +40,8 @@
 
             <div class="form-group">
                 <label for="password">Password</label>
-                <input type="password" id="password" placeholder="Almeno 6 caratteri" required>
-                <small>Scegli una password sicura</small>
+                <input type="password" id="password" placeholder="Es. SinGo12!" required>
+                <small>Almeno 6 lettere, una maiuscola, 2 numeri e un carattere speciale</small>
             </div>
 
             <div class="form-group">
@@ -78,8 +78,9 @@
                 return;
             }
 
-            if (password.length < 6) {
-                mostraMessaggio('La password deve essere di almeno 6 caratteri', 'error');
+            const validazionePassword = validaPasswordSicura(password);
+            if (!validazionePassword.valid) {
+                mostraMessaggio(validazionePassword.msg, 'error');
                 return;
             }
 

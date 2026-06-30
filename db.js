@@ -115,6 +115,26 @@ async function registraVendita(totale) {
     return await DB.registraVendita(totale);
 }
 
+function validaPasswordSicura(password) {
+    const lettere = password.match(/[A-Za-z]/g) || [];
+    const numeri = password.match(/\d/g) || [];
+
+    if (lettere.length < 6) {
+        return { valid: false, msg: 'La password deve contenere almeno 6 lettere.' };
+    }
+    if (!/[A-Z]/.test(password)) {
+        return { valid: false, msg: 'La password deve contenere almeno una lettera maiuscola.' };
+    }
+    if (numeri.length < 2) {
+        return { valid: false, msg: 'La password deve contenere almeno 2 numeri.' };
+    }
+    if (!/[^A-Za-z0-9]/.test(password)) {
+        return { valid: false, msg: 'La password deve contenere almeno un carattere speciale.' };
+    }
+
+    return { valid: true, msg: '' };
+}
+
 // ==========================================
 // 4. FUNZIONI PER DATI LOCALI
 // ==========================================
@@ -343,6 +363,11 @@ function getDiscountedPrice(prezzo, item) {
 
 const DB_CLIENTI = {
     async registraCliente(email, password, nome) {
+        const validazionePassword = validaPasswordSicura(password);
+        if (!validazionePassword.valid) {
+            return { success: false, error: validazionePassword.msg };
+        }
+
         const { data, error } = await supabaseClient
             .from('clienti')
             .select('email')
@@ -403,6 +428,67 @@ const DB_CLIENTI = {
         }
 
         return data;
+    },
+
+    async verificaEmailCliente(email) {
+        const { data, error } = await supabaseClient
+            .from('clienti')
+            .select('id, email, nome')
+            .eq('email', email)
+            .single();
+
+        if (error || !data) {
+            return { success: false, message: 'Email non trovata.' };
+        }
+
+        return { success: true, cliente: data };
+    },
+
+    async resetPasswordCliente(email, nuovaPassword) {
+        const validazionePassword = validaPasswordSicura(nuovaPassword);
+        if (!validazionePassword.valid) {
+            return { success: false, message: validazionePassword.msg };
+        }
+
+        const { error } = await supabaseClient
+            .from('clienti')
+            .update({ password: btoa(nuovaPassword) })
+            .eq('email', email);
+
+        if (error) {
+            console.error("Errore nel reset della password cliente:", error);
+            return { success: false, message: error.message };
+        }
+
+        return { success: true };
+    },
+
+    async cambiaPasswordCliente(clienteId, passwordAttuale, nuovaPassword) {
+        const validazionePassword = validaPasswordSicura(nuovaPassword);
+        if (!validazionePassword.valid) {
+            return { success: false, message: validazionePassword.msg };
+        }
+
+        const cliente = await this.getCliente(clienteId);
+        if (!cliente) {
+            return { success: false, message: 'Cliente non trovato.' };
+        }
+
+        if (atob(cliente.password) !== passwordAttuale) {
+            return { success: false, message: 'Password attuale non corretta.' };
+        }
+
+        const { error } = await supabaseClient
+            .from('clienti')
+            .update({ password: btoa(nuovaPassword) })
+            .eq('id', clienteId);
+
+        if (error) {
+            console.error("Errore nel cambio password cliente:", error);
+            return { success: false, message: error.message };
+        }
+
+        return { success: true };
     },
 
     async aggiungiPuntiSpesa(clienteId, totaleAcquisto) {

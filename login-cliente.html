@@ -251,12 +251,39 @@
         }
 
         function generaPasswordTemporanea() {
-            const caratteri = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%';
-            let password = 'Sg-';
-            for (let i = 0; i < 9; i++) {
-                password += caratteri.charAt(Math.floor(Math.random() * caratteri.length));
+            const maiuscole = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+            const minuscole = 'abcdefghijkmnopqrstuvwxyz';
+            const numeri = '23456789';
+            const speciali = '!@#$%';
+            const tutti = maiuscole + minuscole + numeri + speciali;
+            const caratteri = [
+                carattereCasuale(maiuscole),
+                carattereCasuale(minuscole),
+                carattereCasuale(minuscole),
+                carattereCasuale(minuscole),
+                carattereCasuale(minuscole),
+                carattereCasuale(minuscole),
+                carattereCasuale(numeri),
+                carattereCasuale(numeri),
+                carattereCasuale(speciali),
+                carattereCasuale(tutti),
+                carattereCasuale(tutti),
+                carattereCasuale(tutti)
+            ];
+
+            return mescolaCaratteri(caratteri).join('');
+        }
+
+        function carattereCasuale(caratteri) {
+            return caratteri.charAt(Math.floor(Math.random() * caratteri.length));
+        }
+
+        function mescolaCaratteri(caratteri) {
+            for (let i = caratteri.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [caratteri[i], caratteri[j]] = [caratteri[j], caratteri[i]];
             }
-            return password;
+            return caratteri;
         }
 
         function mostraMessaggio(testo, tipo) {
