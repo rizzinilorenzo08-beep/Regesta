@@ -76,6 +76,18 @@
         @media (max-width: 1024px) {
             .checkout-container { flex-direction: column; }
         }
+        @media (max-width: 768px) {
+            .checkout-container { margin: 18px auto; padding: 0 14px; gap: 16px; }
+            .checkout-left, .checkout-right { width: 100%; flex: none; }
+            .riepilogo-card, .pagamento-card { padding: 16px; border-radius: 12px; }
+            .riepilogo-card h2, .pagamento-card h2 { font-size: 1.25rem; }
+            .ordine-item { flex-wrap: wrap; align-items: flex-start; gap: 8px; }
+            .ordine-item-nome, .ordine-item-prezzo { width: 100%; text-align: left; }
+            .totale-row, .buono-item { flex-wrap: wrap; gap: 8px; }
+            .metodo { padding: 12px; }
+            .toast-container { width: calc(100% - 28px); left: 14px; right: 14px; transform: none; }
+            .toast-message { width: 100%; text-align: center; }
+        }
     </style>
 </head>
 <body>

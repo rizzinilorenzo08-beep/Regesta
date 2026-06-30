@@ -1854,3 +1854,360 @@ td {
         height: 36px;
     }
 }
+
+/* Mobile layout */
+@media (max-width: 768px) {
+    html,
+    body {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+
+    body {
+        min-width: 0;
+    }
+
+    img,
+    video,
+    canvas {
+        max-width: 100%;
+    }
+
+    input,
+    select,
+    textarea,
+    button {
+        font-size: 16px;
+    }
+
+    .navbar,
+    .navbar-index {
+        position: sticky;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+        padding: 10px 12px;
+    }
+
+    .nav-left,
+    .nav-right,
+    .nav-links,
+    .user-section {
+        width: 100%;
+        min-width: 0;
+        flex-wrap: nowrap;
+        gap: 8px;
+        overflow-x: auto;
+        overflow-y: hidden;
+        padding-bottom: 4px;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+    }
+
+    .nav-left::-webkit-scrollbar,
+    .nav-right::-webkit-scrollbar,
+    .nav-links::-webkit-scrollbar,
+    .user-section::-webkit-scrollbar {
+        display: none;
+    }
+
+    .nav-left {
+        flex: none;
+    }
+
+    .nav-logo {
+        width: 42px;
+        height: 42px;
+        min-width: 42px;
+    }
+
+    .nav-logo img {
+        width: 42px !important;
+        height: 42px !important;
+    }
+
+    .navbar a:not(.nav-logo),
+    .navbar button,
+    .theme-toggle {
+        flex: 0 0 auto;
+        min-height: 36px;
+        padding: 8px 12px;
+        font-size: 0.72rem;
+        white-space: nowrap;
+    }
+
+    .user-greeting {
+        flex: 0 0 auto;
+        white-space: nowrap;
+        font-size: 0.82rem;
+        align-self: center;
+    }
+
+    .hero {
+        padding: 44px 16px 38px;
+    }
+
+    .hero h1 {
+        font-size: 2.15rem;
+        line-height: 1.12;
+    }
+
+    .hero p {
+        font-size: 1rem;
+        margin-bottom: 22px;
+    }
+
+    .hero .btn-group,
+    .cta-section .btn-group {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+
+    .btn-primary,
+    .btn-secondary,
+    .btn-action {
+        width: 100%;
+        text-align: center;
+        padding: 12px 16px;
+    }
+
+    .container-index,
+    .container,
+    .policy-container,
+    .checkout-container,
+    .account-container,
+    .orders-container,
+    .address-container,
+    .qr-container {
+        width: 100%;
+        max-width: 100%;
+        padding-left: 14px;
+        padding-right: 14px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .container {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        padding-top: 18px;
+        padding-bottom: 18px;
+    }
+
+    .section {
+        margin-bottom: 34px;
+    }
+
+    .section h2,
+    .section-title,
+    .header h1,
+    .policy-container h1,
+    .account-header h1,
+    .orders-header h1,
+    .address-header h1 {
+        font-size: 1.55rem;
+        line-height: 1.18;
+    }
+
+    .section p,
+    .header p,
+    .policy-container p,
+    .policy-container li {
+        font-size: 0.95rem;
+        line-height: 1.58;
+    }
+
+    .story-box,
+    .points-info,
+    .cta-section,
+    .login-required,
+    .empty-orders,
+    .offer-card,
+    .benefit-card,
+    .product-card,
+    .offerta-card,
+    .cart-panel,
+    .riepilogo-card,
+    .pagamento-card,
+    .side-panel,
+    .content-panel,
+    .address-card,
+    .add-address-form,
+    .order-card {
+        padding: 16px;
+        border-radius: 12px;
+    }
+
+    .offers-grid,
+    .benefits-grid,
+    .points-info .info-grid,
+    .products-grid,
+    .offerte-grid,
+    .reward-grid {
+        grid-template-columns: 1fr;
+        gap: 14px;
+    }
+
+    .promo-banner {
+        width: calc(100% - 28px);
+        flex-direction: column;
+        align-items: flex-start;
+        margin-top: 14px;
+        padding: 14px 16px;
+    }
+
+    .sidebar {
+        width: 100%;
+        position: static;
+        display: flex;
+        flex-direction: row;
+        gap: 8px;
+        overflow-x: auto;
+        padding-bottom: 4px;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .category-btn {
+        flex: 0 0 auto;
+        min-width: max-content;
+        padding: 11px 14px;
+        text-align: center;
+    }
+
+    .products-grid {
+        width: 100%;
+        flex: none;
+    }
+
+    .product-card {
+        min-width: 0;
+    }
+
+    .price-row,
+    .cart-item,
+    .ordine-item,
+    .address-card {
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .cart-panel {
+        width: 100%;
+        min-height: 0;
+        position: static;
+    }
+
+    .cart-items-wrapper {
+        max-height: none;
+    }
+
+    .totale-carrello,
+    .order-total,
+    .ordine-item-prezzo {
+        text-align: left;
+    }
+
+    .checkout-container {
+        flex-direction: column;
+        gap: 16px;
+        margin-top: 18px;
+    }
+
+    .checkout-left,
+    .checkout-right {
+        width: 100%;
+        flex: none;
+    }
+
+    .ordine-item,
+    .totale-row,
+    .buono-item,
+    .address-card,
+    .address-card .actions,
+    .not-registered-alert .actions {
+        flex-wrap: wrap;
+    }
+
+    .address-card .info,
+    .address-card .actions,
+    .address-card .actions button,
+    .btn-save-address {
+        width: 100%;
+    }
+
+    .add-address-form .form-row {
+        flex-direction: column;
+        gap: 0;
+    }
+
+    .add-address-form .form-row .form-group {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .login-required a,
+    .login-required .btn-login,
+    .login-required .btn-register,
+    .empty-orders .btn-shop {
+        width: 100%;
+        margin: 6px 0;
+        text-align: center;
+    }
+
+    .footer {
+        padding: 24px 14px;
+    }
+
+    .footer-links {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .toast-container {
+        width: calc(100% - 28px);
+        left: 14px;
+        right: 14px;
+        transform: none;
+    }
+
+    .toast-message,
+    .toast {
+        width: 100%;
+        max-width: none;
+        text-align: center;
+    }
+}
+
+@media (max-width: 420px) {
+    .navbar a:not(.nav-logo),
+    .navbar button,
+    .theme-toggle {
+        padding: 7px 10px;
+        font-size: 0.68rem;
+    }
+
+    .hero h1 {
+        font-size: 1.85rem;
+    }
+
+    .section h2,
+    .section-title,
+    .header h1,
+    .policy-container h1,
+    .account-header h1,
+    .orders-header h1,
+    .address-header h1 {
+        font-size: 1.35rem;
+    }
+
+    .points-card {
+        padding: 24px 16px;
+    }
+
+    .points-value {
+        font-size: 2.2rem;
+    }
+}

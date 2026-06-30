@@ -1533,9 +1533,47 @@ const DB_PREMI = {
 
         if (error) {
             console.error("Errore caricamento premi riscattati:", error);
-            return [];
+            return await this.getPremiRiscattatiFallback(clienteId);
         }
         return data || [];
+    },
+
+    async getPremiRiscattatiFallback(clienteId) {
+        const { data: riscattati, error: riscattatiError } = await supabaseClient
+            .from('premi_riscattati')
+            .select('*')
+            .eq('cliente_id', clienteId)
+            .order('data_riscatto', { ascending: false });
+
+        if (riscattatiError) {
+            console.error("Errore fallback premi riscattati:", riscattatiError);
+            return [];
+        }
+
+        if (!riscattati || riscattati.length === 0) {
+            return [];
+        }
+
+        const premioIds = [...new Set(riscattati.map(item => item.premio_id).filter(Boolean))];
+        if (premioIds.length === 0) {
+            return riscattati.map(item => ({ ...item, premio: null }));
+        }
+
+        const { data: premi, error: premiError } = await supabaseClient
+            .from('catalogo_premi')
+            .select('*')
+            .in('id', premioIds);
+
+        if (premiError) {
+            console.error("Errore fallback catalogo premi riscattati:", premiError);
+            return riscattati.map(item => ({ ...item, premio: null }));
+        }
+
+        const premiById = new Map((premi || []).map(premio => [premio.id, premio]));
+        return riscattati.map(item => ({
+            ...item,
+            premio: premiById.get(item.premio_id) || null
+        }));
     }
 };
 

@@ -98,6 +98,7 @@
             <a href="index.html">index</a>
             <a href="shop.html">Prodotti</a>
             <a href="sconti.html">Offerte</a>
+            <a href="points.html">Premi</a>
         </div>
         <div class="nav-right">
             <div class="user-section">
@@ -143,6 +144,7 @@
                     <button type="button" data-section="security" onclick="showAccountSection('security', this)">Sicurezza</button>
                 </nav>
                 <div class="account-actions">
+                    <a href="points.html" class="btn-primary-account">Premi disponibili</a>
                     <a href="shop.html" class="btn-primary-account">Vai allo shop</a>
                     <a href="gestione-indirizzi.html" class="btn-muted-account">Gestisci indirizzi</a>
                     <button type="button" class="btn-muted-account" onclick="logoutUser()">Logout</button>
@@ -455,7 +457,7 @@
             return new Date(isoDate + 'T00:00:00').toLocaleDateString('it-IT');
         }
 
-        async function caricaPremiRiscattati() {
+        async function caricaPremiRiscattatiLegacy() {
             const rewardsList = document.getElementById('rewardsList');
             const riscattati = await DB_PREMI.getPremiRiscattati(cliente.id);
             premiRiscattatiCache = riscattati || [];
@@ -479,6 +481,46 @@
                     </div>
                 `;
             }).join('');
+        }
+
+        async function caricaPremiRiscattati() {
+            const rewardsList = document.getElementById('rewardsList');
+            rewardsList.innerHTML = '<div class="empty-box">Caricamento premi...</div>';
+
+            try {
+                const riscattati = await DB_PREMI.getPremiRiscattati(cliente.id);
+                premiRiscattatiCache = riscattati || [];
+
+                if (!riscattati || riscattati.length === 0) {
+                    rewardsList.innerHTML = '<div class="empty-box">Non hai ancora riscattato premi.</div>';
+                    return;
+                }
+
+                rewardsList.innerHTML = riscattati.map((item, indexx) => {
+                    const premio = item.premio || {};
+                    const prezzo = Number(premio.prezzo_aggiuntivo || 0);
+                    const dataRiscatto = item.data_riscatto
+                        ? new Date(item.data_riscatto).toLocaleDateString('it-IT')
+                        : 'data non disponibile';
+                    const premioDisponibile = Boolean(item.premio);
+
+                    return `
+                        <div class="reward-card">
+                            <strong>${premio.nome || 'Premio riscattato'}</strong>
+                            <span>${premio.descrizione || 'Dettagli premio non disponibili.'}</span><br>
+                            <span>${item.punti_utilizzati || 0} punti utilizzati</span><br>
+                            <span>Riscattato il ${dataRiscatto}</span>
+                            <button type="button" ${premioDisponibile ? '' : 'disabled'} onclick="acquistaPremioRiscattato(${indexx}, this)">
+                                ${premioDisponibile ? `Acquista${prezzo > 0 ? ` - € ${prezzo.toFixed(2)}` : ' gratis'}` : 'Premio non disponibile'}
+                            </button>
+                        </div>
+                    `;
+                }).join('');
+            } catch (error) {
+                console.error('Errore caricamento premi area personale:', error);
+                premiRiscattatiCache = [];
+                rewardsList.innerHTML = '<div class="empty-box">Errore nel caricamento dei premi riscattati.</div>';
+            }
         }
 
         async function acquistaPremioRiscattato(indexx, btn) {
