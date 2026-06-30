@@ -2080,6 +2080,15 @@ td {
     .products-grid {
         width: 100%;
         flex: none;
+        order: 3;
+    }
+
+    .container > .sidebar {
+        order: 1;
+    }
+
+    .container > .cart-panel {
+        order: 2;
     }
 
     .product-card {
