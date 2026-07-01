@@ -191,6 +191,89 @@
             .finance-grid { grid-template-columns: 1fr; }
             #vista-finanze { max-height: none; }
         }
+
+        .manager-topbar {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        .manager-topbar .nav-logo img { height: 36px; width: 36px; border-radius: 50%; }
+        .manager-topbar-title { display: flex; flex-direction: column; line-height: 1.2; margin-right: auto; }
+        .manager-topbar-title span { font-size: 0.75rem; color: #94a3b8; }
+        .manager-topbar-title strong { font-size: 1rem; color: var(--primary); }
+        .manager-topbar-links { display: flex; gap: 10px; }
+        .manager-topbar-links a {
+            background: #eef2f7; color: var(--primary); text-decoration: none;
+            padding: 8px 14px; border-radius: 8px; font-weight: 600; font-size: 0.85rem;
+        }
+
+        /* ── MOBILE: componenti specifici del pannello manager ──────────
+           (sidebar/category-btn sono già gestiti globalmente da style.css) */
+        @media (max-width: 768px) {
+            .main {
+                padding: 16px;
+            }
+
+            .manager-topbar {
+                gap: 10px;
+                margin-bottom: 16px;
+            }
+
+            .manager-topbar-title {
+                margin-right: 0;
+                flex: 1 1 auto;
+            }
+
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+
+            .stats-cards {
+                flex-direction: column;
+            }
+
+            .card {
+                min-width: 100%;
+            }
+
+            /* Tabelle scorrevoli orizzontalmente invece di rompere il layout */
+            table {
+                display: block;
+                overflow-x: auto;
+                white-space: nowrap;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .controls select,
+            .controls button {
+                width: 100%;
+            }
+
+            .modal-card {
+                padding: 20px;
+            }
+
+            .modal-actions {
+                flex-direction: column;
+            }
+
+            .modal-actions button {
+                width: 100%;
+            }
+
+            .chat-bubble {
+                max-width: 92%;
+            }
+        }
     </style>
     <link rel="stylesheet" href="style.css">
 </head>
