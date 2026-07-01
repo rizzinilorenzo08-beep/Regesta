@@ -26,7 +26,7 @@
 }
 
 html {
-    font-size: 16px;
+    font-size: 18px;
     -webkit-text-size-adjust: 100%;
 }
 
@@ -897,7 +897,7 @@ input::placeholder {
 }
 
 .product-card h3 {
-    font-size: 1.05rem;
+    font-size: 1.2rem;
     font-weight: 600;
     margin-bottom: 2px;
 }
@@ -922,21 +922,21 @@ input::placeholder {
 .prezzo {
     font-weight: 700;
     color: var(--primary);
-    font-size: 1.3rem;
+    font-size: 1.5rem;
 }
 
 .btn-add {
     background-color: var(--secondary);
     color: white;
     border: none;
-    padding: 12px;
+    padding: 16px;  
     border-radius: 10px;
     cursor: pointer;
     width: 100%;
-    font-weight: 600;
+    font-weight: 700;  
     transition: 0.2s;
-    min-height: 48px;
-    font-size: 0.95rem;
+    min-height: 54px;  
+    font-size: 1.05rem; 
 }
 
 .btn-add:disabled {
@@ -947,9 +947,9 @@ input::placeholder {
 
 /* ── CART PANEL ──────────────────────────────────────────────────────── */
 .cart-panel {
-    width: 340px;
+    width: 100%;  /* CAMBIA DA 340px a 100% su mobile */
     background: var(--card-bg);
-    padding: 20px;
+    padding: 24px 18px;  /* CAMBIA DA 20px a 24px 18px */
     border-radius: var(--radius);
     box-shadow: var(--shadow-lg);
     border: 1px solid var(--border);
@@ -972,11 +972,11 @@ input::placeholder {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 10px;
-    padding: 10px 12px;
+    margin-bottom: 12px;  /* CAMBIA DA 10px a 12px */
+    padding: 14px 16px;  /* CAMBIA DA 10px 12px a 14px 16px */
     background: var(--bg);
     border-radius: 10px;
-    gap: 8px;
+    gap: 12px;
     flex-wrap: wrap;
 }
 
@@ -989,7 +989,7 @@ input::placeholder {
     display: block;
     font-weight: 700;
     color: var(--primary);
-    font-size: 0.9rem;
+    font-size: 1rem;  /* CAMBIA DA 0.9rem a 1rem */
     overflow-wrap: anywhere;
 }
 
@@ -1028,7 +1028,7 @@ input::placeholder {
 }
 
 .totale-carrello {
-    font-size: 1.2rem;
+    font-size: 1.4rem;  /* CAMBIA DA 1.2rem a 1.4rem */
     font-weight: 700;
     margin-top: 16px;
     text-align: right;
@@ -1041,15 +1041,15 @@ input::placeholder {
     background-color: var(--accent);
     color: white;
     border: none;
-    padding: 14px;
+    padding: 16px;  /* CAMBIA DA 14px a 16px */
     border-radius: 10px;
     cursor: pointer;
     width: 100%;
     font-weight: 700;
-    font-size: 1rem;
+    font-size: 1.1rem;  /* CAMBIA DA 1rem a 1.1rem */
     margin-top: 16px;
     transition: 0.3s;
-    min-height: 50px;
+    min-height: 54px;  /* CAMBIA DA 50px a 54px */
 }
 
 .btn-checkout:hover {
@@ -3484,7 +3484,7 @@ td {
     }
     
     input, select, textarea, button {
-        font-size: 16px;
+        font-size: 18px;
     }
     
     .navbar, .navbar-index {
@@ -3533,9 +3533,9 @@ td {
     .navbar button,
     .theme-toggle {
         flex: 0 0 auto;
-        min-height: 36px;
-        padding: 6px 12px;
-        font-size: 0.65rem;
+        min-height: 44px;  /* CAMBIA DA 36px a 44px */
+        padding: 10px 16px;  /* CAMBIA DA 6px 12px a 10px 16px */
+        font-size: 0.75rem;  /* CAMBIA DA 0.65rem a 0.75rem */
         white-space: nowrap;
     }
     
@@ -3550,11 +3550,11 @@ td {
         padding: 36px 16px 30px;
     }
     .hero h1 {
-        font-size: 1.8rem;
+        font-size: 2.2rem;  /* CAMBIA DA 1.8rem a 2.2rem */
         line-height: 1.12;
     }
     .hero p {
-        font-size: 0.95rem;
+        font-size: 1.1rem;  /* CAMBIA DA 0.95rem a 1.1rem */
         margin-bottom: 18px;
     }
     
@@ -3626,11 +3626,12 @@ td {
     
     .category-btn {
         flex: 0 0 auto;
-        padding: 10px 14px;
+        padding: 14px 20px;  /* CAMBIA DA 10px 14px a 14px 20px */
         white-space: nowrap;
         text-align: center;
         transform: none !important;
-        min-height: 44px;
+        min-height: 50px;  /* CAMBIA DA 44px a 50px */
+        font-size: 1rem;  /* AGGIUNGI questa riga */
     }
     
     .products-grid {
@@ -3742,7 +3743,7 @@ td {
     .section h2, .section-title, .header h1,
     .policy-container h1, .account-header h1,
     .orders-header h1, .address-header h1 {
-        font-size: 1.4rem;
+        font-size: 1.6rem;
         line-height: 1.18;
     }
     
@@ -3982,6 +3983,96 @@ td {
     }
 }
 
+/* ── TOGGLE SIDEBAR MANAGER ──────────────────────────────────────────── */
+.sidebar-toggle {
+    display: none;
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    z-index: 1200;
+    background: var(--secondary);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 1.2rem;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    min-height: 48px;
+    min-width: 48px;
+}
+
+.sidebar-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 1150;
+}
+
+.sidebar {
+    transition: transform 0.3s ease, width 0.3s ease;
+}
+
+.sidebar.closed {
+    transform: translateX(-100%);
+    width: 0;
+    padding: 20px 0;
+    overflow: hidden;
+}
+
+.sidebar.closed .sidebar-toggle {
+    display: block;
+}
+
+/* Mostra toggle su mobile */
+@media (max-width: 768px) {
+    .sidebar-toggle {
+        display: block;
+    }
+    
+    .sidebar.closed {
+        transform: translateX(-100%);
+        width: 0;
+        padding: 0;
+        overflow: hidden;
+        border-right: none;
+    }
+    
+    .sidebar.open {
+        transform: translateX(0);
+        width: 280px;
+        padding: 20px;
+        border-right: 1px solid var(--border);
+    }
+    
+    .sidebar-overlay.show {
+        display: block;
+    }
+    
+    /* Quando sidebar è chiusa, il main occupa tutto lo spazio */
+    .manager-page .main {
+        margin-left: 0;
+        width: 100%;
+    }
+}
+
+/* Desktop: sidebar sempre visibile */
+@media (min-width: 769px) {
+    .sidebar-toggle {
+        display: none !important;
+    }
+    .sidebar-overlay {
+        display: none !important;
+    }
+    .sidebar {
+        transform: none !important;
+        width: 250px !important;
+        padding: 20px !important;
+        overflow: visible !important;
+    }
+}
+
 /* Mobile piccolo */
 @media (max-width: 420px) {
     .navbar a:not(.nav-logo),
@@ -4013,7 +4104,7 @@ td {
     }
     
     .product-card h3 {
-        font-size: 0.95rem;
+        font-size: 1.2rem;
     }
     .product-sub {
         font-size: 0.7rem;
@@ -4099,5 +4190,121 @@ td {
     }
     .card h3 {
         font-size: 0.75rem;
+    }
+}
+
+
+
+/* FORZA DIMENSIONI PIÙ GRANDI SU MOBILE */
+@media (max-width: 768px) {
+    /* Testi */
+    html { font-size: 18px; }
+    
+    .product-card h3 { font-size: 1.3rem !important; }
+    .prezzo { font-size: 1.7rem !important; }
+    .product-sub { font-size: 0.85rem !important; }
+    .cart-item-name { font-size: 1.1rem !important; }
+    .totale-carrello { font-size: 1.6rem !important; }
+    .section h2 { font-size: 1.7rem !important; }
+    .hero h1 { font-size: 2.3rem !important; }
+    .hero p { font-size: 1.15rem !important; }
+    
+    /* Bottoni */
+    .btn-add, .btn-checkout, .btn-primary, .btn-secondary {
+        padding: 18px !important;
+        font-size: 1.1rem !important;
+        min-height: 58px !important;
+    }
+    
+    .category-btn {
+        padding: 14px 20px !important;
+        font-size: 1rem !important;
+        min-height: 50px !important;
+    }
+    
+    /* Card prodotti */
+    .product-card {
+        padding: 24px 18px !important;
+    }
+    
+    /* Spaziature */
+    .products-grid { 
+        grid-template-columns: 1fr !important; 
+        gap: 24px !important; 
+    }
+    .cart-item { padding: 16px !important; }
+}
+
+/* ── TOGGLE SIDEBAR MANAGER (FIX) ──────────────────────────────────── */
+.sidebar-toggle {
+    display: none;
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    z-index: 1200;
+    background: #10b981;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 1.4rem;
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+    min-height: 50px;
+    min-width: 50px;
+    line-height: 1;
+}
+
+.sidebar-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 1150;
+}
+
+/* SU MOBILE: mostra il toggle */
+@media (max-width: 768px) {
+    .sidebar-toggle {
+        display: block !important;
+    }
+    
+    .sidebar.closed {
+        transform: translateX(-100%);
+        width: 0;
+        padding: 0;
+        overflow: hidden;
+        border-right: none;
+        min-width: 0;
+    }
+    
+    .sidebar.open {
+        transform: translateX(0);
+        width: 280px;
+        padding: 20px;
+        border-right: 1px solid rgba(255,255,255,0.1);
+        min-width: 280px;
+    }
+    
+    .sidebar-overlay.show {
+        display: block !important;
+    }
+}
+
+/* SU DESKTOP: nasconde toggle e overlay */
+@media (min-width: 769px) {
+    .sidebar-toggle {
+        display: none !important;
+    }
+    .sidebar-overlay {
+        display: none !important;
+    }
+    .sidebar {
+        transform: none !important;
+        width: 250px !important;
+        padding: 20px !important;
+        overflow: visible !important;
+        min-width: 250px !important;
+        position: relative !important;
     }
 }

@@ -209,69 +209,95 @@
             padding: 8px 14px; border-radius: 8px; font-weight: 600; font-size: 0.85rem;
         }
 
-        /* ── MOBILE: componenti specifici del pannello manager ──────────
-           (sidebar/category-btn sono già gestiti globalmente da style.css) */
         @media (max-width: 768px) {
-            .main {
-                padding: 16px;
-            }
+            .main { padding: 16px; }
+            .manager-topbar { gap: 10px; margin-bottom: 16px; }
+            .manager-topbar-title { margin-right: 0; flex: 1 1 auto; }
+            .header { flex-direction: column; align-items: flex-start; gap: 10px; }
+            .stats-cards { flex-direction: column; }
+            .card { min-width: 100%; }
+            table { display: block; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; }
+            .controls { flex-direction: column; align-items: stretch; }
+            .controls select, .controls button { width: 100%; }
+            .modal-card { padding: 20px; }
+            .modal-actions { flex-direction: column; }
+            .modal-actions button { width: 100%; }
+            .chat-bubble { max-width: 92%; }
+        }
 
-            .manager-topbar {
-                gap: 10px;
-                margin-bottom: 16px;
-            }
+        /* ── TOGGLE SIDEBAR MANAGER ──────────────────────────────────── */
+        .sidebar-toggle {
+            display: none;
+            position: fixed;
+            top: 12px;
+            left: 12px;
+            z-index: 1200;
+            background: var(--secondary);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 10px 14px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            min-height: 48px;
+            min-width: 48px;
+        }
 
-            .manager-topbar-title {
-                margin-right: 0;
-                flex: 1 1 auto;
-            }
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.4);
+            z-index: 1150;
+        }
 
-            .header {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 10px;
-            }
+        .sidebar {
+            transition: transform 0.3s ease, width 0.3s ease;
+        }
 
-            .stats-cards {
-                flex-direction: column;
-            }
+        .sidebar.closed {
+            transform: translateX(-100%);
+            width: 0;
+            padding: 0;
+            overflow: hidden;
+            border-right: none;
+        }
 
-            .card {
-                min-width: 100%;
-            }
+        .sidebar.open {
+            transform: translateX(0);
+            width: 280px;
+            padding: 20px;
+            border-right: 1px solid rgba(255,255,255,0.1);
+        }
 
-            /* Tabelle scorrevoli orizzontalmente invece di rompere il layout */
-            table {
+        .sidebar-overlay.show {
+            display: block;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar-toggle {
                 display: block;
-                overflow-x: auto;
-                white-space: nowrap;
-                -webkit-overflow-scrolling: touch;
             }
-
-            .controls {
-                flex-direction: column;
-                align-items: stretch;
-            }
-
-            .controls select,
-            .controls button {
+            .manager-page .main {
+                margin-left: 0;
                 width: 100%;
             }
+        }
 
-            .modal-card {
-                padding: 20px;
+        @media (min-width: 769px) {
+            .sidebar-toggle {
+                display: none !important;
             }
-
-            .modal-actions {
-                flex-direction: column;
+            .sidebar-overlay {
+                display: none !important;
             }
-
-            .modal-actions button {
-                width: 100%;
-            }
-
-            .chat-bubble {
-                max-width: 92%;
+            .sidebar {
+                transform: none !important;
+                width: 250px !important;
+                padding: 20px !important;
+                overflow: visible !important;
+                border-right: 1px solid rgba(255,255,255,0.1);
             }
         }
     </style>
@@ -279,7 +305,14 @@
 </head>
 <body class="manager-page">
 
-    <div class="sidebar">
+    <!-- TOGGLE SIDEBAR (visibile solo su mobile) -->
+    <button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()" aria-label="Toggle menu">
+        ☰
+    </button>
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+    <!-- SIDEBAR -->
+    <div class="sidebar closed" id="sidebar">
         <h2>🛠️ Pannello Manager</h2>
         <div class="menu-label">Viste</div>
         
@@ -305,6 +338,7 @@
         <button onclick="logoutUtente()" class="logout-btn">Esci alla Vista Cliente</button>
     </div>
 
+    <!-- MAIN CONTENT -->
     <div class="main">
         <div class="manager-topbar">
             <a href="index.html" class="nav-logo"><img src="logo.png" alt="SinGo"></a>
@@ -806,7 +840,9 @@
             backdrop.style.display = 'flex';
         }
 
-        // ── Inizializzazione ─────────────────────────────────────────────
+        // =============================================
+        // 🗂️ CARICAMENTO DATI INIZIALE
+        // =============================================
         async function caricaDati() {
             setSpinner(true);
             try {
@@ -876,8 +912,6 @@
                 }
 
                 caricaOrdini();
-                
-                // Aggiorna finanze dopo aver caricato gli ordini
                 await aggiornaFinanze();
 
             } catch (err) {
@@ -1482,7 +1516,6 @@
             });
 
             const labels = Object.keys(perData).sort();
-            // Limita i dati agli ultimi 30 giorni per evitare grafici troppo lunghi
             const maxPoints = 30;
             let slicedLabels = labels;
             let slicedRevenue = labels.map(d => perData[d].revenue);
@@ -1545,7 +1578,7 @@
                     labels: stati.map(([, label]) => label),
                     datasets: [{ label: 'Ordini', data: statoCounts, backgroundColor: ['#f59e0b', '#3b82f6', '#8b5cf6', '#ec4899', '#10b981'] }]
                 },
-                options: { indexxAxis: 'y', responsive: true, maintainAspectRatio: false, scales: { x: { beginAtZero: true, ticks: { precision: 0 } } }, plugins: { legend: { display: false } } }
+                options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, scales: { x: { beginAtZero: true, ticks: { precision: 0 } } }, plugins: { legend: { display: false } } }
             });
 
             const leadByDate = {};
@@ -1561,7 +1594,6 @@
             const leadLabels = Object.keys(leadByDate).sort();
             let leadData = leadLabels.map(d => leadByDate[d].reduce((s, v) => s + v, 0) / leadByDate[d].length);
             
-            // Limita i dati dei lead time
             if (leadLabels.length > maxPoints) {
                 const start = leadLabels.length - maxPoints;
                 const slicedLeadLabels = leadLabels.slice(start);
@@ -2262,17 +2294,17 @@
             }
         }
 
-    function salvaChiaveGemini() {
-        const key = document.getElementById('geminiKey').value.trim();
-        if (key && (key.startsWith('AIza') || key.startsWith('AQ'))) {
-            localStorage.setItem('gemini_api_key', key);
-            document.getElementById('aiConfigPanel').style.display = 'none';
-            document.getElementById('aiStatus').innerHTML = '✅ Gemini configurato! (gratuito)';
-            document.getElementById('aiStatus').style.color = '#10B981';
-            showToast('✅ Chiave Gemini salvata!', 'success');
-        } else {
-            showToast('❌ Inserisci una chiave valida (formato: AIza... o AQ...)', 'error');
-        }
+        function salvaChiaveGemini() {
+            const key = document.getElementById('geminiKey').value.trim();
+            if (key && (key.startsWith('AIza') || key.startsWith('AQ'))) {
+                localStorage.setItem('gemini_api_key', key);
+                document.getElementById('aiConfigPanel').style.display = 'none';
+                document.getElementById('aiStatus').innerHTML = '✅ Gemini configurato! (gratuito)';
+                document.getElementById('aiStatus').style.color = '#10B981';
+                showToast('✅ Chiave Gemini salvata!', 'success');
+            } else {
+                showToast('❌ Inserisci una chiave valida (formato: AIza... o AQ...)', 'error');
+            }
         }
 
         async function inviaMessaggioAI() {
@@ -2361,27 +2393,73 @@
             inviaMessaggioAI();
         }
 
-        // ── Avvio ──────────────────────────────────────────────────────
+        // =============================================
+        // 🗂️ TOGGLE SIDEBAR (mobile)
+        // =============================================
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            const isMobile = window.innerWidth <= 768;
+            
+            if (!isMobile) return;
+            
+            if (sidebar.classList.contains('closed')) {
+                sidebar.classList.remove('closed');
+                sidebar.classList.add('open');
+                overlay.classList.add('show');
+            } else {
+                sidebar.classList.add('closed');
+                sidebar.classList.remove('open');
+                overlay.classList.remove('show');
+            }
+        }
+
+        // Chiudi sidebar quando si clicca su un link (mobile)
+        document.querySelectorAll('.sidebar .category-btn, .sidebar .logout-btn, .sidebar .sub-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                if (window.innerWidth <= 768) {
+                    const sidebar = document.getElementById('sidebar');
+                    const overlay = document.getElementById('sidebarOverlay');
+                    sidebar.classList.add('closed');
+                    sidebar.classList.remove('open');
+                    overlay.classList.remove('show');
+                }
+            });
+        });
+
+        // Gestisci resize
+        window.addEventListener('resize', function() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            if (window.innerWidth > 768) {
+                sidebar.classList.remove('closed', 'open');
+                overlay.classList.remove('show');
+            } else {
+                if (!sidebar.classList.contains('open') && !sidebar.classList.contains('closed')) {
+                    sidebar.classList.add('closed');
+                }
+            }
+        });
+
+        // =============================================
+        // 🚀 AVVIO
+        // =============================================
         caricaDati();
 
-        // Simula avanzamento consegne ogni 60 secondi (non 30)
         let consegnaInterval = setInterval(async () => {
             try {
                 await DB_ORDINI.simulaAvanzamentoConsegna();
-                // Ricarica solo se la vista ordini è attiva
                 if (document.getElementById('vista-ordini').classList.contains('active')) {
                     caricaOrdini();
                 }
-                // Ricarica i grafici finanziari se la vista finanze è attiva
                 if (document.getElementById('vista-finanze').classList.contains('active')) {
                     await aggiornaFinanze();
                 }
             } catch (err) {
                 console.error('Errore simulazione consegna:', err);
             }
-        }, 60000); // 60 secondi invece di 30
+        }, 60000);
 
-        // Pulisci l'intervallo quando la pagina si chiude
         window.addEventListener('beforeunload', function() {
             if (consegnaInterval) {
                 clearInterval(consegnaInterval);
